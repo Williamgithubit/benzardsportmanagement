@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/store/Auth/logoutAction";
 import { useAppDispatch, useAppSelector } from "@/store/store";
@@ -56,10 +56,10 @@ import Settings from "@/components/admin/Settings/Settings";
 import Dashboard from "@/components/admin/Dashboard";
 import Reports from "@/components/admin/Reports";
 import ContactManagement from "@/components/admin/ContactManagement";
-import NotificationSystem from "@/components/admin/NotificationSystem";
 import GlobalSearch from "@/components/admin/GlobalSearch";
 import BlogManagement from "@/components/admin/BlogManagement";
 import MediaLibrary from "@/components/admin/MediaLibrary";
+import NotificationSystem from "@/components/admin/NotificationSystem";
 
 const drawerWidth = 240;
 
@@ -105,6 +105,21 @@ export default function AdminDashboard() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { user } = useAppSelector(selectAuthState);
+
+  // Listen for custom event to change tab (from notifications)
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      if (event.detail) {
+        setTab(event.detail);
+      }
+    };
+    
+    window.addEventListener("changeTab", handleTabChange as EventListener);
+    
+    return () => {
+      window.removeEventListener("changeTab", handleTabChange as EventListener);
+    };
+  }, []);
 
   const handleSnackbarClose = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -166,10 +181,6 @@ export default function AdminDashboard() {
       </Toolbar>
       {/* Divider */}
       <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.2)" }} />
-      {/* Notifications (sidebar) */}
-      <Box sx={{ display: "flex", justifyContent: "center", p: 1 }}>
-        <NotificationSystem />
-      </Box>
       {/* Navigation */}
       <List>
         {tabs.map((tabItem) => {

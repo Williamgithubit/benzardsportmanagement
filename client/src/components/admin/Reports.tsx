@@ -22,7 +22,7 @@ import {
 import {
   Refresh as RefreshIcon,
   People as PeopleIcon,
-  School as SchoolIcon,
+  Sports as SportsIcon,
   Event as EventIcon,
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
@@ -46,6 +46,8 @@ import {
   getUserEngagementMetrics,
   getProgramPerformanceMetrics,
   AnalyticsData,
+  ProgramPerformance,
+  UserEngagementMetrics,
 } from '@/services/reportsService';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
@@ -61,7 +63,7 @@ const Reports: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-  const [engagementMetrics, setEngagementMetrics] = useState<Record<string, number> | null>(null);
+  const [engagementMetrics, setEngagementMetrics] = useState<UserEngagementMetrics | null>(null);
   const [programPerformance, setProgramPerformance] = useState<Array<{
     name: string;
     status: string;
@@ -85,13 +87,13 @@ const Reports: React.FC = () => {
       setError(null);
 
       const [analytics, engagement, performance] = await Promise.all([
-        getAnalyticsData(),
-        getUserEngagementMetrics(),
-        getProgramPerformanceMetrics(),
+        getAnalyticsData() as Promise<AnalyticsData>,
+        getUserEngagementMetrics() as Promise<UserEngagementMetrics>,
+        getProgramPerformanceMetrics() as Promise<ProgramPerformance[]>,
       ]);
 
       // Transform performance data to match state type
-      const transformedPerformance = performance.map(program => ({
+      const transformedPerformance = performance.map((program: ProgramPerformance) => ({
         name: program.name,
         status: program.status,
         startDate: formatDate(program.startDate),
@@ -99,7 +101,7 @@ const Reports: React.FC = () => {
         enrollments: program.enrollments,
         completions: program.completions,
         completionRate: program.completionRate,
-        rating: parseFloat(program.rating),
+        rating: parseFloat(program.rating.toString()),
       }));
 
       setAnalyticsData(analytics);
@@ -112,7 +114,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info' | 'default' => {
     switch (status) {
       case 'active': return 'success';
       case 'inactive': return 'error';
@@ -216,7 +218,7 @@ const Reports: React.FC = () => {
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
                       <Typography color="textSecondary" gutterBottom variant="body2">
-                        Programs
+                        Training Programs
                       </Typography>
                       <Typography variant="h4">
                         {analyticsData.totalPrograms}
@@ -225,7 +227,7 @@ const Reports: React.FC = () => {
                         {analyticsData.activePrograms} active
                       </Typography>
                     </Box>
-                    <SchoolIcon color="primary" sx={{ fontSize: 40 }} />
+                    <SportsIcon color="primary" sx={{ fontSize: 40 }} />
                   </Box>
                 </CardContent>
               </Card>
@@ -258,13 +260,13 @@ const Reports: React.FC = () => {
                   <Box display="flex" alignItems="center" justifyContent="space-between">
                     <Box>
                       <Typography color="textSecondary" gutterBottom variant="body2">
-                        Task Completion
+                        Training Completion
                       </Typography>
                       <Typography variant="h4">
                         {analyticsData.completionRate}%
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
-                        {analyticsData.completedTasks}/{analyticsData.totalTasks} tasks
+                        {analyticsData.completedTasks}/{analyticsData.totalTasks} sessions
                       </Typography>
                     </Box>
                     <AssignmentIcon color="primary" sx={{ fontSize: 40 }} />
@@ -280,7 +282,7 @@ const Reports: React.FC = () => {
             <Box sx={{ flex: { xs: '1 1 100%', lg: '1 1 calc(66.67% - 12px)' } }}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  User Growth (Last 30 Days)
+                  Athlete & Staff Growth (Last 30 Days)
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={analyticsData.userGrowth}>
@@ -356,12 +358,12 @@ const Reports: React.FC = () => {
             </Box>
           </Box>
 
-          {/* Task Completion Trends */}
+          {/* Training Session Trends */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
             <Box sx={{ flex: { xs: '1 1 100%', lg: '1 1 calc(66.67% - 12px)' } }}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  Task Completion Trends (Last 30 Days)
+                  Training Session Trends (Last 30 Days)
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={analyticsData.taskCompletion}>
@@ -401,11 +403,11 @@ const Reports: React.FC = () => {
               </Paper>
             </Box>
 
-            {/* Program Status Distribution */}
+            {/* Training Program Status */}
             <Box sx={{ flex: { xs: '1 1 100%', lg: '1 1 calc(33.33% - 12px)' } }}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  Program Status Distribution
+                  Training Program Status
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -436,21 +438,21 @@ const Reports: React.FC = () => {
             </Box>
           </Box>
 
-          {/* Program Performance Table */}
+          {/* Training Program Performance */}
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Program Performance
+              Training Program Performance
             </Typography>
             <TableContainer sx={{ overflowX: 'auto' }}>
               <Table size={isMobile ? "small" : "medium"}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Program Name</TableCell>
+                    <TableCell>Training Program</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Start Date</TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>End Date</TableCell>
-                    <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Enrollments</TableCell>
-                    <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Completions</TableCell>
+                    <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Athletes</TableCell>
+                    <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Completed</TableCell>
                     <TableCell align="right">Completion Rate</TableCell>
                     <TableCell align="right">Rating</TableCell>
                   </TableRow>

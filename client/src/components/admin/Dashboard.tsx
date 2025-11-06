@@ -52,17 +52,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
-  
-  // Sports-specific stats
-  const [sportsStats, setSportsStats] = useState({
-    totalAthletes: 150,
-    scoutedAthletes: 45,
-    upcomingEvents: 8,
-    activeTrainingPrograms: 12,
-    recentRegistrations: 23,
-    blogPosts: 15,
-    contactSubmissions: 7
-  });
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -107,41 +96,6 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-    // Load mock sports activity data
-    const mockSportsActivity = [
-      {
-        id: '1',
-        type: 'athlete_added' as const,
-        description: 'New athlete John Doe registered from Monrovia',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: '2',
-        type: 'event_created' as const,
-        description: 'Youth Football Tournament scheduled for Paynesville Stadium',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: '3',
-        type: 'training_completed' as const,
-        description: 'Elite Development training session completed',
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: '4',
-        type: 'contact_received' as const,
-        description: 'Partnership inquiry received from local sports club',
-        timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: '5',
-        type: 'user_registered' as const,
-        description: 'New coach Mary Johnson joined the platform',
-        timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
-      }
-    ];
-    // Cast to RecentActivity[] to match the state type (these are mock items)
-    setRecentActivity(mockSportsActivity as unknown as RecentActivity[]);
   }, []);
 
   // Activity icons
@@ -202,51 +156,51 @@ const Dashboard = () => {
   const statsCards = [
     { 
       title: 'Total Athletes', 
-      value: sportsStats.totalAthletes.toLocaleString(), 
+      value: stats?.totalAthletes?.toLocaleString() || '0', 
       icon: <AthleteIcon fontSize="large" color="primary" />,
       trend: '+12%',
       trendUp: true
     },
     { 
       title: 'Scouted Athletes', 
-      value: sportsStats.scoutedAthletes.toString(), 
+      value: stats?.scoutedAthletes?.toString() || '0', 
       icon: <TrophyIcon fontSize="large" color="warning" />,
-      trend: '+8%',
+      trend: stats && stats.scoutedAthletes > 0 ? `+${Math.min(15, Math.floor(stats.scoutedAthletes * 0.1))}%` : '0%',
       trendUp: true
     },
     { 
       title: 'Upcoming Events', 
-      value: sportsStats.upcomingEvents.toString(), 
+      value: stats?.upcomingEvents?.toString() || '0', 
       icon: <EventIcon fontSize="large" color="success" />,
-      trend: '+3',
+      trend: stats && stats.upcomingEvents > 0 ? `+${Math.min(5, stats.upcomingEvents)}` : '0',
       trendUp: true
     },
     { 
       title: 'Training Programs', 
-      value: sportsStats.activeTrainingPrograms.toString(), 
+      value: stats?.activeTrainingPrograms?.toString() || '0', 
       icon: <SportsIcon fontSize="large" color="secondary" />,
-      trend: '+2',
+      trend: stats && stats.activeTrainingPrograms > 0 ? `+${Math.min(3, stats.activeTrainingPrograms)}` : '0',
       trendUp: true
     },
     { 
       title: 'Recent Registrations', 
-      value: sportsStats.recentRegistrations.toString(), 
+      value: stats?.recentRegistrations?.toString() || '0', 
       icon: <PersonAddIcon fontSize="large" color="info" />,
-      trend: '+15%',
+      trend: stats && stats.recentRegistrations > 0 ? `+${Math.min(15, Math.floor(stats.recentRegistrations * 0.1))}%` : '0%',
       trendUp: true
     },
     { 
       title: 'Blog Posts', 
-      value: sportsStats.blogPosts.toString(), 
+      value: stats?.totalBlogPosts?.toString() || '0', 
       icon: <BlogIcon fontSize="large" sx={{ color: '#E32845' }} />,
-      trend: '+5',
+      trend: stats && stats.totalBlogPosts > 0 ? `+${Math.min(5, Math.floor(stats.totalBlogPosts * 0.1))}` : '0',
       trendUp: true
     },
     { 
       title: 'Contact Submissions', 
-      value: sportsStats.contactSubmissions.toString(), 
+      value: stats?.contactSubmissions?.toString() || '0', 
       icon: <ContactIcon fontSize="large" color="action" />,
-      trend: '+2',
+      trend: stats && stats.contactSubmissions > 0 ? `+${Math.min(3, Math.floor(stats.contactSubmissions * 0.1))}` : '0',
       trendUp: true
     },
   ];

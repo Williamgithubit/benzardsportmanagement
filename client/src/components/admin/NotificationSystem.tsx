@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Typography,
@@ -69,7 +70,7 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
+  const router = useRouter();
   const userRole = useUserRole();
 
   useEffect(() => {
@@ -111,36 +112,78 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({
     setAnchorEl(null);
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    // Mark as read
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
-    );
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read in Firestore
+    try {
+      await NotificationService.markAsRead(notification.id, true);
+      
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+      );
 
-    if (onNotificationClick) {
-      onNotificationClick(notification);
+      if (onNotificationClick) {
+        onNotificationClick(notification);
+      }
+
+      // Navigate to Contact Management for blog notifications
+      if (notification.category === "user" || notification.title?.includes("Blog")) {
+        handleClose();
+        router.push("/dashboard/admin#contacts");
+        // Trigger tab change after navigation
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("changeTab", { detail: "contacts" }));
+        }, 100);
+      } else {
+        handleClose();
+      }
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to update notification",
+        severity: "error",
+      });
     }
-
-    handleClose();
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setSnackbar({
-      open: true,
-      message: "All notifications marked as read",
-      severity: "success",
-    });
+  const markAllAsRead = async () => {
+    try {
+      await NotificationService.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setSnackbar({
+        open: true,
+        message: "All notifications marked as read",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to update notifications",
+        severity: "error",
+      });
+    }
   };
 
-  const deleteNotification = (id: string, event: React.MouseEvent) => {
+  const deleteNotification = async (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    setSnackbar({
-      open: true,
-      message: "Notification deleted",
-      severity: "info",
-    });
+    try {
+      await NotificationService.deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setSnackbar({
+        open: true,
+        message: "Notification deleted",
+        severity: "info",
+      });
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to delete notification",
+        severity: "error",
+      });
+    }
   };
 
   const clearAllNotifications = () => {

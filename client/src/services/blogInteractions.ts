@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { BlogComment, BlogReaction } from "@/types/blog";
+import { NotificationService } from "./notificationService";
 
 const serializeTimestamp = (timestamp: Timestamp | null): string | null => {
   return timestamp?.toDate?.()?.toISOString() || null;
@@ -47,9 +48,31 @@ export const addComment = async (
     const postSnap = await getDoc(postRef);
     if (postSnap.exists()) {
       const currentComments = postSnap.data().commentCount || 0;
+      const postData = postSnap.data();
       await updateDoc(postRef, {
         commentCount: currentComments + 1,
       });
+
+      // Create notification for admin about new comment
+      try {
+        await NotificationService.createNotification({
+          type: "blog",
+          title: "New Blog Comment",
+          body: `${userName} commented on "${postData.title || 'a blog post'}"`,
+          data: {
+            postId,
+            commentId: docRef.id,
+            userName,
+            userEmail,
+            postTitle: postData.title,
+            commentPreview: content.substring(0, 100),
+          },
+          recipientRole: "admin",
+        });
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+        // Don't fail the comment creation if notification fails
+      }
     }
 
     return docRef.id;
@@ -130,9 +153,29 @@ export const addReaction = async (
       const postSnap = await getDoc(postRef);
       if (postSnap.exists()) {
         const currentReactions = postSnap.data().reactionCount || 0;
+        const postData = postSnap.data();
         await updateDoc(postRef, {
           reactionCount: currentReactions + 1,
         });
+
+        // Create notification for admin about new reaction
+        try {
+          await NotificationService.createNotification({
+            type: "blog",
+            title: "New Blog Reaction",
+            body: `${userName} reacted with ${type} to "${postData.title || 'a blog post'}"`,
+            data: {
+              postId,
+              userName,
+              reactionType: type,
+              postTitle: postData.title,
+            },
+            recipientRole: "admin",
+          });
+        } catch (notifError) {
+          console.error("Failed to create notification:", notifError);
+          // Don't fail the reaction if notification fails
+        }
       }
     }
   } catch (error) {

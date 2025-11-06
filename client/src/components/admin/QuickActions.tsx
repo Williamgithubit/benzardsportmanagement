@@ -209,35 +209,34 @@ const QuickActions: React.FC<QuickActionsProps> = ({
 
   const quickActionButtons = [
     {
-      label: "Add User",
-      icon: <PersonAddIcon />,
+      label: "Add Athlete",
+      icon: <AthleteIcon />,
       color: "#000054",
-      onClick: onAddUser,
-    },
-    {
-      label: "Add Program",
-      icon: <SchoolIcon />,
-      color: "#E32845",
-      onClick: onAddProgram,
-    },
-    {
-      label: "Subjects & Classes",
-      icon: <SchoolIcon />,
-      color: "#9C27B0",
-      onClick: () =>
-        (window.location.href = "/dashboard/admin/subjects-classes"),
+      onClick: onAddAthlete || (() => window.location.href = "/dashboard/admin#athletes"),
     },
     {
       label: "Add Event",
       icon: <EventIcon />,
-      color: "#4CAF50",
-      onClick: onAddEvent,
+      color: "#E32845",
+      onClick: onAddEvent || (() => window.location.href = "/dashboard/admin#events"),
     },
     {
-      label: "Add Admission",
-      icon: <AssignmentIcon />,
+      label: "Add Blog Post",
+      icon: <BlogIcon />,
+      color: "#4CAF50",
+      onClick: onAddBlog || (() => window.location.href = "/dashboard/admin#blog"),
+    },
+    {
+      label: "Add User",
+      icon: <PersonAddIcon />,
+      color: "#9C27B0",
+      onClick: onAddUser || (() => window.location.href = "/dashboard/admin#users"),
+    },
+    {
+      label: "View Contacts",
+      icon: <ContactIcon />,
       color: "#FF9800",
-      onClick: onAddAdmission,
+      onClick: () => window.location.href = "/dashboard/admin#contacts",
     },
   ];
 

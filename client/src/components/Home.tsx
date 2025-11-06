@@ -20,7 +20,7 @@ const Home = () => {
         "Discover and nurture young football talent across Liberia with professional scouting and mentorship from FIFA-licensed coaches.",
       duration: "Ongoing",
       level: "All Levels",
-      icon: <FaFutbol className="text-4xl mb-4 text-[#E32845]" />
+      icon: <FaFutbol className="text-4xl mb-4 text-[#03045e]" />
     },
     {
       id: 2,
@@ -29,7 +29,7 @@ const Home = () => {
         "Intensive football training programs focusing on skills, fitness, and tactics to prepare athletes for professional and grassroots competitions.",
       duration: "12 weeks",
       level: "Intermediate",
-      icon: <FaRunning className="text-4xl mb-4 text-[#E32845]" />
+      icon: <FaRunning className="text-4xl mb-4 text-[#03045e]" />
     },
     {
       id: 3,
@@ -38,7 +38,7 @@ const Home = () => {
         "Organize and participate in local and regional football tournaments, fostering community engagement and showcasing talent.",
       duration: "Event-Based",
       level: "All Levels",
-      icon: <FaTrophy className="text-4xl mb-4 text-[#E32845]" />
+      icon: <FaTrophy className="text-4xl mb-4 text-[#03045e]" />
     },
     {
       id: 4,
@@ -47,7 +47,7 @@ const Home = () => {
         "Support grassroots football through equipment donations, workshops, and community events to empower young athletes.",
       duration: "Ongoing",
       level: "Beginner",
-      icon: <FaUsers className="text-4xl mb-4 text-[#E32845]" />
+      icon: <FaUsers className="text-4xl mb-4 text-[#03045e]" />
     },
   ];
 
@@ -65,7 +65,7 @@ const Home = () => {
       role: "Youth Coach",
       content:
         "The training academy helped me develop my coaching skills, and now I'm mentoring young players to reach their potential.",
-      image: "https://placehold.co/80x80/E32845/ffffff?text=GT",
+      image: "https://placehold.co/80x80/03045e/ffffff?text=GT",
       icon: <FaRunning className="text-2xl text-[#68c2ca]" />,
     },
     {
@@ -87,7 +87,7 @@ const Home = () => {
       <div className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-[#E32845] mb-4">
+            <h2 className="text-3xl font-bold text-[#03045e] mb-4">
               Our Programs
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -104,7 +104,7 @@ const Home = () => {
                   {program.icon}
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
-                  <h3 className="text-xl font-semibold text-[#E32845] mb-3">
+                  <h3 className="text-xl font-semibold text-[#03045e] mb-3">
                     {program.title}
                   </h3>
                   <p className="text-gray-600 mb-4 flex-1">
@@ -115,7 +115,7 @@ const Home = () => {
                       <GiSoccerField className="mr-1 text-[#68c2ca]" />
                       <span>{program.duration}</span>
                     </div>
-                    <span className="bg-[#68c2ca] text-[#E32845] px-3 py-1 rounded-full text-xs font-medium">
+                    <span className="bg-[#68c2ca] text-[#03045e] px-3 py-1 rounded-full text-xs font-medium">
                       {program.level}
                     </span>
                   </div>
@@ -130,7 +130,7 @@ const Home = () => {
       <div className="bg-[#f8f9fa] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-[#E32845] mb-4">
+            <h2 className="text-3xl font-bold text-[#03045e] mb-4">
               Success Stories
             </h2>
             <p className="text-xl text-gray-600">

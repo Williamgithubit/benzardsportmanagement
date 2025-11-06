@@ -20,6 +20,7 @@ export const seedSampleData = async () => {
     const programsSnapshot = await getDocs(collection(db, 'programs'));
     const eventsSnapshot = await getDocs(collection(db, 'events'));
     const tasksSnapshot = await getDocs(collection(db, 'tasks'));
+    const blogPostsSnapshot = await getDocs(collection(db, 'blogPosts'));
 
     // Seed sample programs if none exist
     if (programsSnapshot.empty) {
@@ -71,35 +72,47 @@ export const seedSampleData = async () => {
       console.log('Seeding sample events...');
       const sampleEvents = [
         {
-          title: 'Tech Career Fair 2024',
-          description: 'Connect with top tech companies',
-          date: Timestamp.fromDate(new Date('2024-09-15')),
-          location: 'Convention Center',
+          title: 'Football Tournament 2024',
+          description: 'Annual grassroots football tournament for young athletes',
+          startDate: Timestamp.fromDate(new Date('2024-12-15')),
+          endDate: Timestamp.fromDate(new Date('2024-12-17')),
+          location: 'National Stadium, Monrovia',
           status: 'upcoming',
+          category: 'tournament',
           capacity: 500,
-          registered: 234,
+          registrations: 234,
+          price: 0,
+          isPublic: true,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now()
         },
         {
-          title: 'AI Workshop Series',
-          description: 'Hands-on AI and machine learning workshop',
-          date: Timestamp.fromDate(new Date('2024-08-20')),
-          location: 'Tech Hub',
+          title: 'Youth Training Camp',
+          description: 'Intensive training camp for aspiring football players',
+          startDate: Timestamp.fromDate(new Date('2024-11-20')),
+          endDate: Timestamp.fromDate(new Date('2024-11-25')),
+          location: 'BSM Training Facility',
           status: 'upcoming',
+          category: 'training_camp',
           capacity: 50,
-          registered: 45,
+          registrations: 45,
+          price: 25,
+          isPublic: true,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now()
         },
         {
-          title: 'Coding Bootcamp Graduation',
-          description: 'Celebrating our latest graduates',
-          date: Timestamp.fromDate(new Date('2024-08-10')),
-          location: 'Main Campus',
+          title: 'Community Outreach Program',
+          description: 'Sports development program for local communities',
+          startDate: Timestamp.fromDate(new Date('2024-11-10')),
+          endDate: Timestamp.fromDate(new Date('2024-11-10')),
+          location: 'Various Locations',
           status: 'upcoming',
+          category: 'community_outreach',
           capacity: 200,
-          registered: 150,
+          registrations: 150,
+          price: 0,
+          isPublic: true,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now()
         }
@@ -173,11 +186,41 @@ export const seedSampleData = async () => {
       console.log('Sample tasks seeded successfully');
     }
 
+    // Seed sample blog posts if none exist
+    if (blogPostsSnapshot.empty) {
+      console.log('Seeding sample blog posts...');
+      const sampleBlogPosts = [
+        {
+          title: 'Upcoming Pre Season Game',
+          slug: 'upcoming-pre-season-game',
+          excerpt: 'Get ready for an exciting pre-season match featuring our top athletes',
+          content: 'We are thrilled to announce our upcoming pre-season game...',
+          author: 'Admin User',
+          authorId: 'admin',
+          category: 'Game',
+          tags: ['football', 'tournament', 'grassroots'],
+          status: 'published',
+          views: 0,
+          likes: 0,
+          commentsCount: 0,
+          publishedAt: Timestamp.now(),
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        }
+      ];
+
+      for (const post of sampleBlogPosts) {
+        await addDoc(collection(db, 'blogPosts'), post);
+      }
+      console.log('Sample blog posts seeded successfully');
+    }
+
     console.log('Sample data seeding completed!');
     console.log(`Users: ${usersSnapshot.size} (existing)`);
     console.log(`Programs: ${programsSnapshot.size > 0 ? programsSnapshot.size : 3} (${programsSnapshot.empty ? 'seeded' : 'existing'})`);
     console.log(`Events: ${eventsSnapshot.size > 0 ? eventsSnapshot.size : 3} (${eventsSnapshot.empty ? 'seeded' : 'existing'})`);
     console.log(`Tasks: ${tasksSnapshot.size > 0 ? tasksSnapshot.size : 5} (${tasksSnapshot.empty ? 'seeded' : 'existing'})`);
+    console.log(`Blog Posts: ${blogPostsSnapshot.size > 0 ? blogPostsSnapshot.size : 1} (${blogPostsSnapshot.empty ? 'seeded' : 'existing'})`);
 
   } catch (error) {
     console.error('Error seeding sample data:', error);

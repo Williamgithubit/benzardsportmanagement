@@ -8,10 +8,13 @@ import {
   Timestamp,
   getDoc,
   doc,
+  getCountFromServer,
+  collectionGroup,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
 export interface DashboardStats {
+  // General stats
   totalUsers: number;
   activePrograms: number;
   upcomingEvents: number;
@@ -19,6 +22,13 @@ export interface DashboardStats {
   totalCertificates: number;
   totalAdmissions: number;
   totalBlogPosts: number;
+  
+  // Sports-specific stats
+  totalAthletes: number;
+  scoutedAthletes: number;
+  activeTrainingPrograms: number;
+  recentRegistrations: number;
+  contactSubmissions: number;
 }
 
 export interface RecentActivity {
@@ -27,7 +37,10 @@ export interface RecentActivity {
     | "user_registered"
     | "program_created"
     | "event_created"
-    | "task_completed";
+    | "task_completed"
+    | "athlete_added"
+    | "training_completed"
+    | "contact_received";
   description: string;
   timestamp: string;
   user?: string;
@@ -38,94 +51,143 @@ export interface RecentActivity {
  */
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
   try {
-    // Try aggregated stats doc first (recommended). This keeps rules tight
-    // and avoids broad collection reads on the client.
-    const statsRef = doc(db, "dashboard", "stats");
-    const statsSnap = await getDoc(statsRef);
+    // Fetch all stats in parallel for better performance
+    const [
+      usersCount,
+      programsCount,
+      eventsCount,
+      tasksCount,
+      certificatesCount,
+      admissionsCount,
+      blogPostsCount,
+      athletesCount,
+      scoutedAthletesCount,
+      trainingProgramsCount,
+      recentRegistrationsCount,
+      contactSubmissionsCount
+    ] = await Promise.all([
+      getCountFromServer(collection(db, "users")).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(query(collection(db, "programs"), where("status", "==", "active"))).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(collection(db, "events")).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(collection(db, "tasks")).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(collection(db, "certificates")).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(collection(db, "admissionApplications")).catch(() => ({ data: () => ({ count: 0 }) })),
+      // Get blog posts count
+      getCountFromServer(collection(db, "blogPosts")).catch(() => ({ data: () => ({ count: 0 }) })),
+      // Sports-specific counts
+      getCountFromServer(collection(db, "athletes")).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(query(collection(db, "athletes"), where("status", "==", "scouted"))).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(query(collection(db, "programs"), where("type", "==", "training"))).catch(() => ({ data: () => ({ count: 0 }) })),
+      getCountFromServer(query(collection(db, "users"), where("createdAt", ">", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))).catch(() => ({ data: () => ({ count: 0 }) })),
+      // Try multiple possible collection names for contact messages
+      getCountFromServer(collection(db, "contactSubmissions"))
+        .catch(() => getCountFromServer(collection(db, "contacts")))
+        .catch(() => getCountFromServer(collection(db, "messages")))
+        .catch(() => ({ data: () => ({ count: 0 }) }))
+    ]);
 
-    if (statsSnap.exists()) {
-      const data = statsSnap.data() as Partial<DashboardStats>;
-      return {
-        totalUsers: data.totalUsers ?? 0,
-        activePrograms: data.activePrograms ?? 0,
-        upcomingEvents: data.upcomingEvents ?? 0,
-        tasksCompleted: data.tasksCompleted ?? 0,
-        totalCertificates: data.totalCertificates ?? 0,
-        totalAdmissions: data.totalAdmissions ?? 0,
-        totalBlogPosts: data.totalBlogPosts ?? 0,
-      };
-    }
-
-    console.warn(
-      "dashboard/stats missing — falling back to live collection reads"
-    );
-
-    // Fetch total users count
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    const totalUsers = usersSnapshot.size;
-
-    // Fetch active programs count
-    const programsQuery = query(
-      collection(db, "programs"),
-      where("status", "==", "active")
-    );
-    const programsSnapshot = await getDocs(programsQuery);
-    const activePrograms = programsSnapshot.size;
-
-    // Fetch upcoming events count (simplified to avoid composite index)
-    const eventsSnapshot = await getDocs(collection(db, "events"));
-    const now = new Date();
-    let upcomingEvents = 0;
-
-    eventsSnapshot.forEach((doc) => {
-      const eventData = doc.data();
-      const eventDate = eventData.date?.toDate
-        ? eventData.date.toDate()
-        : new Date(eventData.date);
-      const status = eventData.status;
-
-      if (eventDate >= now && status !== "cancelled") {
-        upcomingEvents++;
-      }
-    });
-
-    // Fetch tasks completion rate (simplified to avoid multiple queries)
-    const allTasksSnapshot = await getDocs(collection(db, "tasks"));
-    let completedTasksCount = 0;
-
-    allTasksSnapshot.forEach((doc) => {
-      const taskData = doc.data();
-      if (taskData.status === "completed") {
-        completedTasksCount++;
-      }
-    });
-
-    const tasksCompleted =
-      allTasksSnapshot.size > 0
-        ? Math.round((completedTasksCount / allTasksSnapshot.size) * 100)
+    try {
+      // Calculate completed tasks percentage
+      const completedTasks = await getCountFromServer(
+        query(collection(db, "tasks"), where("status", "==", "completed"))
+      );
+      const tasksCompleted = tasksCount.data().count > 0 
+        ? Math.round((completedTasks.data().count / tasksCount.data().count) * 100) 
         : 0;
 
-    // Fetch total certificates count
-    const certificatesSnapshot = await getDocs(collection(db, "certificates"));
-    const totalCertificates = certificatesSnapshot.size;
+      // Get events count - use simple query to avoid index issues
+      let upcomingEventsCount = 0;
+      try {
+        const now = new Date();
+        const upcomingEventsSnapshot = await getCountFromServer(
+          query(
+            collection(db, "events"),
+            where("startDate", ">=", Timestamp.fromDate(now))
+          )
+        );
+        upcomingEventsCount = upcomingEventsSnapshot.data().count;
+        
+        // If no upcoming events, show total events count instead
+        if (upcomingEventsCount === 0) {
+          const totalEventsSnapshot = await getCountFromServer(collection(db, "events"));
+          upcomingEventsCount = totalEventsSnapshot.data().count;
+        }
+      } catch (error) {
+        console.error("Error fetching upcoming events count:", error);
+        // Fallback to total events count
+        const totalEventsSnapshot = await getCountFromServer(collection(db, "events"));
+        upcomingEventsCount = totalEventsSnapshot.data().count;
+      }
 
-    // Fetch total admission applications count
-    const admissionsSnapshot = await getDocs(collection(db, "admissionApplications"));
-    const totalAdmissions = admissionsSnapshot.size;
+      // Get recent registrations (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recentRegistrations = await getCountFromServer(
+        query(
+          collection(db, "users"),
+          where("createdAt", ">=", Timestamp.fromDate(sevenDaysAgo))
+        )
+      );
 
-    // Fetch total blog posts count
-    const blogPostsSnapshot = await getDocs(collection(db, "blogPosts"));
-    const totalBlogPosts = blogPostsSnapshot.size;
+      // Get active training programs - simplified query
+      let activeTrainingProgramsCount = 0;
+      try {
+        const activeTrainingPrograms = await getCountFromServer(
+          query(
+            collection(db, "programs"),
+            where("type", "==", "training")
+          )
+        );
+        activeTrainingProgramsCount = activeTrainingPrograms.data().count;
+      } catch (error) {
+        console.error("Error fetching training programs:", error);
+        activeTrainingProgramsCount = 0;
+      }
 
-    return {
-      totalUsers,
-      activePrograms,
-      upcomingEvents,
-      tasksCompleted,
-      totalCertificates,
-      totalAdmissions,
-      totalBlogPosts,
-    };
+      const stats = {
+        // General stats
+        totalUsers: usersCount.data().count,
+        activePrograms: programsCount.data().count,
+        upcomingEvents: upcomingEventsCount,
+        tasksCompleted,
+        totalCertificates: certificatesCount.data().count,
+        totalAdmissions: admissionsCount.data().count,
+        totalBlogPosts: blogPostsCount.data().count,
+        
+        // Sports-specific stats
+        totalAthletes: athletesCount.data().count,
+        scoutedAthletes: scoutedAthletesCount.data().count,
+        activeTrainingPrograms: activeTrainingProgramsCount,
+        recentRegistrations: recentRegistrations.data().count,
+        contactSubmissions: contactSubmissionsCount.data().count
+      };
+      
+      console.log("Dashboard stats fetched successfully:", stats);
+      return stats;
+    } catch (error) {
+      console.error("Error in dashboard stats calculation:", error);
+      console.log("Error details:", {
+        usersCount: usersCount?.data?.(),
+        blogPostsCount: blogPostsCount?.data?.(),
+        contactSubmissionsCount: contactSubmissionsCount?.data?.()
+      });
+      
+      // Return partial data with zeros for failed queries
+      return {
+        totalUsers: usersCount?.data?.()?.count ?? 0,
+        activePrograms: programsCount?.data?.()?.count ?? 0,
+        upcomingEvents: 0,
+        tasksCompleted: 0,
+        totalCertificates: certificatesCount?.data?.()?.count ?? 0,
+        totalAdmissions: admissionsCount?.data?.()?.count ?? 0,
+        totalBlogPosts: blogPostsCount?.data?.()?.count ?? 0,
+        totalAthletes: athletesCount?.data?.()?.count ?? 0,
+        scoutedAthletes: scoutedAthletesCount?.data?.()?.count ?? 0,
+        activeTrainingPrograms: 0,
+        recentRegistrations: 0,
+        contactSubmissions: contactSubmissionsCount?.data?.()?.count ?? 0
+      };
+    }
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     throw new Error("Failed to fetch dashboard statistics");
@@ -133,83 +195,149 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
 };
 
 /**
- * Fetch recent activity from Firebase
+ * Fetch recent activity from Firebase including sports-specific activities
  */
 export const fetchRecentActivity = async (
   limitCount: number = 10
 ): Promise<RecentActivity[]> => {
   try {
+    // Fetch all activity types in parallel
+    const [
+      recentUsers,
+      recentPrograms,
+      recentEvents,
+      recentAthletes,
+      recentTrainings,
+      recentContacts
+    ] = await Promise.all([
+      // Recent user registrations
+      getDocs(
+        query(
+          collection(db, "users"),
+          orderBy("createdAt", "desc"),
+          limit(3)
+        )
+      ).catch(() => ({ docs: [] })),
+      // Recent programs
+      getDocs(
+        query(
+          collection(db, "programs"),
+          orderBy("createdAt", "desc"),
+          limit(3)
+        )
+      ).catch(() => ({ docs: [] })),
+      // Recent events
+      getDocs(
+        query(
+          collection(db, "events"),
+          orderBy("startDate", "desc"),
+          limit(3)
+        )
+      ).catch(() => ({ docs: [] })),
+      // Recent athletes
+      getDocs(
+        query(
+          collection(db, "athletes"),
+          orderBy("createdAt", "desc"),
+          limit(3)
+        )
+      ).catch(() => ({ docs: [] })),
+      // Recent training sessions - simplified to avoid orderBy + where issues
+      getDocs(
+        query(
+          collection(db, "trainingSessions"),
+          orderBy("startDate", "desc"),
+          limit(3)
+        )
+      ).catch(() => ({ docs: [] })),
+      // Recent contact form submissions
+      getDocs(
+        query(
+          collection(db, "contactSubmissions"),
+          orderBy("createdAt", "desc"),
+          limit(3)
+        )
+      ).catch(() => ({ docs: [] }))
+    ]);
+
     const activities: RecentActivity[] = [];
 
-    // Fetch recent user registrations
-    const recentUsersQuery = query(
-      collection(db, "users"),
-      orderBy("createdAt", "desc"),
-      limit(3)
-    );
-    const recentUsersSnapshot = await getDocs(recentUsersQuery);
-
-    recentUsersSnapshot.forEach((doc) => {
-      const userData = doc.data();
+    // Process user registrations
+    recentUsers.docs.forEach(doc => {
+      const data = doc.data();
       activities.push({
         id: `user_${doc.id}`,
         type: "user_registered",
-        description: `New user ${userData.name || userData.email} registered`,
-        timestamp: userData.createdAt || new Date().toISOString(),
-        user: userData.name || userData.email,
+        description: `New user ${data.name || data.email} registered`,
+        timestamp: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        user: data.name || data.email
       });
     });
 
-    // Fetch recent programs
-    const recentProgramsQuery = query(
-      collection(db, "programs"),
-      orderBy("createdAt", "desc"),
-      limit(3)
-    );
-    const recentProgramsSnapshot = await getDocs(recentProgramsQuery);
-
-    recentProgramsSnapshot.forEach((doc) => {
-      const programData = doc.data();
+    // Process programs
+    recentPrograms.docs.forEach(doc => {
+      const data = doc.data();
       activities.push({
         id: `program_${doc.id}`,
         type: "program_created",
-        description: `New program "${
-          programData.title || programData.name
-        }" created`,
-        timestamp: programData.createdAt || new Date().toISOString(),
+        description: `New program "${data.title || data.name}" created`,
+        timestamp: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
       });
     });
 
-    // Fetch recent events
-    const recentEventsQuery = query(
-      collection(db, "events"),
-      orderBy("createdAt", "desc"),
-      limit(3)
-    );
-    const recentEventsSnapshot = await getDocs(recentEventsQuery);
-
-    recentEventsSnapshot.forEach((doc) => {
-      const eventData = doc.data();
+    // Process events
+    recentEvents.docs.forEach(doc => {
+      const data = doc.data();
       activities.push({
         id: `event_${doc.id}`,
         type: "event_created",
-        description: `New event "${
-          eventData.title || eventData.name
-        }" scheduled`,
-        timestamp: eventData.createdAt || new Date().toISOString(),
+        description: `New event "${data.title || data.name}" scheduled`,
+        timestamp: data.startDate?.toDate?.()?.toISOString() || new Date().toISOString()
       });
     });
 
-    // Sort all activities by timestamp and limit
+    // Process athletes
+    recentAthletes.docs.forEach(doc => {
+      const data = doc.data();
+      activities.push({
+        id: `athlete_${doc.id}`,
+        type: "athlete_added",
+        description: `New athlete ${data.firstName} ${data.lastName} added`,
+        timestamp: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+      });
+    });
+
+    // Process training sessions
+    recentTrainings.docs.forEach(doc => {
+      const data = doc.data();
+      activities.push({
+        id: `training_${doc.id}`,
+        type: "training_completed",
+        description: `Training session completed: ${data.title || 'Untitled'}`,
+        timestamp: data.startDate?.toDate?.()?.toISOString() || new Date().toISOString()
+      });
+    });
+
+    // Process contact form submissions
+    recentContacts.docs.forEach(doc => {
+      const data = doc.data();
+      activities.push({
+        id: `contact_${doc.id}`,
+        type: "contact_received",
+        description: `New contact from ${data.name || 'Anonymous'}: ${data.subject || 'No subject'}`,
+        timestamp: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+      });
+    });
+
+    // Sort all activities by timestamp (newest first) and limit the results
     return activities
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      .sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       )
       .slice(0, limitCount);
   } catch (error) {
     console.error("Error fetching recent activity:", error);
-    throw new Error("Failed to fetch recent activity");
+    return []; // Return empty array on error to prevent UI breakage
   }
 };
 

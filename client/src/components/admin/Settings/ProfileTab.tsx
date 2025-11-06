@@ -107,13 +107,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
   // Load profile from service on mount
   useEffect(() => {
     let mounted = true;
+    
     const loadProfile = async () => {
-      if (!currentUser) return;
+      if (!currentUser?.uid) {
+        console.warn("No current user available to load profile");
+        return;
+      }
+      
       try {
-        const profile = await SettingsService.getTeacherProfile(
-          currentUser.uid
-        );
+        const profile = await SettingsService.getTeacherProfile(currentUser.uid);
+        
         if (!mounted) return;
+        
         if (profile) {
           setProfileData({
             name:
@@ -129,6 +134,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
         }
       } catch (error) {
         console.error("Failed to load profile", error);
+        onError("Failed to load profile. Please refresh the page or try again later.");
       }
     };
 
@@ -136,7 +142,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
     return () => {
       mounted = false;
     };
-  }, [currentUser]);
+  }, [currentUser, onError]);
 
   const handleAvatarSelect = (file?: File) => {
     if (!file) return;

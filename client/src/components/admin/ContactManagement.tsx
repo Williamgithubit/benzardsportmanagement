@@ -82,7 +82,7 @@ export default function ContactManagement({
     severity: "success" as "success" | "error" | "info" | "warning",
   });
 
-  // Subscribe to Firestore contacts and enquiries collections
+  // Subscribe to Firestore contacts, enquiries, and notifications collections
   useEffect(() => {
     setLoading(true);
     const contactsQ = query(
@@ -93,6 +93,8 @@ export default function ContactManagement({
       collection(db, "enquiries"),
       orderBy("createdAt", "desc")
     );
+    // Query notifications without orderBy to avoid index requirements
+    const notificationsQ = collection(db, "notifications");
 
     const unsubContacts = onSnapshot(contactsQ, (snap) => {
       const items: ContactSubmission[] = [];
@@ -120,9 +122,10 @@ export default function ContactManagement({
         });
       });
       setContacts((prev) => {
-        // merge with existing enquiries if any
+        // Preserve enquiries and blog notifications
         const enquiries = prev.filter((p) => p.category === "enquiry");
-        return [...items, ...enquiries];
+        const blogNotifs = prev.filter((p) => p.category === "blog_comment" || p.category === "blog_reaction");
+        return [...items, ...enquiries, ...blogNotifs];
       });
       setLoading(false);
     });
@@ -181,17 +184,75 @@ export default function ContactManagement({
 
         const resolved = await Promise.all(promises);
         setContacts((prev) => {
-          // remove previous enquiries and replace with latest
-          const nonEnquiries = prev.filter((p) => p.category !== "enquiry");
-          return [...nonEnquiries, ...resolved];
+          // Remove previous enquiries and replace with latest, preserve contacts and blog notifications
+          const contacts = prev.filter((p) => p.category !== "enquiry" && p.category !== "blog_comment" && p.category !== "blog_reaction");
+          const blogNotifs = prev.filter((p) => p.category === "blog_comment" || p.category === "blog_reaction");
+          return [...contacts, ...resolved, ...blogNotifs];
         });
       })();
       setLoading(false);
     });
 
+    const unsubNotifications = onSnapshot(
+      notificationsQ,
+      (snap) => {
+        const items: ContactSubmission[] = [];
+        snap.forEach((d) => {
+          const data: any = d.data();
+          // Only include blog-related notifications
+          if (data.type === "blog") {
+            const isComment = data.title?.includes("Comment");
+            // For comments, show the actual comment text; for reactions, show the notification body
+            const messageText = isComment 
+              ? (data.data?.commentPreview || data.body || "")
+              : data.body || "";
+            
+            items.push({
+              id: d.id,
+              name: data.data?.userName || "Anonymous",
+              email: data.data?.userEmail || "No email",
+              subject: data.title || "Blog Notification",
+              message: messageText,
+              category: isComment ? "blog_comment" : "blog_reaction",
+              status: data.read ? "responded" : "new",
+              response: "",
+              createdAt: data.createdAt
+                ? data.createdAt.toDate
+                  ? data.createdAt.toDate().toISOString()
+                  : data.createdAt
+                : new Date().toISOString(),
+              updatedAt: data.createdAt
+                ? data.createdAt.toDate
+                  ? data.createdAt.toDate().toISOString()
+                  : data.createdAt
+                : new Date().toISOString(),
+            });
+          }
+        });
+        
+        console.log("Blog notifications fetched:", items.length, items);
+        
+        setContacts((prev) => {
+          // Remove previous blog notifications and add new ones
+          const nonBlogNotifs = prev.filter(
+            (p) => p.category !== "blog_comment" && p.category !== "blog_reaction"
+          );
+          const merged = [...nonBlogNotifs, ...items];
+          console.log("Total contacts after adding blog notifications:", merged.length);
+          return merged;
+        });
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching notifications:", error);
+        setLoading(false);
+      }
+    );
+
     return () => {
       unsubContacts();
       unsubEnquiries();
+      unsubNotifications();
     };
   }, []);
 
@@ -225,38 +286,72 @@ export default function ContactManagement({
   };
 
   const handleArchiveContact = (contactId: string) => {
-    // update in Firestore if exists in contacts collection, otherwise update enquiries
+    // update in Firestore if exists in contacts, enquiries, or notifications collection
     (async () => {
       try {
-        // try contacts collection
-        await updateDoc(doc(db, "contacts", contactId), {
-          status: "archived",
-          updatedAt: new Date().toISOString(),
-        });
-        setSnackbar({
-          open: true,
-          message: "Contact archived successfully",
-          severity: "success",
-        });
-      } catch (err) {
-        try {
+        // Find the contact to determine which collection it belongs to
+        const contact = contacts.find((c) => c.id === contactId);
+        
+        if (!contact) {
+          setSnackbar({
+            open: true,
+            message: "Contact not found",
+            severity: "error",
+          });
+          return;
+        }
+
+        // Determine collection and update based on category
+        if (contact.category === "blog_comment" || contact.category === "blog_reaction") {
+          // For notifications, mark as read
+          await updateDoc(doc(db, "notifications", contactId), {
+            read: true,
+          });
+          
+          // Update local state
+          setContacts((prev) =>
+            prev.map((c) =>
+              c.id === contactId ? { ...c, status: "responded" } : c
+            )
+          );
+          
+          setSnackbar({
+            open: true,
+            message: "Notification marked as read",
+            severity: "success",
+          });
+        } else if (contact.category === "enquiry") {
+          // For enquiries
           await updateDoc(doc(db, "enquiries", contactId), {
             status: "archived",
             updatedAt: new Date().toISOString(),
           });
+          
           setSnackbar({
             open: true,
             message: "Enquiry archived successfully",
             severity: "success",
           });
-        } catch (e) {
-          console.error("Archive failed", e);
+        } else {
+          // For regular contacts
+          await updateDoc(doc(db, "contacts", contactId), {
+            status: "archived",
+            updatedAt: new Date().toISOString(),
+          });
+          
           setSnackbar({
             open: true,
-            message: "Failed to archive",
-            severity: "error",
+            message: "Contact archived successfully",
+            severity: "success",
           });
         }
+      } catch (error) {
+        console.error("Archive failed", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to archive",
+          severity: "error",
+        });
       }
     })();
     handleMenuClose();
@@ -265,28 +360,48 @@ export default function ContactManagement({
   const handleDeleteContact = (contactId: string) => {
     (async () => {
       try {
-        await deleteDoc(doc(db, "contacts", contactId));
-        setSnackbar({
-          open: true,
-          message: "Contact deleted successfully",
-          severity: "success",
-        });
-      } catch (err) {
-        try {
-          await deleteDoc(doc(db, "enquiries", contactId));
+        // Find the contact to determine which collection it belongs to
+        const contact = contacts.find((c) => c.id === contactId);
+        
+        if (!contact) {
           setSnackbar({
             open: true,
-            message: "Enquiry deleted successfully",
-            severity: "success",
-          });
-        } catch (e) {
-          console.error("Delete failed", e);
-          setSnackbar({
-            open: true,
-            message: "Failed to delete",
+            message: "Contact not found",
             severity: "error",
           });
+          return;
         }
+
+        // Determine collection based on category
+        let collectionName = "contacts";
+        let successMessage = "Contact deleted successfully";
+        
+        if (contact.category === "enquiry") {
+          collectionName = "enquiries";
+          successMessage = "Enquiry deleted successfully";
+        } else if (contact.category === "blog_comment" || contact.category === "blog_reaction") {
+          collectionName = "notifications";
+          successMessage = "Notification deleted successfully";
+        }
+
+        // Delete from the correct collection
+        await deleteDoc(doc(db, collectionName, contactId));
+        
+        // Remove from local state immediately
+        setContacts((prev) => prev.filter((c) => c.id !== contactId));
+        
+        setSnackbar({
+          open: true,
+          message: successMessage,
+          severity: "success",
+        });
+      } catch (error) {
+        console.error("Delete failed", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to delete",
+          severity: "error",
+        });
       }
     })();
     handleMenuClose();
@@ -440,6 +555,8 @@ export default function ContactManagement({
                 <MenuItem value="scouting">Scouting</MenuItem>
                 <MenuItem value="events">Events</MenuItem>
                 <MenuItem value="general">General</MenuItem>
+                <MenuItem value="blog_comment">Blog Comments</MenuItem>
+                <MenuItem value="blog_reaction">Blog Reactions</MenuItem>
               </Select>
             </FormControl>
           </Grid>

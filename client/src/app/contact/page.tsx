@@ -123,7 +123,7 @@ const Contact = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-[#03045e] mb-4">Contact Us</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Have questions or want to join our mission? Reach out to Benzard Sports Management—we’d love to hear from you.
+            Have questions or want to join our mission? Reach out to Benzard Sports Management we’d love to hear from you.
           </p>
         </div>
 
@@ -135,17 +135,17 @@ const Contact = () => {
                 { 
                   title: 'Address', 
                   content: 'Paynesville City, Montserrado County, Liberia',
-                  icon: <FaMapMarkerAlt className="text-2xl text-[#68c2ca] mt-1 flex-shrink-0" />
+                  icon: <FaMapMarkerAlt className="text-2xl text-[#E32845] mt-1 flex-shrink-0" />
                 },
                 { 
                   title: 'Email', 
                   content: 'info@benzardsportsmanagement.com',
-                  icon: <HiMail className="text-2xl text-[#68c2ca] mt-1 flex-shrink-0" />
+                  icon: <HiMail className="text-2xl text-[#E32845] mt-1 flex-shrink-0" />
                 },
                 { 
                   title: 'Phone', 
                   content: '+231 777 123 456',
-                  icon: <HiPhone className="text-2xl text-[#68c2ca] mt-1 flex-shrink-0" />
+                  icon: <HiPhone className="text-2xl text-[#E32845] mt-1 flex-shrink-0" />
                 }
               ].map((contact, index) => (
                 <div key={index} className="flex items-start">
@@ -161,18 +161,18 @@ const Contact = () => {
               
               <div className="flex items-start mt-2">
                 <div className="flex-shrink-0">
-                  <BsGlobe className="text-2xl text-[#68c2ca] mt-1" />
+                  <BsGlobe className="text-2xl text-[#E32845] mt-1" />
                 </div>
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-[#03045e]">Connect With Us</h3>
                   <div className="flex space-x-4 mt-2">
-                    <a href="https://www.facebook.com/benzardsports" className="text-[#03045e] hover:text-[#68c2ca] transition-colors duration-200">
+                    <a href="https://www.facebook.com/benzardsports" className="text-[#03045e] hover:text-[#E32845] transition-colors duration-200">
                       <FaFacebook className="text-2xl" />
                     </a>
-                    <a href="https://twitter.com/BSM_Liberia" className="text-[#03045e] hover:text-[#68c2ca] transition-colors duration-200">
+                    <a href="https://twitter.com/BSM_Liberia" className="text-[#03045e] hover:text-[#E32845] transition-colors duration-200">
                       <FaTwitter className="text-2xl" />
                     </a>
-                    <a href="https://www.instagram.com/registabenzardinho/" className="text-[#03045e] hover:text-[#68c2ca] transition-colors duration-200">
+                    <a href="https://www.instagram.com/registabenzardinho/" className="text-[#03045e] hover:text-[#E32845] transition-colors duration-200">
                       <FaInstagram className="text-2xl" />
                     </a>
                   </div>
@@ -182,7 +182,7 @@ const Contact = () => {
 
             <div className="mt-12 bg-[#03045e] text-white rounded-lg p-6 shadow-md">
               <div className="flex items-center mb-4">
-                <IoMdTime className="text-2xl text-[#68c2ca] mr-2" />
+                <IoMdTime className="text-2xl text-[#E32845] mr-2" />
                 <h3 className="text-xl font-semibold">Office Hours</h3>
               </div>
               <div className="space-y-2 text-gray-200">
@@ -290,7 +290,7 @@ const Contact = () => {
                   fullWidth 
                   size="lg"
                   disabled={isSubmitting}
-                  className={`relative bg-[#000054] text-white hover:bg-[#68c2ca] ${isSubmitting ? 'cursor-not-allowed' : ''}`}
+                  className={`relative bg-[#000054] text-white hover:bg-[#E32845] ${isSubmitting ? 'cursor-not-allowed' : ''}`}
                 >
                   {isSubmitting ? (
                     <div className="flex items-center justify-center">

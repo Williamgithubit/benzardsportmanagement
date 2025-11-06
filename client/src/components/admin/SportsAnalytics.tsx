@@ -1,5 +1,5 @@
 'use client'
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -7,7 +7,9 @@ import {
   Card,
   CardContent,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import Grid from "@/components/ui/Grid";
 import {
@@ -25,37 +27,64 @@ import {
   LineChart,
   Line
 } from 'recharts';
+import {
+  fetchAllAnalytics,
+  RegionalData,
+  LevelData,
+  GrowthData,
+  AnalyticsMetrics
+} from '@/services/analyticsService';
 
 const SportsAnalytics = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // Mock data for athlete distribution by region
-  const regionData = [
-    { name: 'Monrovia', athletes: 65, events: 12 },
-    { name: 'Paynesville', athletes: 45, events: 8 },
-    { name: 'Buchanan', athletes: 25, events: 5 },
-    { name: 'Gbarnga', athletes: 15, events: 3 },
-  ];
+  const [regionData, setRegionData] = useState<RegionalData[]>([]);
+  const [levelData, setLevelData] = useState<LevelData[]>([]);
+  const [growthData, setGrowthData] = useState<GrowthData[]>([]);
+  const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for athlete levels
-  const levelData = [
-    { name: 'Grassroots', value: 85, color: '#8884d8' },
-    { name: 'Semi-Pro', value: 45, color: '#82ca9d' },
-    { name: 'Professional', value: 20, color: '#ffc658' },
-  ];
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchAllAnalytics();
+        setRegionData(data.regionalData);
+        setLevelData(data.levelData);
+        setGrowthData(data.growthData);
+        setMetrics(data.metrics);
+      } catch (err) {
+        console.error('Error loading analytics:', err);
+        setError('Failed to load analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Mock data for monthly growth
-  const growthData = [
-    { month: 'Jan', athletes: 120, events: 15 },
-    { month: 'Feb', athletes: 125, events: 18 },
-    { month: 'Mar', athletes: 135, events: 20 },
-    { month: 'Apr', athletes: 140, events: 22 },
-    { month: 'May', athletes: 150, events: 25 },
-    { month: 'Jun', athletes: 150, events: 28 },
-  ];
+    loadAnalytics();
+  }, []);
 
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={50} />
+        <Typography variant="h6" sx={{ ml: 2 }}>Loading analytics...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
 
   return (
     <Box>
@@ -78,29 +107,37 @@ const SportsAnalytics = () => {
             <Typography variant="h6" gutterBottom>
               Athlete & Event Growth (6 Months)
             </Typography>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={growthData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="athletes" 
-                  stroke="#E32845" 
-                  strokeWidth={3}
-                  name="Athletes"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="events" 
-                  stroke="#000054" 
-                  strokeWidth={3}
-                  name="Events"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {growthData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={growthData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="athletes" 
+                    stroke="#E32845" 
+                    strokeWidth={3}
+                    name="Athletes"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="events" 
+                    stroke="#000054" 
+                    strokeWidth={3}
+                    name="Events"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height={280}>
+                <Typography variant="body2" color="text.secondary">
+                  No growth data available yet. Add athletes and events to see trends.
+                </Typography>
+              </Box>
+            )}
           </Paper>
         </Grid>
 
@@ -110,25 +147,33 @@ const SportsAnalytics = () => {
             <Typography variant="h6" gutterBottom>
               Athletes by Level
             </Typography>
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={levelData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : '0'}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {levelData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {levelData.some(d => d.value > 0) ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={levelData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : '0'}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {levelData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height={280}>
+                <Typography variant="body2" color="text.secondary">
+                  No athlete level data available yet.
+                </Typography>
+              </Box>
+            )}
           </Paper>
         </Grid>
 
@@ -138,17 +183,25 @@ const SportsAnalytics = () => {
             <Typography variant="h6" gutterBottom>
               Athletes & Events by Region (Liberia)
             </Typography>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={regionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="athletes" fill="#E32845" name="Athletes" />
-                <Bar dataKey="events" fill="#000054" name="Events" />
-              </BarChart>
-            </ResponsiveContainer>
+            {regionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={regionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="athletes" fill="#E32845" name="Athletes" />
+                  <Bar dataKey="events" fill="#000054" name="Events" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box display="flex" justifyContent="center" alignItems="center" height={280}>
+                <Typography variant="body2" color="text.secondary">
+                  No regional data available yet. Add athletes and events with locations.
+                </Typography>
+              </Box>
+            )}
           </Paper>
         </Grid>
 
@@ -159,7 +212,7 @@ const SportsAnalytics = () => {
               <Card sx={{ textAlign: 'center', p: 1 }}>
                 <CardContent>
                   <Typography variant="h4" color="#E32845" fontWeight="bold">
-                    92%
+                    {metrics?.eventAttendanceRate || 0}%
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Event Attendance Rate
@@ -171,7 +224,7 @@ const SportsAnalytics = () => {
               <Card sx={{ textAlign: 'center', p: 1 }}>
                 <CardContent>
                   <Typography variant="h4" color="#000054" fontWeight="bold">
-                    30%
+                    {metrics?.athletesScouted || 0}%
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Athletes Scouted
@@ -183,7 +236,7 @@ const SportsAnalytics = () => {
               <Card sx={{ textAlign: 'center', p: 1 }}>
                 <CardContent>
                   <Typography variant="h4" color="#4caf50" fontWeight="bold">
-                    85%
+                    {metrics?.trainingCompletion || 0}%
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Training Completion
@@ -195,7 +248,7 @@ const SportsAnalytics = () => {
               <Card sx={{ textAlign: 'center', p: 1 }}>
                 <CardContent>
                   <Typography variant="h4" color="#ff9800" fontWeight="bold">
-                    12
+                    {metrics?.activePrograms || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Active Programs

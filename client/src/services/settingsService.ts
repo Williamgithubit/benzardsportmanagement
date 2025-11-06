@@ -44,6 +44,11 @@ import {
   getDefaultSystemSettings
 } from '@/types/settings';
 
+interface ServiceError extends Error {
+  code?: string;
+  userFriendlyMessage?: string;
+}
+
 export class SettingsService {
   private static readonly PROFILES_COLLECTION = 'teacherProfiles';
   private static readonly NOTIFICATIONS_COLLECTION = 'notificationSettings';
@@ -52,22 +57,28 @@ export class SettingsService {
   private static readonly SYSTEM_COLLECTION = 'systemSettings';
   private static readonly AVATARS_FOLDER = 'avatars';
 
-  // Profile Management
+  /**
+   * Gets teacher profile with strict validation
+   * @throws {ServiceError} When userId is invalid or profile fetch fails
+   */
   static async getTeacherProfile(userId: string): Promise<TeacherProfile | null> {
-    try {
-      if (!userId) {
-        console.error('No user ID provided to getTeacherProfile');
-        return null;
-      }
+    if (!userId || typeof userId !== 'string') {
+      const err = new Error('Invalid user ID provided') as ServiceError;
+      err.code = 'INVALID_USER_ID';
+      err.userFriendlyMessage = 'Authentication required - please sign in again';
+      throw err;
+    }
 
+    try {
       const docRef = doc(db, this.PROFILES_COLLECTION, userId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (!data) {
-          console.error('Document exists but has no data');
-          return null;
+          const err = new Error('Profile document has no data') as ServiceError;
+          err.code = 'EMPTY_PROFILE';
+          throw err;
         }
         
         return {
@@ -92,11 +103,42 @@ export class SettingsService {
       }
       return null;
     } catch (error) {
-      console.error('Error fetching teacher profile:', error);
-      throw new Error('Failed to fetch teacher profile');
+      console.error(`Failed to fetch profile for user ${userId}:`, error);
+      
+      const serviceError = error instanceof Error 
+        ? error as ServiceError
+        : new Error('Failed to fetch profile') as ServiceError;
+      
+      serviceError.code = serviceError.code || 'PROFILE_FETCH_FAILED';
+      serviceError.userFriendlyMessage = serviceError.userFriendlyMessage || 
+        'Failed to load profile data. Please try again.';
+      
+      throw serviceError;
     }
   }
 
+  /**
+   * Safely gets current authenticated user's profile
+   * @throws {ServiceError} When no user is authenticated
+   */
+  static async getCurrentTeacherProfile(): Promise<TeacherProfile | null> {
+    try {
+      const user = auth.currentUser;
+      if (!user?.uid) {
+        const err = new Error('No authenticated user found') as ServiceError;
+        err.code = 'UNAUTHENTICATED';
+        err.userFriendlyMessage = 'Please sign in to access your profile';
+        throw err;
+      }
+
+      return await this.getTeacherProfile(user.uid);
+    } catch (error) {
+      console.error('Failed to get current teacher profile:', error);
+      throw error;
+    }
+  }
+
+  // Profile Management
   static async createTeacherProfile(userId: string, profileData: Partial<TeacherProfile>): Promise<void> {
     try {
       const profile: Omit<TeacherProfile, 'id'> = {
