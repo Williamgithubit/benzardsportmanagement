@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function AthleteProfilePage({ params }: Props) {
