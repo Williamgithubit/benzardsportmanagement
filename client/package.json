@@ -38,7 +38,7 @@
     "firebase-admin": "^13.4.0",
     "framer-motion": "^12.23.12",
     "geist": "^1.4.2",
-    "next": "^15.4.5",
+    "next": "15.4.10",
     "next-auth": "^4.24.11",
     "next-cloudinary": "^6.16.0",
     "next-redux-wrapper": "^8.1.0",
