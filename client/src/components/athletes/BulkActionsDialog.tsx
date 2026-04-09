@@ -1,40 +1,23 @@
 "use client";
 import React, { useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Box,
-  Typography,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  ListItemIcon,
-  Divider,
-  Alert,
-} from "@mui/material";
-import {
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Assignment as AssignIcon,
-  GetApp as ExportIcon,
-  Group as GroupIcon,
-} from "@mui/icons-material";
+  MdDelete,
+  MdEdit,
+  MdAssignment,
+  MdFileDownload,
+  MdGroup,
+  MdClose,
+} from "react-icons/md";
 import { BulkActionType, UserRole } from "@/types/athlete";
 
 interface BulkActionsDialogProps {
   open: boolean;
   onClose: () => void;
   selectedCount: number;
-  onAction: (actionType: BulkActionType, data?: any) => void;
+  onAction: (
+    actionType: BulkActionType,
+    data?: Record<string, string | number>,
+  ) => void;
   userRole: UserRole;
 }
 
@@ -46,7 +29,9 @@ export default function BulkActionsDialog({
   userRole,
 }: BulkActionsDialogProps) {
   const [selectedAction, setSelectedAction] = useState<BulkActionType | "">("");
-  const [actionData, setActionData] = useState<any>({});
+  const [actionData, setActionData] = useState<Record<string, string | number>>(
+    {},
+  );
 
   const handleActionSelect = (action: BulkActionType) => {
     setSelectedAction(action);
@@ -65,62 +50,79 @@ export default function BulkActionsDialog({
     switch (selectedAction) {
       case "updateStatus":
         return (
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>New Status</InputLabel>
-            <Select
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">
+              New Status
+            </label>
+            <select
               value={actionData.status || ""}
               onChange={(e) => setActionData({ status: e.target.value })}
-              label="New Status"
+              className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
             >
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="scouted">Scouted</MenuItem>
-              <MenuItem value="signed">Signed</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>
-            </Select>
-          </FormControl>
+              <option value="" disabled>
+                Select Status
+              </option>
+              <option value="active">Active</option>
+              <option value="scouted">Scouted</option>
+              <option value="signed">Signed</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
         );
 
       case "updateLevel":
         return (
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>New Level</InputLabel>
-            <Select
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">
+              New Level
+            </label>
+            <select
               value={actionData.level || ""}
               onChange={(e) => setActionData({ level: e.target.value })}
-              label="New Level"
+              className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
             >
-              <MenuItem value="grassroots">Grassroots</MenuItem>
-              <MenuItem value="semi-pro">Semi-Pro</MenuItem>
-              <MenuItem value="professional">Professional</MenuItem>
-            </Select>
-          </FormControl>
+              <option value="" disabled>
+                Select Level
+              </option>
+              <option value="grassroots">Grassroots</option>
+              <option value="semi-pro">Semi-Pro</option>
+              <option value="professional">Professional</option>
+            </select>
+          </div>
         );
 
       case "assignProgram":
         return (
-          <TextField
-            fullWidth
-            label="Training Program"
-            value={actionData.program || ""}
-            onChange={(e) => setActionData({ program: e.target.value })}
-            sx={{ mt: 2 }}
-            placeholder="Enter training program name"
-          />
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">
+              Training Program
+            </label>
+            <input
+              type="text"
+              value={
+                typeof actionData.program === "string" ? actionData.program : ""
+              }
+              onChange={(e) => setActionData({ program: e.target.value })}
+              className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+              placeholder="Enter training program name"
+            />
+          </div>
         );
 
       case "delete":
         return (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            This action will permanently delete {selectedCount} athletes. This
-            cannot be undone.
-          </Alert>
+          <div className="mt-4 p-4 bg-orange-50 border left-4 border-orange-200 text-orange-800 rounded-lg text-sm">
+            This action will permanently delete <strong>{selectedCount}</strong>{" "}
+            athletes. This cannot be undone.
+          </div>
         );
 
       case "export":
         return (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            This will export {selectedCount} selected athletes to a CSV file.
-          </Alert>
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm">
+            This will export <strong>{selectedCount}</strong> selected athletes
+            to a CSV file.
+          </div>
         );
 
       default:
@@ -152,7 +154,8 @@ export default function BulkActionsDialog({
       case "updateLevel":
         return !!actionData.level;
       case "assignProgram":
-        return !!actionData.program?.trim();
+        const program = actionData.program;
+        return typeof program === "string" && program.trim() !== "";
       case "delete":
       case "export":
         return true;
@@ -166,159 +169,145 @@ export default function BulkActionsDialog({
       type: "updateStatus" as BulkActionType,
       label: "Update Status",
       description: "Change scouting status for selected athletes",
-      icon: <EditIcon />,
+      icon: <MdEdit size={20} />,
       permission: userRole.permissions.canEdit,
     },
     {
       type: "updateLevel" as BulkActionType,
       label: "Update Level",
       description: "Change competition level for selected athletes",
-      icon: <EditIcon />,
+      icon: <MdEdit size={20} />,
       permission: userRole.permissions.canEdit,
     },
     {
       type: "assignProgram" as BulkActionType,
       label: "Assign Training Program",
       description: "Assign a training program to selected athletes",
-      icon: <AssignIcon />,
+      icon: <MdAssignment size={20} />,
       permission: userRole.permissions.canEdit,
     },
     {
       type: "export" as BulkActionType,
       label: "Export to CSV",
       description: "Export selected athletes data to CSV file",
-      icon: <ExportIcon />,
+      icon: <MdFileDownload size={20} />,
       permission: userRole.permissions.canExport,
     },
     {
       type: "delete" as BulkActionType,
       label: "Delete Athletes",
       description: "Permanently delete selected athletes",
-      icon: <DeleteIcon />,
+      icon: <MdDelete size={20} />,
       permission: userRole.permissions.canDelete,
       dangerous: true,
     },
   ].filter((action) => action.permission);
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle
-        component="div"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          backgroundColor: "#03045e",
-          color: "white",
-        }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-in fade-in">
+      <div
+        className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
       >
-        <GroupIcon />
-        Bulk Actions ({selectedCount} selected)
-      </DialogTitle>
+        <div className="bg-[#03045e] text-white px-6 py-4 flex items-center gap-2">
+          <MdGroup size={24} />
+          <h2 className="font-bold text-lg grow">
+            Bulk Actions ({selectedCount} selected)
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition-colors"
+          >
+            <MdClose size={24} />
+          </button>
+        </div>
 
-      <DialogContent sx={{ pt: 2 }}>
-        {!selectedAction ? (
-          <Box>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              Choose an action to perform on {selectedCount} selected athletes:
-            </Typography>
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {!selectedAction ? (
+            <div>
+              <p className="text-slate-600 mb-4">
+                Choose an action to perform on <strong>{selectedCount}</strong>{" "}
+                selected athletes:
+              </p>
 
-            <List>
-              {availableActions.map((action, index) => (
-                <React.Fragment key={action.type}>
-                  <ListItem
-                    sx={{
-                      borderRadius: 1,
-                      mb: 1,
-                      border: "1px solid",
-                      borderColor: action.dangerous ? "error.main" : "divider",
-                      padding: 0,
-                    }}
+              <div className="space-y-2">
+                {availableActions.map((action) => (
+                  <button
+                    key={action.type}
+                    onClick={() => handleActionSelect(action.type)}
+                    className={`w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-colors ${
+                      action.dangerous
+                        ? "border-red-200 hover:bg-red-50"
+                        : "border-slate-200 hover:bg-slate-50"
+                    }`}
                   >
-                    <ListItemButton
-                      onClick={() => handleActionSelect(action.type)}
-                      sx={{
-                        borderRadius: 1,
-                        "&:hover": {
-                          backgroundColor: action.dangerous
-                            ? "error.light"
-                            : "action.hover",
-                        },
-                      }}
+                    <div
+                      className={`mt-0.5 ${action.dangerous ? "text-red-500" : "text-[#03045e]"}`}
                     >
-                      <ListItemIcon
-                        sx={{
-                          color: action.dangerous ? "error.main" : "#03045e",
-                        }}
+                      {action.icon}
+                    </div>
+                    <div>
+                      <h4
+                        className={`font-bold ${action.dangerous ? "text-red-600" : "text-slate-800"}`}
                       >
-                        {action.icon}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={action.label}
-                        secondary={action.description}
-                        sx={{
-                          "& .MuiListItemText-primary": {
-                            color: action.dangerous ? "error.main" : "inherit",
-                            fontWeight: "bold",
-                          },
-                        }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                  {index < availableActions.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          </Box>
-        ) : (
-          <Box>
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{ mb: 2, color: "#03045e" }}
+                        {action.label}
+                      </h4>
+                      <p className="text-sm text-slate-500 mt-0.5">
+                        {action.description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="animate-in slide-in-from-right-4 duration-200">
+              <h3 className="text-xl font-bold text-[#03045e] mb-2">
+                {getActionTitle()}
+              </h3>
+              <p className="text-sm text-slate-500 mb-4">
+                This action will be applied to <strong>{selectedCount}</strong>{" "}
+                selected athletes.
+              </p>
+
+              {renderActionForm()}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
+          {selectedAction ? (
+            <>
+              <button
+                onClick={() => setSelectedAction("")}
+                className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 bg-white font-medium hover:bg-slate-50 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleExecute}
+                disabled={!canExecute()}
+                className={`px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm disabled:opacity-50 ${
+                  selectedAction === "delete"
+                    ? "bg-red-600 hover:bg-red-700 text-white"
+                    : "bg-primary text-navy hover:bg-accent"
+                }`}
+              >
+                Execute Action
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 bg-white font-medium hover:bg-slate-50 transition-colors"
             >
-              {getActionTitle()}
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              This action will be applied to {selectedCount} selected athletes.
-            </Typography>
-
-            {renderActionForm()}
-          </Box>
-        )}
-      </DialogContent>
-
-      <DialogActions sx={{ p: 2, backgroundColor: "#f5f5f5" }}>
-        {selectedAction ? (
-          <>
-            <Button onClick={() => setSelectedAction("")} variant="outlined">
-              Back
-            </Button>
-            <Button
-              onClick={handleExecute}
-              disabled={!canExecute()}
-              variant="contained"
-              color={selectedAction === "delete" ? "error" : "primary"}
-              sx={
-                selectedAction !== "delete"
-                  ? {
-                      backgroundColor: "#ADF802",
-                      color: "#03045e",
-                      "&:hover": { backgroundColor: "#9de002" },
-                    }
-                  : {}
-              }
-            >
-              Execute Action
-            </Button>
-          </>
-        ) : (
-          <Button onClick={onClose} variant="outlined">
-            Cancel
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

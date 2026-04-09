@@ -1,33 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Box,
-  Typography,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
-  Divider,
-  IconButton,
-  Chip,
-  Avatar,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  Close as CloseIcon,
-  PhotoCamera as PhotoIcon,
-  VideoCall as VideoIcon,
-  Add as AddIcon,
-  Delete as DeleteIcon,
-} from "@mui/icons-material";
+import { MdClose, MdPhotoCamera, MdVideoCall } from "react-icons/md";
 import {
   Athlete,
   AthleteFormData,
@@ -43,7 +16,6 @@ interface AthleteFormProps {
   athlete: Athlete | null;
   open: boolean;
   onClose: () => void;
-  // onSubmit now accepts an object with athlete partial data and optional files
   onSubmit: (payload: {
     data: Partial<Athlete>;
     photos?: File[];
@@ -53,28 +25,12 @@ interface AthleteFormProps {
   userRole: UserRole;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
-    </div>
-  );
-}
-
 export default function AthleteForm({
   athlete,
   open,
   onClose,
   onSubmit,
   mode,
-  userRole,
 }: AthleteFormProps) {
   const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState<AthleteFormData>({
@@ -105,39 +61,37 @@ export default function AthleteForm({
     facebook: "",
   });
 
-  // Local file inputs
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [videoFiles, setVideoFiles] = useState<File[]>([]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Helper function to calculate age from date of birth
   const calculateAge = (dateOfBirth: string): number => {
     if (!dateOfBirth) return 0;
     const birthDate = new Date(dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
-    
     return age;
   };
 
-  // Helper function to validate age and date of birth consistency
-  const validateAgeAndDateOfBirth = (age: string, dateOfBirth: string): boolean => {
-    if (!age || !dateOfBirth) return true; // Skip validation if either is empty
-    
+  const validateAgeAndDateOfBirth = (
+    age: string,
+    dateOfBirth: string,
+  ): boolean => {
+    if (!age || !dateOfBirth) return true;
     const enteredAge = parseInt(age);
     const calculatedAge = calculateAge(dateOfBirth);
-    
-    // Allow 1 year difference to account for birthdays
     const ageDifference = Math.abs(enteredAge - calculatedAge);
     return ageDifference <= 1;
   };
-  //
+
   useEffect(() => {
     if (athlete && mode === "edit") {
       setFormData({
@@ -168,7 +122,6 @@ export default function AthleteForm({
         facebook: athlete.socialMedia?.facebook || "",
       });
     } else {
-      // Reset form for add mode
       setFormData({
         name: "",
         firstName: "",
@@ -202,35 +155,33 @@ export default function AthleteForm({
   }, [athlete, mode, open]);
 
   const handleInputChange = (field: keyof AthleteFormData, value: string) => {
-    let updatedFormData = { ...formData, [field]: value };
-    
-    // Special handling for date of birth - auto-calculate age
-    if (field === 'dateOfBirth' && value) {
+    const updatedFormData = { ...formData, [field]: value };
+
+    if (field === "dateOfBirth" && value) {
       const calculatedAge = calculateAge(value);
       if (calculatedAge > 0) {
         updatedFormData.age = calculatedAge.toString();
       }
     }
-    
-    // Validation for age and date of birth consistency
-    if (field === 'age' || field === 'dateOfBirth') {
-      const ageToCheck = field === 'age' ? value : updatedFormData.age;
-      const dobToCheck = field === 'dateOfBirth' ? value : updatedFormData.dateOfBirth;
-      
+
+    if (field === "age" || field === "dateOfBirth") {
+      const ageToCheck = field === "age" ? value : updatedFormData.age;
+      const dobToCheck =
+        field === "dateOfBirth" ? value : updatedFormData.dateOfBirth;
+
       if (ageToCheck && dobToCheck) {
         const isValid = validateAgeAndDateOfBirth(ageToCheck, dobToCheck);
         if (!isValid) {
           const calculatedAge = calculateAge(dobToCheck);
-          toast.error(`Age doesn't match date of birth. Based on the date of birth, age should be ${calculatedAge}.`);
-          
-          // Set error state
+          toast.error(
+            `Age doesn't match date of birth. Based on date of birth, age should be ${calculatedAge}.`,
+          );
           setErrors((prev) => ({
             ...prev,
-            age: `Should be ${calculatedAge} based on date of birth`,
-            dateOfBirth: `Age ${ageToCheck} doesn't match this date`
+            age: `Should be ${calculatedAge}`,
+            dateOfBirth: `Age mismatch`,
           }));
         } else {
-          // Clear errors if validation passes
           setErrors((prev) => {
             const newErrors = { ...prev };
             delete newErrors.age;
@@ -240,11 +191,10 @@ export default function AthleteForm({
         }
       }
     }
-    
+
     setFormData(updatedFormData);
-    
-    // Clear field-specific error if it exists
-    if (errors[field] && field !== 'age' && field !== 'dateOfBirth') {
+
+    if (errors[field] && field !== "age" && field !== "dateOfBirth") {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
@@ -252,31 +202,23 @@ export default function AthleteForm({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    }
-
-    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email))
       newErrors.email = "Invalid email format";
-    }
-
     if (
       formData.age &&
       (isNaN(Number(formData.age)) ||
         Number(formData.age) < 0 ||
         Number(formData.age) > 100)
     ) {
-      newErrors.age = "Age must be a valid number between 0 and 100";
+      newErrors.age = "Must be a valid number between 0-100";
     }
 
-    // Validate age and date of birth consistency
     if (formData.age && formData.dateOfBirth) {
-      const isValid = validateAgeAndDateOfBirth(formData.age, formData.dateOfBirth);
-      if (!isValid) {
-        const calculatedAge = calculateAge(formData.dateOfBirth);
-        newErrors.age = `Should be ${calculatedAge} based on date of birth`;
-        newErrors.dateOfBirth = `Age ${formData.age} doesn't match this date`;
-        toast.error("Please correct the age and date of birth mismatch before submitting.");
+      if (!validateAgeAndDateOfBirth(formData.age, formData.dateOfBirth)) {
+        newErrors.age = `Doesn't match date of birth`;
+        newErrors.dateOfBirth = `Age mismatch`;
+        toast.error("Please correct age and date of birth.");
       }
     }
 
@@ -287,99 +229,71 @@ export default function AthleteForm({
   const handleSubmit = () => {
     if (!validateForm()) return;
 
-    // Build athlete data object, omitting undefined fields for Firebase compatibility
     const athleteData: Partial<Athlete> = {
       name: formData.name.trim(),
       sport: formData.sport,
-      level: formData.level as any,
-      scoutingStatus: formData.scoutingStatus as any,
+      level: formData.level as "grassroots" | "semi-pro" | "professional",
+      scoutingStatus: formData.scoutingStatus as
+        | "active"
+        | "scouted"
+        | "signed"
+        | "inactive",
     };
 
-    // Only add optional fields if they have values (avoid undefined)
-    if (formData.firstName.trim()) {
+    if (formData.firstName.trim())
       athleteData.firstName = formData.firstName.trim();
-    }
-    if (formData.lastName.trim()) {
+    if (formData.lastName.trim())
       athleteData.lastName = formData.lastName.trim();
-    }
-    if (formData.age && !isNaN(parseInt(formData.age))) {
+    if (formData.age && !isNaN(parseInt(formData.age)))
       athleteData.age = parseInt(formData.age);
-    }
-    if (formData.dateOfBirth) {
-      athleteData.dateOfBirth = formData.dateOfBirth;
-    }
-    if (formData.position) {
-      athleteData.position = formData.position;
-    }
-    if (formData.bio.trim()) {
-      athleteData.bio = formData.bio.trim();
-    }
-    if (formData.location.trim()) {
+    if (formData.dateOfBirth) athleteData.dateOfBirth = formData.dateOfBirth;
+    if (formData.position) athleteData.position = formData.position;
+    if (formData.bio.trim()) athleteData.bio = formData.bio.trim();
+    if (formData.location.trim())
       athleteData.location = formData.location.trim();
-    }
-    if (formData.county) {
-      athleteData.county = formData.county;
-    }
-    if (formData.trainingProgram.trim()) {
+    if (formData.county) athleteData.county = formData.county;
+    if (formData.trainingProgram.trim())
       athleteData.trainingProgram = formData.trainingProgram.trim();
-    }
-    if (formData.performanceNotes.trim()) {
+    if (formData.performanceNotes.trim())
       athleteData.performanceNotes = formData.performanceNotes.trim();
-    }
-    if (formData.height && !isNaN(parseInt(formData.height))) {
+    if (formData.height && !isNaN(parseInt(formData.height)))
       athleteData.height = parseInt(formData.height);
-    }
-    if (formData.weight && !isNaN(parseInt(formData.weight))) {
+    if (formData.weight && !isNaN(parseInt(formData.weight)))
       athleteData.weight = parseInt(formData.weight);
-    }
-    if (formData.preferredFoot) {
-      athleteData.preferredFoot = formData.preferredFoot as any;
-    }
-    if (formData.nationality.trim()) {
+    if (formData.preferredFoot)
+      athleteData.preferredFoot = formData.preferredFoot as
+        | "left"
+        | "right"
+        | "both";
+    if (formData.nationality.trim())
       athleteData.nationality = formData.nationality.trim();
-    }
-    if (formData.previousClubs.trim()) {
-      athleteData.previousClubs = formData.previousClubs.split(",").map((s) => s.trim());
-    }
-    if (formData.achievements.trim()) {
-      athleteData.achievements = formData.achievements.split(",").map((s) => s.trim());
-    }
+    if (formData.previousClubs.trim())
+      athleteData.previousClubs = formData.previousClubs
+        .split(",")
+        .map((s) => s.trim());
+    if (formData.achievements.trim())
+      athleteData.achievements = formData.achievements
+        .split(",")
+        .map((s) => s.trim());
 
-    // Handle contact info - only add if there are values
     const contact: AthleteContact = {};
-    if (formData.email.trim()) {
-      contact.email = formData.email.trim();
-    }
-    if (formData.phone.trim()) {
-      contact.phone = formData.phone.trim();
-    }
-    if (Object.keys(contact).length > 0) {
-      athleteData.contact = contact;
-    }
+    if (formData.email.trim()) contact.email = formData.email.trim();
+    if (formData.phone.trim()) contact.phone = formData.phone.trim();
+    if (Object.keys(contact).length > 0) athleteData.contact = contact;
 
-    // Handle social media - only add if there are values
-    const socialMedia: any = {};
-    if (formData.instagram.trim()) {
+    const socialMedia: Record<string, string> = {};
+    if (formData.instagram.trim())
       socialMedia.instagram = formData.instagram.trim();
-    }
-    if (formData.twitter.trim()) {
-      socialMedia.twitter = formData.twitter.trim();
-    }
-    if (formData.facebook.trim()) {
+    if (formData.twitter.trim()) socialMedia.twitter = formData.twitter.trim();
+    if (formData.facebook.trim())
       socialMedia.facebook = formData.facebook.trim();
-    }
-    if (Object.keys(socialMedia).length > 0) {
+    if (Object.keys(socialMedia).length > 0)
       athleteData.socialMedia = socialMedia;
-    }
 
-    // Attach stats if present
-    const stats: any = {};
-    if ((formData as any).goals)
-      stats.goals = parseInt((formData as any).goals);
-    if ((formData as any).assists)
-      stats.assists = parseInt((formData as any).assists);
-    if ((formData as any).matches)
-      stats.matches = parseInt((formData as any).matches);
+    const stats: Record<string, number> = {};
+    if (formData.goals) stats.goals = parseInt(formData.goals || "0");
+    if (formData.assists) stats.assists = parseInt(formData.assists || "0");
+    if (formData.matches) stats.matches = parseInt(formData.matches || "0");
     if (Object.keys(stats).length > 0) athleteData.stats = stats;
 
     onSubmit({
@@ -398,459 +312,570 @@ export default function AthleteForm({
     }
   };
 
+  if (!open) return null;
+
+  const tabs = ["Basic Info", "Sports Details", "Contact", "Additional"];
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          backgroundColor: "#03045e",
-          color: "white",
-        }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm">
+      <div
+        className="bg-white w-full max-w-4xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
       >
-        <Typography variant="h6" component="div">
-          {mode === "add" ? "Add New Athlete" : "Edit Athlete"}
-        </Typography>
-        <IconButton onClick={onClose} sx={{ color: "white" }}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+        {/* Header */}
+        <div className="bg-[#03045e] text-white px-6 py-4 flex items-center justify-between shrink-0">
+          <h2 className="text-xl font-bold">
+            {mode === "add" ? "Add New Athlete" : "Edit Athlete"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          >
+            <MdClose size={24} />
+          </button>
+        </div>
 
-      <DialogContent sx={{ p: 0 }}>
-        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-          <Tab label="Basic Info" />
-          <Tab label="Sports Details" />
-          <Tab label="Contact" />
-          <Tab label="Additional" />
-        </Tabs>
+        {/* Tabs */}
+        <div className="flex overflow-x-auto bg-slate-50 border-b border-slate-200 shrink-0 hide-scrollbar pt-2 px-4 shadow-sm z-10 w-full">
+          {tabs.map((tab, idx) => (
+            <button
+              key={tab}
+              onClick={() => setTabValue(idx)}
+              className={`px-6 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
+                tabValue === idx
+                  ? "border-[#03045e] text-[#03045e]"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-        <Box sx={{ p: 3 }}>
-          {/* Basic Info Tab */}
-          <TabPanel value={tabValue} index={0}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Full Name"
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-white min-h-100">
+          {tabValue === 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
-                  error={!!errors.name}
-                  helperText={errors.name}
-                  required
+                  className={`w-full p-2.5 rounded-lg border bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 ${errors.name ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-primary outline-none"}`}
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="First Name"
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  First Name
+                </label>
+                <input
+                  type="text"
                   value={formData.firstName}
                   onChange={(e) =>
                     handleInputChange("firstName", e.target.value)
                   }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Last Name"
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Last Name
+                </label>
+                <input
+                  type="text"
                   value={formData.lastName}
                   onChange={(e) =>
                     handleInputChange("lastName", e.target.value)
                   }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Age"
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Age
+                </label>
+                <input
                   type="number"
                   value={formData.age}
                   onChange={(e) => handleInputChange("age", e.target.value)}
-                  error={!!errors.age}
-                  helperText={errors.age || "Will auto-calculate from date of birth"}
-                  placeholder="Enter age or select date of birth"
+                  placeholder="Will auto-calculate..."
+                  className={`w-full p-2.5 rounded-lg border bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 ${errors.age ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-primary outline-none"}`}
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Date of Birth"
+                {errors.age && (
+                  <p className="text-red-500 text-xs mt-1">{errors.age}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Date of Birth
+                </label>
+                <input
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) =>
                     handleInputChange("dateOfBirth", e.target.value)
                   }
-                  InputLabelProps={{ shrink: true }}
-                  error={!!errors.dateOfBirth}
-                  helperText={errors.dateOfBirth}
+                  className={`w-full p-2.5 rounded-lg border bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 ${errors.dateOfBirth ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-primary outline-none"}`}
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Bio"
-                  multiline
+                {errors.dateOfBirth && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.dateOfBirth}
+                  </p>
+                )}
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Bio
+                </label>
+                <textarea
                   rows={3}
                   value={formData.bio}
                   onChange={(e) => handleInputChange("bio", e.target.value)}
                   placeholder="Brief description of the athlete..."
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary resize-y"
                 />
-              </Grid>
-              {/* Stats inputs */}
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Goals"
-                  type="number"
-                  value={(formData as any).goals || ""}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, goals: e.target.value }))
-                  }
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Assists"
-                  type="number"
-                  value={(formData as any).assists || ""}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      assists: e.target.value,
-                    }))
-                  }
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Matches"
-                  type="number"
-                  value={(formData as any).matches || ""}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      matches: e.target.value,
-                    }))
-                  }
-                />
-              </Grid>
-            </Grid>
-          </TabPanel>
+              </div>
 
-          {/* Sports Details Tab */}
-          <TabPanel value={tabValue} index={1}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Sport</InputLabel>
-                  <Select
-                    value={formData.sport}
-                    onChange={(e) => handleInputChange("sport", e.target.value)}
-                    label="Sport"
-                  >
-                    {SPORTS.map((sport) => (
-                      <MenuItem key={sport} value={sport}>
-                        {sport.charAt(0).toUpperCase() + sport.slice(1)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Level</InputLabel>
-                  <Select
-                    value={formData.level}
-                    onChange={(e) => handleInputChange("level", e.target.value)}
-                    label="Level"
-                  >
-                    <MenuItem value="grassroots">Grassroots</MenuItem>
-                    <MenuItem value="semi-pro">Semi-Pro</MenuItem>
-                    <MenuItem value="professional">Professional</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              {getPositionOptions().length > 0 && (
-                <Grid item xs={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Position</InputLabel>
-                    <Select
-                      value={formData.position}
-                      onChange={(e) =>
-                        handleInputChange("position", e.target.value)
-                      }
-                      label="Position"
-                    >
-                      {getPositionOptions().map((position) => (
-                        <MenuItem key={position} value={position}>
-                          {position}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-              )}
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Scouting Status</InputLabel>
-                  <Select
-                    value={formData.scoutingStatus}
+              <div className="md:col-span-2 grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Goals
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.goals || ""}
                     onChange={(e) =>
-                      handleInputChange("scoutingStatus", e.target.value)
+                      setFormData((prev) => ({
+                        ...prev,
+                        goals: e.target.value,
+                      }))
                     }
-                    label="Scouting Status"
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Assists
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.assists || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        assists: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Matches
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.matches || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        matches: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-white focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tabValue === 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Sport
+                </label>
+                <select
+                  value={formData.sport}
+                  onChange={(e) => handleInputChange("sport", e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+                >
+                  {SPORTS.map((sport) => (
+                    <option key={sport} value={sport}>
+                      {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Level
+                </label>
+                <select
+                  value={formData.level}
+                  onChange={(e) => handleInputChange("level", e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+                >
+                  <option value="grassroots">Grassroots</option>
+                  <option value="semi-pro">Semi-Pro</option>
+                  <option value="professional">Professional</option>
+                </select>
+              </div>
+
+              {getPositionOptions().length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Position
+                  </label>
+                  <select
+                    value={formData.position}
+                    onChange={(e) =>
+                      handleInputChange("position", e.target.value)
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
                   >
-                    <MenuItem value="active">Active</MenuItem>
-                    <MenuItem value="scouted">Scouted</MenuItem>
-                    <MenuItem value="signed">Signed</MenuItem>
-                    <MenuItem value="inactive">Inactive</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Height (cm)"
+                    <option value="">Select Position</option>
+                    {getPositionOptions().map((pos) => (
+                      <option key={pos} value={pos}>
+                        {pos}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Scouting Status
+                </label>
+                <select
+                  value={formData.scoutingStatus}
+                  onChange={(e) =>
+                    handleInputChange("scoutingStatus", e.target.value)
+                  }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+                >
+                  <option value="active">Active</option>
+                  <option value="scouted">Scouted</option>
+                  <option value="signed">Signed</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Height (cm)
+                </label>
+                <input
                   type="number"
                   value={formData.height}
                   onChange={(e) => handleInputChange("height", e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Weight (kg)"
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Weight (kg)
+                </label>
+                <input
                   type="number"
                   value={formData.weight}
                   onChange={(e) => handleInputChange("weight", e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Training Program"
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Training Program
+                </label>
+                <input
+                  type="text"
                   value={formData.trainingProgram}
                   onChange={(e) =>
                     handleInputChange("trainingProgram", e.target.value)
                   }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Performance Notes"
-                  multiline
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Performance Notes
+                </label>
+                <textarea
                   rows={3}
                   value={formData.performanceNotes}
                   onChange={(e) =>
                     handleInputChange("performanceNotes", e.target.value)
                   }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary resize-y"
                 />
-              </Grid>
-            </Grid>
-          </TabPanel>
+              </div>
+            </div>
+          )}
 
-          {/* Contact Tab */}
-          <TabPanel value={tabValue} index={2}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Email"
+          {tabValue === 2 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Email
+                </label>
+                <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  error={!!errors.email}
-                  helperText={errors.email}
+                  className={`w-full p-2.5 rounded-lg border bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 ${errors.email ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-primary outline-none"}`}
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Phone"
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Phone
+                </label>
+                <input
+                  type="text"
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>County</InputLabel>
-                  <Select
-                    value={formData.county}
-                    onChange={(e) =>
-                      handleInputChange("county", e.target.value)
-                    }
-                    label="County"
-                  >
-                    <MenuItem value="">Select County</MenuItem>
-                    {LIBERIA_COUNTIES.map((county) => (
-                      <MenuItem key={county} value={county}>
-                        {county}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="City/Location"
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  County
+                </label>
+                <select
+                  value={formData.county}
+                  onChange={(e) => handleInputChange("county", e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+                >
+                  <option value="">Select County</option>
+                  {LIBERIA_COUNTIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  City/Location
+                </label>
+                <input
+                  type="text"
                   value={formData.location}
                   onChange={(e) =>
                     handleInputChange("location", e.target.value)
                   }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography
-                  variant="subtitle2"
-                  sx={{ mb: 1, fontWeight: "bold" }}
-                >
-                  Social Media
-                </Typography>
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Instagram"
+              </div>
+
+              <div className="md:col-span-2 pt-2 pb-1 border-b border-slate-100">
+                <h3 className="font-bold text-slate-800">Social Media</h3>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Instagram
+                </label>
+                <input
+                  type="text"
+                  placeholder="@username"
                   value={formData.instagram}
                   onChange={(e) =>
                     handleInputChange("instagram", e.target.value)
                   }
-                  placeholder="@username"
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Twitter"
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Twitter
+                </label>
+                <input
+                  type="text"
+                  placeholder="@username"
                   value={formData.twitter}
                   onChange={(e) => handleInputChange("twitter", e.target.value)}
-                  placeholder="@username"
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Facebook"
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Facebook
+                </label>
+                <input
+                  type="text"
+                  placeholder="Profile URL"
                   value={formData.facebook}
                   onChange={(e) =>
                     handleInputChange("facebook", e.target.value)
                   }
-                  placeholder="Profile URL"
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-            </Grid>
-          </TabPanel>
+              </div>
+            </div>
+          )}
 
-          {/* Additional Tab */}
-          <TabPanel value={tabValue} index={3}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Nationality"
+          {tabValue === 3 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Nationality
+                </label>
+                <input
+                  type="text"
                   value={formData.nationality}
                   onChange={(e) =>
                     handleInputChange("nationality", e.target.value)
                   }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Preferred Foot</InputLabel>
-                  <Select
-                    value={formData.preferredFoot}
-                    onChange={(e) =>
-                      handleInputChange("preferredFoot", e.target.value)
-                    }
-                    label="Preferred Foot"
-                  >
-                    <MenuItem value="">Not specified</MenuItem>
-                    <MenuItem value="left">Left</MenuItem>
-                    <MenuItem value="right">Right</MenuItem>
-                    <MenuItem value="both">Both</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Previous Clubs"
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Preferred Foot
+                </label>
+                <select
+                  value={formData.preferredFoot}
+                  onChange={(e) =>
+                    handleInputChange("preferredFoot", e.target.value)
+                  }
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+                >
+                  <option value="">Not specified</option>
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                  <option value="both">Both</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Previous Clubs (Comma separated)
+                </label>
+                <input
+                  type="text"
                   value={formData.previousClubs}
                   onChange={(e) =>
                     handleInputChange("previousClubs", e.target.value)
                   }
-                  placeholder="Separate multiple clubs with commas"
-                  helperText="Enter previous clubs separated by commas"
+                  placeholder="Club A, Club B"
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Achievements"
+              </div>
+
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-sm font-semibold text-slate-700">
+                  Achievements (Comma separated)
+                </label>
+                <input
+                  type="text"
                   value={formData.achievements}
                   onChange={(e) =>
                     handleInputChange("achievements", e.target.value)
                   }
-                  placeholder="Separate multiple achievements with commas"
-                  helperText="Enter achievements separated by commas"
+                  placeholder="Award A, Award B"
+                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
                 />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography
-                  variant="subtitle2"
-                  sx={{ mb: 1, fontWeight: "bold" }}
-                >
-                  Upload Photos & Videos
-                </Typography>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) =>
-                    setPhotoFiles(
-                      e.target.files ? Array.from(e.target.files) : []
-                    )
-                  }
-                  style={{ marginBottom: 8 }}
-                />
-                <br />
-                <input
-                  type="file"
-                  accept="video/*"
-                  multiple
-                  onChange={(e) =>
-                    setVideoFiles(
-                      e.target.files ? Array.from(e.target.files) : []
-                    )
-                  }
-                />
-              </Grid>
-            </Grid>
-          </TabPanel>
-        </Box>
-      </DialogContent>
+              </div>
 
-      <DialogActions sx={{ p: 2, backgroundColor: "#f5f5f5" }}>
-        <Button onClick={onClose} variant="outlined">
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          sx={{
-            backgroundColor: "#ADF802",
-            color: "#03045e",
-            "&:hover": { backgroundColor: "#9de002" },
-          }}
-        >
-          {mode === "add" ? "Add Athlete" : "Update Athlete"}
-        </Button>
-      </DialogActions>
-    </Dialog>
+              <div className="md:col-span-2 pt-2 border-t border-slate-100">
+                <label className="block text-sm font-bold text-slate-800 mb-3">
+                  Upload Media
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 hover:bg-slate-100 transition-colors">
+                    <label className="flex flex-col items-center justify-center cursor-pointer min-h-25">
+                      <MdPhotoCamera
+                        size={32}
+                        className="text-slate-400 mb-2"
+                      />
+                      <span className="text-sm font-medium text-slate-600">
+                        Select Photos
+                      </span>
+                      <span className="text-xs text-slate-400 mt-1">
+                        {photoFiles.length} file(s) chosen
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) =>
+                          setPhotoFiles(
+                            e.target.files ? Array.from(e.target.files) : [],
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 hover:bg-slate-100 transition-colors">
+                    <label className="flex flex-col items-center justify-center cursor-pointer min-h-25">
+                      <MdVideoCall size={32} className="text-slate-400 mb-2" />
+                      <span className="text-sm font-medium text-slate-600">
+                        Select Videos
+                      </span>
+                      <span className="text-xs text-slate-400 mt-1">
+                        {videoFiles.length} file(s) chosen
+                      </span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) =>
+                          setVideoFiles(
+                            e.target.files ? Array.from(e.target.files) : [],
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 bg-white font-medium hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="px-5 py-2.5 rounded-lg bg-primary text-navy font-bold hover:bg-primary-hover transition-colors shadow-sm"
+          >
+            {mode === "add" ? "Add Athlete" : "Update Athlete"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -14,6 +14,19 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 console.log("Starting dashboard stats update...");
 
+const normalizePrivateKey = (value) => {
+  if (!value) {
+    return undefined;
+  }
+
+  return value
+    .trim()
+    .replace(/\\n/g, "\n")
+    .replace(/^"(.*)"$/s, "$1")
+    .replace(/"\s*,?\s*$/, "")
+    .trim();
+};
+
 // Build service account object from env vars
 const serviceAccount = {
   type: "service_account",
@@ -21,9 +34,7 @@ const serviceAccount = {
     process.env.FIREBASE_ADMIN_PROJECT_ID ||
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   client_email: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-  private_key: process.env.FIREBASE_ADMIN_PRIVATE_KEY
-    ? process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, "\n")
-    : undefined,
+  private_key: normalizePrivateKey(process.env.FIREBASE_ADMIN_PRIVATE_KEY),
 };
 
 if (

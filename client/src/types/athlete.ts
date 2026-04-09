@@ -84,8 +84,11 @@ export interface Athlete {
   medicalInfo?: {
     allergies?: string[];
     injuries?: string[];
+    conditions?: string[];
+    bloodType?: string;
     medicalClearance?: boolean;
     lastMedicalCheck?: string;
+    notes?: string;
   };
 
   // Social media
@@ -258,5 +261,5 @@ export type BulkActionType =
 export interface BulkAction {
   type: BulkActionType;
   athleteIds: string[];
-  data?: any;
+  data?: Record<string, unknown>;
 }

@@ -1,36 +1,26 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { FiClock, FiCalendar } from "react-icons/fi";
+import { toast } from "react-hot-toast";
+import { MdClose } from "react-icons/md";
 import AthleteService from "@/services/athleteService";
-import { Athlete } from "@/types/athlete";
-import { notFound } from "next/navigation";
 import EnquiryService from "@/services/enquiryService";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Snackbar,
-  Alert,
-  type AlertColor,
-} from "@mui/material";
+import { Athlete } from "@/types/athlete";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
 export default function AthleteProfilePage({ params }: Props) {
-  // Next.js may provide `params` as a Promise in newer versions.
-  // If `React.use` is available (Next.js/React helper to unwrap async props), use it.
-  // Otherwise fall back to direct access for compatibility.
   const resolvedParams =
-    typeof (React as any).use === "function"
-      ? (React as any).use(params)
-      : params;
-  const { id } = resolvedParams as { id: string };
+    typeof (React as { use?: (value: Promise<{ id: string }>) => { id: string } }).use ===
+    "function"
+      ? (React as { use: (value: Promise<{ id: string }>) => { id: string } }).use(params)
+      : (params as unknown as { id: string });
+
+  const { id } = resolvedParams;
+
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [loading, setLoading] = useState(true);
   const [contactOpen, setContactOpen] = useState(false);
@@ -39,119 +29,150 @@ export default function AthleteProfilePage({ params }: Props) {
   const [contactPhone, setContactPhone] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [contactSubmitting, setContactSubmitting] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] =
-    useState<AlertColor>("success");
 
   useEffect(() => {
-    const load = async () => {
+    const loadAthlete = async () => {
       setLoading(true);
+
       try {
-        const a = await AthleteService.getAthleteById(id);
-        if (!a) {
-          setAthlete(null);
-        } else {
-          setAthlete(a);
-        }
-      } catch (err) {
-        console.error(err);
+        const loadedAthlete = await AthleteService.getAthleteById(id);
+        setAthlete(loadedAthlete || null);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
 
-    load();
+    void loadAthlete();
   }, [id]);
+
+  const handleEnquirySubmit = async () => {
+    if (!contactName.trim()) return;
+
+    setContactSubmitting(true);
+
+    try {
+      await EnquiryService.createEnquiry({
+        athleteId: id,
+        name: contactName,
+        email: contactEmail,
+        phone: contactPhone,
+        message: contactMessage,
+      });
+
+      setContactOpen(false);
+      setContactName("");
+      setContactEmail("");
+      setContactPhone("");
+      setContactMessage("");
+      toast.success("Enquiry sent. Our admins have been notified.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to send enquiry");
+    } finally {
+      setContactSubmitting(false);
+    }
+  };
 
   if (!loading && !athlete) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Athlete not found
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="glass-panel rounded-[32px] px-8 py-10 text-center">
+          <h1 className="text-2xl font-semibold text-secondary">Athlete not found</h1>
+          <p className="mt-3 text-sm text-slate-500">
+            The profile you’re looking for is unavailable right now.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-16 bg-gray-50">
-      <div className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {athlete && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div className="min-h-screen pt-16">
+      <div className="bg-white/60">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          {athlete ? (
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               <div className="md:col-span-2">
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                  {athlete.name}
-                </h1>
-                <div className="text-gray-600 mb-6">{athlete.bio}</div>
+                <div className="glass-panel rounded-[32px] p-8">
+                  <h1 className="text-3xl font-semibold text-secondary">
+                    {athlete.name}
+                  </h1>
+                  <div className="mt-4 text-sm leading-7 text-slate-600">
+                    {athlete.bio}
+                  </div>
+                </div>
 
-                {/* Gallery */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {(athlete.media || []).slice(0, 4).map((m) => (
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  {(athlete.media || []).slice(0, 4).map((media) => (
                     <div
-                      key={m.id}
-                      className="relative w-full h-44 bg-gray-100 rounded overflow-hidden"
+                      key={media.id}
+                      className="glass-panel relative h-44 overflow-hidden rounded-[28px]"
                     >
-                      {m.type === "photo" ? (
+                      {media.type === "photo" ? (
                         <Image
-                          src={m.url}
-                          alt={m.caption || athlete.name}
+                          src={media.url}
+                          alt={media.caption || athlete.name}
                           fill
                           className="object-cover"
                         />
                       ) : (
                         <video
-                          src={m.url}
+                          src={media.url}
                           controls
-                          className="w-full h-full object-cover"
+                          className="h-full w-full object-cover"
                         />
                       )}
                     </div>
                   ))}
                 </div>
 
-                {/* Stats */}
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
-                  <h2 className="text-xl font-semibold mb-4">Stats</h2>
+                <div className="glass-panel mt-6 rounded-[32px] p-6">
+                  <h2 className="text-xl font-semibold text-secondary">Stats</h2>
                   {athlete.stats ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.entries(athlete.stats).map(([k, v]) => (
-                        <div key={k} className="text-sm text-gray-700">
-                          <div className="font-medium">
-                            {k.replace(/([A-Z])/g, " $1")}
+                    <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
+                      {Object.entries(athlete.stats).map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="rounded-[24px] border border-slate-200 bg-white/80 p-4 text-sm text-slate-700"
+                        >
+                          <div className="font-medium text-slate-500">
+                            {key.replace(/([A-Z])/g, " $1")}
                           </div>
-                          <div className="text-lg font-bold">{v ?? "—"}</div>
+                          <div className="mt-2 text-2xl font-semibold text-secondary">
+                            {value ?? "—"}
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-gray-500">No stats available.</div>
+                    <div className="mt-4 text-slate-500">No stats available.</div>
                   )}
                 </div>
 
-                {/* Videos */}
-                {athlete.media &&
-                  athlete.media.some((m) => m.type === "video") && (
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                      <h2 className="text-xl font-semibold mb-4">Videos</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {athlete.media
-                          .filter((m) => m.type === "video")
-                          .map((v) => (
-                            <video
-                              key={v.id}
-                              src={v.url}
-                              controls
-                              className="w-full h-48 object-cover rounded"
-                            />
-                          ))}
-                      </div>
+                {athlete.media?.some((media) => media.type === "video") ? (
+                  <div className="glass-panel mt-6 rounded-[32px] p-6">
+                    <h2 className="text-xl font-semibold text-secondary">Videos</h2>
+                    <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                      {athlete.media
+                        .filter((media) => media.type === "video")
+                        .map((video) => (
+                          <video
+                            key={video.id}
+                            src={video.url}
+                            controls
+                            className="h-48 w-full rounded-[24px] object-cover"
+                          />
+                        ))}
                     </div>
-                  )}
+                  </div>
+                ) : null}
               </div>
 
-              <aside className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-20 h-20 relative rounded-full overflow-hidden">
+              <aside className="glass-panel rounded-[32px] p-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative h-20 w-20 overflow-hidden rounded-full">
                     <Image
                       src={
                         athlete.media && athlete.media[0]
@@ -164,128 +185,135 @@ export default function AthleteProfilePage({ params }: Props) {
                     />
                   </div>
                   <div>
-                    <div className="text-sm text-gray-500">Age</div>
-                    <div className="font-semibold">{athlete.age ?? "—"}</div>
+                    <div className="text-sm text-slate-500">Age</div>
+                    <div className="font-semibold text-secondary">
+                      {athlete.age ?? "—"}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <div className="text-sm text-gray-500">Position</div>
-                  <div className="font-semibold">{athlete.position ?? "—"}</div>
-                </div>
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <div className="text-sm text-slate-500">Position</div>
+                    <div className="font-semibold text-secondary">
+                      {athlete.position ?? "—"}
+                    </div>
+                  </div>
 
-                <div className="mb-4">
-                  <div className="text-sm text-gray-500">Location</div>
-                  <div className="font-semibold">
-                    {athlete.county ?? athlete.location ?? "—"}
+                  <div>
+                    <div className="text-sm text-slate-500">Location</div>
+                    <div className="font-semibold text-secondary">
+                      {athlete.county ?? athlete.location ?? "—"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm text-slate-500">Sport</div>
+                    <div className="font-semibold text-secondary">{athlete.sport}</div>
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <div className="text-sm text-gray-500">Sport</div>
-                  <div className="font-semibold">{athlete.sport}</div>
-                </div>
-
-                <div className="mt-6">
-                  <button
-                    className="w-full bg-[#000054] text-white py-2 rounded-full"
-                    onClick={() => setContactOpen(true)}
-                  >
-                    Contact/Enquire
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setContactOpen(true)}
+                  className="mt-8 w-full rounded-2xl bg-secondary px-4 py-3 text-sm font-semibold text-white transition hover:bg-secondary-hover"
+                >
+                  Contact / Enquire
+                </button>
               </aside>
             </div>
-          )}
+          ) : loading ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-secondary" />
+            </div>
+          ) : null}
         </div>
       </div>
-      {/* Contact Dialog */}
-      <Dialog open={contactOpen} onClose={() => setContactOpen(false)}>
-        <DialogTitle>Contact about {athlete?.name}</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Name"
-            value={contactName}
-            onChange={(e) => setContactName(e.target.value)}
-            sx={{ mt: 1 }}
-          />
-          <TextField
-            fullWidth
-            label="Email"
-            value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
-            sx={{ mt: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Phone"
-            value={contactPhone}
-            onChange={(e) => setContactPhone(e.target.value)}
-            sx={{ mt: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Message"
-            multiline
-            rows={4}
-            value={contactMessage}
-            onChange={(e) => setContactMessage(e.target.value)}
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setContactOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            disabled={contactSubmitting || !contactName}
-            onClick={async () => {
-              setContactSubmitting(true);
-              try {
-                await EnquiryService.createEnquiry({
-                  athleteId: id,
-                  name: contactName,
-                  email: contactEmail,
-                  phone: contactPhone,
-                  message: contactMessage,
-                });
-                setContactOpen(false);
-                // reset
-                setContactName("");
-                setContactEmail("");
-                setContactPhone("");
-                setContactMessage("");
-                setSnackbarMessage("Enquiry sent — admins will be notified");
-                setSnackbarSeverity("success");
-                setSnackbarOpen(true);
-              } catch (err) {
-                console.error(err);
-                setSnackbarMessage("Failed to send enquiry");
-                setSnackbarSeverity("error");
-                setSnackbarOpen(true);
-              } finally {
-                setContactSubmitting(false);
-              }
-            }}
-          >
-            Send Enquiry
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={snackbarSeverity}
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+
+      {contactOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-xl rounded-[32px] bg-white">
+            <div className="flex items-start justify-between border-b border-slate-200/70 px-6 py-5">
+              <div>
+                <h3 className="text-lg font-semibold text-secondary">
+                  Contact about {athlete?.name}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Send an enquiry and the admin team will follow up with you.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setContactOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Close enquiry form"
+              >
+                <MdClose size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-4 px-6 py-5">
+              <label className="block text-sm font-medium text-slate-700">
+                Name
+                <input
+                  type="text"
+                  value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-secondary/20 focus:ring-2 focus:ring-secondary/10"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Email
+                <input
+                  type="email"
+                  value={contactEmail}
+                  onChange={(event) => setContactEmail(event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-secondary/20 focus:ring-2 focus:ring-secondary/10"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Phone
+                <input
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-secondary/20 focus:ring-2 focus:ring-secondary/10"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Message
+                <textarea
+                  rows={4}
+                  value={contactMessage}
+                  onChange={(event) => setContactMessage(event.target.value)}
+                  className="mt-2 w-full rounded-[24px] border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-secondary/20 focus:ring-2 focus:ring-secondary/10"
+                />
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200/70 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setContactOpen(false)}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleEnquirySubmit()}
+                disabled={contactSubmitting || !contactName.trim()}
+                className="rounded-2xl bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-secondary-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {contactSubmitting ? "Sending..." : "Send Enquiry"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

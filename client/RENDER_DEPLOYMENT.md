@@ -1,4 +1,4 @@
-# T-Tech Initiative - Render.com Deployment Guide
+# Benzard Sports Management - Render.com Deployment Guide
 
 ## Prerequisites
 
@@ -13,20 +13,20 @@
 1. Go to [Render Dashboard](https://dashboard.render.com)
 2. Click "New +" → "Web Service"
 3. Connect your GitHub repository
-4. Select the repository containing your T-Tech Initiative project
+4. Select the repository containing your Benzard Sports Management project
 
 ### 2. Configure Build Settings
 
 **Basic Settings:**
-- **Name**: `t-tech-initiative` (or your preferred name)
+- **Name**: `benzard-sports-management` (or your preferred name)
 - **Environment**: `Node`
 - **Region**: Choose closest to your users (e.g., US East)
 - **Branch**: `main` (or your production branch)
-- **Root Directory**: `client` (if your Next.js app is in a subdirectory)
+- **Root Directory**: repository root (recommended for the `pnpm` workspace)
 
 **Build & Deploy Settings:**
-- **Build Command**: `chmod +x ./render-build.sh && ./render-build.sh`
-- **Start Command**: `npm start`
+- **Build Command**: `chmod +x ./client/render-build.sh && ./client/render-build.sh`
+- **Start Command**: `pnpm --filter client start`
 - **Node Version**: `18` (or latest LTS)
 
 ### 3. Environment Variables
@@ -45,7 +45,11 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
 #### Firebase Admin SDK
 ```
-NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY={"type":"service_account","project_id":"t-tech-initiative",...}
+FIREBASE_ADMIN_PROJECT_ID=your_project_id
+FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your_project.iam.gserviceaccount.com
+FIREBASE_ADMIN_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nYOUR_ESCAPED_PRIVATE_KEY\n-----END PRIVATE KEY-----\n
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=replace_with_a_strong_password
 ```
 
 #### Next.js Configuration

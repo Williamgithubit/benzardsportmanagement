@@ -1,36 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Button,
-  TextField,
-  Avatar,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  InputAdornment,
-  CircularProgress,
-  Chip,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  Edit as EditIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  PhotoCamera as PhotoCameraIcon,
-  AccountCircle as AccountIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-} from "@mui/icons-material";
+  MdEdit,
+  MdSave,
+  MdCancel,
+  MdVisibility,
+  MdVisibilityOff,
+  MdPhotoCamera,
+  MdAccountCircle,
+  MdEmail,
+  MdPhone,
+  MdClose
+} from "react-icons/md";
 import { useAppSelector, useAppDispatch } from "@/store/store";
 import { updateUser } from "@/store/Auth/authSlice";
 import { SettingsService } from "@/services/settingsService";
@@ -41,8 +21,6 @@ interface ProfileTabProps {
 }
 
 const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const currentUser = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
 
@@ -217,366 +195,299 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
   };
 
   return (
-    <Grid container spacing={3}>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {/* Profile Card */}
-      <Grid item xs={12} md={4}>
-        <Card>
-          <CardContent sx={{ textAlign: "center" }}>
-            <Avatar sx={{ width: 100, height: 100, mx: "auto", mb: 2 }}>
-              {currentUser?.name?.charAt(0) || "A"}
-            </Avatar>
-            <Typography variant="h6" gutterBottom>
-              {currentUser?.name || "Admin User"}
-            </Typography>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              {currentUser?.role || "Administrator"}
-            </Typography>
-            <Chip label="Active" color="success" size="small" sx={{ mb: 2 }} />
-            <br />
-            <Button
-              variant="outlined"
-              startIcon={<PhotoCameraIcon />}
-              size="small"
-              onClick={() => document.getElementById("avatar-input")?.click()}
-            >
-              Change Photo
-            </Button>
-            <input
-              id="avatar-input"
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={(e) => handleAvatarSelect(e.target.files?.[0])}
-            />
-            {avatarFile && (
-              <Box mt={2} display="flex" gap={2}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleAvatarUpload}
-                  disabled={loading}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:col-span-1 h-fit">
+        <div className="text-center">
+            <div className="w-28 h-28 bg-[#000054] text-white rounded-full flex items-center justify-center mx-auto mb-4 text-4xl font-bold shadow-md shadow-[#000054]/20 relative object-cover overflow-hidden">
+                {currentUser?.photoURL ? (
+                    <img src={currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                    currentUser?.name?.charAt(0).toUpperCase() || "A"
+                )}
+            </div>
+            
+            <h3 className="text-xl font-bold text-slate-800 mb-1">
+                {currentUser?.name || "Admin User"}
+            </h3>
+            <p className="text-sm font-medium text-slate-500 mb-4">
+                {currentUser?.role || "Administrator"}
+            </p>
+            
+            <div className="inline-block px-3 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-xs font-bold mb-6">
+                Active
+            </div>
+            
+            <div className="border-t border-slate-100 pt-6">
+                <button
+                className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 font-bold transition-colors"
+                onClick={() => document.getElementById("avatar-input")?.click()}
                 >
-                  Upload
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => setAvatarFile(null)}
-                >
-                  Cancel
-                </Button>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-      </Grid>
+                <MdPhotoCamera size={20} />
+                Change Photo
+                </button>
+                <input
+                id="avatar-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleAvatarSelect(e.target.files?.[0])}
+                />
+                
+                {avatarFile && (
+                <div className="mt-4 flex gap-2">
+                    <button
+                        className="flex-1 py-2 bg-[#000054] text-white font-bold rounded-lg hover:bg-[#1a1a6e] transition-colors disabled:opacity-50 flex items-center justify-center"
+                        onClick={handleAvatarUpload}
+                        disabled={loading}
+                    >
+                    {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : "Upload"}
+                    </button>
+                    <button
+                        className="flex-1 py-2 bg-white text-slate-700 border border-slate-300 font-bold rounded-lg hover:bg-slate-50 transition-colors"
+                        onClick={() => setAvatarFile(null)}
+                    >
+                    Cancel
+                    </button>
+                </div>
+                )}
+            </div>
+        </div>
+      </div>
 
       {/* Profile Information */}
-      <Grid item xs={12} md={8}>
-        <Card>
-          <CardHeader
-            title="Profile Information"
-            action={
-              <IconButton onClick={() => setEditingProfile(!editingProfile)}>
-                {editingProfile ? <CancelIcon /> : <EditIcon />}
-              </IconButton>
-            }
-          />
-          <CardContent>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Full Name"
-                  value={profileData.name}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, name: e.target.value })
-                  }
-                  disabled={!editingProfile}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <AccountIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={profileData.email}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, email: e.target.value })
-                  }
-                  disabled={!editingProfile}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={profileData.phone}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, phone: e.target.value })
-                  }
-                  disabled={!editingProfile}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PhoneIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Location"
-                  value={profileData.location}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, location: e.target.value })
-                  }
-                  disabled={!editingProfile}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Bio"
-                  multiline
-                  rows={3}
-                  value={profileData.bio}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, bio: e.target.value })
-                  }
-                  disabled={!editingProfile}
-                  placeholder="Tell us about yourself..."
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Website"
-                  value={profileData.website}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, website: e.target.value })
-                  }
-                  disabled={!editingProfile}
-                  placeholder="https://example.com"
-                />
-              </Grid>
-              {editingProfile && (
-                <Grid item xs={12}>
-                  <Box display="flex" gap={2}>
-                    <Button
-                      variant="contained"
-                      startIcon={<SaveIcon />}
-                      onClick={handleProfileSave}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        "Save Changes"
-                      )}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => setEditingProfile(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </Box>
-                </Grid>
-              )}
-            </Grid>
-          </CardContent>
-        </Card>
+      <div className="md:col-span-2 flex flex-col gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+             <h3 className="text-lg font-bold text-[#000054]">Profile Information</h3>
+             <button 
+                onClick={() => setEditingProfile(!editingProfile)}
+                className={`p-2 rounded-lg transition-colors ${editingProfile ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+             >
+                {editingProfile ? <MdCancel size={20} /> : <MdEdit size={20} />}
+             </button>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+               <div className="space-y-1">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
+                 <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <MdAccountCircle size={20} />
+                    </div>
+                    <input 
+                      type="text" 
+                      value={profileData.name}
+                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                      disabled={!editingProfile}
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] disabled:bg-slate-50 disabled:text-slate-500 transition-colors"
+                    />
+                 </div>
+               </div>
+
+               <div className="space-y-1">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
+                 <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <MdEmail size={20} />
+                    </div>
+                    <input 
+                      type="email" 
+                      value={profileData.email}
+                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                      disabled={!editingProfile}
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] disabled:bg-slate-50 disabled:text-slate-500 transition-colors"
+                    />
+                 </div>
+               </div>
+
+               <div className="space-y-1">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</label>
+                 <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <MdPhone size={20} />
+                    </div>
+                    <input 
+                      type="tel" 
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                      disabled={!editingProfile}
+                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] disabled:bg-slate-50 disabled:text-slate-500 transition-colors"
+                    />
+                 </div>
+               </div>
+
+               <div className="space-y-1">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Location</label>
+                 <input 
+                    type="text" 
+                    value={profileData.location}
+                    onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+                    disabled={!editingProfile}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] disabled:bg-slate-50 disabled:text-slate-500 transition-colors"
+                 />
+               </div>
+
+               <div className="col-span-1 sm:col-span-2 space-y-1">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Bio</label>
+                 <textarea 
+                    rows={3}
+                    value={profileData.bio}
+                    onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                    disabled={!editingProfile}
+                    placeholder="Tell us about yourself..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] disabled:bg-slate-50 disabled:text-slate-500 transition-colors resize-none"
+                 />
+               </div>
+
+               <div className="col-span-1 sm:col-span-2 space-y-1">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Website</label>
+                 <input 
+                    type="url" 
+                    value={profileData.website}
+                    onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
+                    disabled={!editingProfile}
+                    placeholder="https://example.com"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] disabled:bg-slate-50 disabled:text-slate-500 transition-colors"
+                 />
+               </div>
+            </div>
+
+            {editingProfile && (
+              <div className="flex gap-3 pt-4 border-t border-slate-100">
+                <button
+                  onClick={handleProfileSave}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-[#ADF802] text-[#000054] font-bold rounded-lg hover:bg-[#9DE002] transition-colors disabled:opacity-50"
+                >
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-[#000054] border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <MdSave size={20} />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setEditingProfile(false)}
+                  className="px-6 py-2 bg-white text-slate-700 border border-slate-300 font-bold rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Password & Security Section */}
-        <Card sx={{ mt: 3 }}>
-          <CardHeader title="Password & Security" />
-          <CardContent>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <Box>
-                <Typography variant="body1" gutterBottom>
-                  Password
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Last changed 30 days ago
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+             <h3 className="text-lg font-bold text-[#000054]">Password & Security</h3>
+          </div>
+          <div className="p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-bold text-slate-800">Password</p>
+                <p className="text-sm font-medium text-slate-500">Last changed 30 days ago</p>
+              </div>
+              <button
                 onClick={() => setPasswordDialogOpen(true)}
+                className="px-4 py-2 border border-[#000054] text-[#000054] font-bold rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Change Password
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-      </Grid>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Password Change Dialog */}
-      <Dialog
-        open={passwordDialogOpen}
-        onClose={() => setPasswordDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            width: { xs: "95%", sm: "80%", md: "60%" },
-            p: { xs: 1, sm: 2 },
-          },
-        }}
-      >
-        <DialogTitle sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem" } }}>
-          Change Password
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Current Password"
-                type={showPasswords.current ? "text" : "password"}
-                value={passwordData.currentPassword}
-                onChange={(e) =>
-                  setPasswordData({
-                    ...passwordData,
-                    currentPassword: e.target.value,
-                  })
-                }
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => togglePasswordVisibility("current")}
-                        edge="end"
-                      >
-                        {showPasswords.current ? (
-                          <VisibilityOffIcon />
-                        ) : (
-                          <VisibilityIcon />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="New Password"
-                type={showPasswords.new ? "text" : "password"}
-                value={passwordData.newPassword}
-                onChange={(e) =>
-                  setPasswordData({
-                    ...passwordData,
-                    newPassword: e.target.value,
-                  })
-                }
-                helperText="Password must be at least 8 characters long"
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => togglePasswordVisibility("new")}
-                        edge="end"
-                      >
-                        {showPasswords.new ? (
-                          <VisibilityOffIcon />
-                        ) : (
-                          <VisibilityIcon />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Confirm New Password"
-                type={showPasswords.confirm ? "text" : "password"}
-                value={passwordData.confirmPassword}
-                onChange={(e) =>
-                  setPasswordData({
-                    ...passwordData,
-                    confirmPassword: e.target.value,
-                  })
-                }
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => togglePasswordVisibility("confirm")}
-                        edge="end"
-                      >
-                        {showPasswords.confirm ? (
-                          <VisibilityOffIcon />
-                        ) : (
-                          <VisibilityIcon />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, gap: { xs: 1, sm: 2 } }}>
-          <Button
-            onClick={() => setPasswordDialogOpen(false)}
-            disabled={loading}
-            size={isMobile ? "small" : "medium"}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handlePasswordChange}
-            variant="contained"
-            disabled={loading}
-            size={isMobile ? "small" : "medium"}
-            sx={{
-              backgroundColor: "#E32845",
-              "&:hover": {
-                backgroundColor: "#c41e3a",
-              },
-            }}
-          >
-            {loading ? (
-              <CircularProgress size={isMobile ? 16 : 20} />
-            ) : isMobile ? (
-              "Change"
-            ) : (
-              "Change Password"
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Grid>
+      {passwordDialogOpen && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-in fade-in" onClick={() => setPasswordDialogOpen(false)}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+               <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                  <h3 className="text-xl font-bold text-[#000054]">Change Password</h3>
+                  <button onClick={() => setPasswordDialogOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                     <MdClose size={24} />
+                  </button>
+               </div>
+               <div className="p-6 space-y-4">
+                  <div className="space-y-1">
+                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Password</label>
+                     <div className="relative">
+                        <input 
+                           type={showPasswords.current ? "text" : "password"}
+                           value={passwordData.currentPassword}
+                           onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                           className="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] transition-colors"
+                        />
+                        <button 
+                           onClick={() => togglePasswordVisibility("current")}
+                           className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                        >
+                           {showPasswords.current ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                        </button>
+                     </div>
+                  </div>
+
+                  <div className="space-y-1">
+                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">New Password</label>
+                     <div className="relative">
+                        <input 
+                           type={showPasswords.new ? "text" : "password"}
+                           value={passwordData.newPassword}
+                           onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                           className="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] transition-colors"
+                        />
+                        <button 
+                           onClick={() => togglePasswordVisibility("new")}
+                           className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                        >
+                           {showPasswords.new ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                        </button>
+                     </div>
+                     <p className="text-xs text-slate-500 font-medium">Password must be at least 8 characters long</p>
+                  </div>
+
+                  <div className="space-y-1">
+                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Confirm New Password</label>
+                     <div className="relative">
+                        <input 
+                           type={showPasswords.confirm ? "text" : "password"}
+                           value={passwordData.confirmPassword}
+                           onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                           className="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] transition-colors"
+                        />
+                        <button 
+                           onClick={() => togglePasswordVisibility("confirm")}
+                           className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                        >
+                           {showPasswords.confirm ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                        </button>
+                     </div>
+                  </div>
+               </div>
+               <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                  <button 
+                     onClick={() => setPasswordDialogOpen(false)} 
+                     disabled={loading}
+                     className="px-5 py-2 font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                     Cancel
+                  </button>
+                  <button 
+                     onClick={handlePasswordChange}
+                     disabled={loading}
+                     className="px-6 py-2 font-bold text-white bg-[#E32845] rounded-lg hover:bg-[#c41e3a] transition-colors flex items-center justify-center min-w-[120px]"
+                  >
+                     {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : "Change Password"}
+                  </button>
+               </div>
+            </div>
+         </div>
+      )}
+    </div>
   );
 };
 

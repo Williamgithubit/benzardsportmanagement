@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AthleteDirectory from '@/components/athletes/AthleteDirectory';
 import useUserRole from '@/hooks/useUserRole';
 

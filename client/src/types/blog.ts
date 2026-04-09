@@ -51,13 +51,13 @@ export interface BlogComment {
   userName: string;
   userEmail: string;
   content: string;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface BlogReaction {
   userId: string;
   userName: string;
   type: "like" | "love" | "celebrate";
-  createdAt: any;
+  createdAt: Date | string;
 }

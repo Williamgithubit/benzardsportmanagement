@@ -1,45 +1,19 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  Card,
-  CardContent,
-  IconButton,
-  Chip,
-  Badge,
-  CircularProgress,
-  Alert,
-  Divider,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  Add as AddIcon,
-  PersonAdd as PersonAddIcon,
-  FitnessCenter as AthleteIcon,
-  Event as EventIcon,
-  SportsFootball as SportsIcon,
-  Notifications as NotificationsIcon,
-  CheckCircle as CheckCircleIcon,
-  ContactMail as ContactIcon,
-  Article as BlogIcon,
-  Warning as WarningIcon,
-  Refresh as RefreshIcon,
-  Storage as StorageIcon,
-  Speed as SpeedIcon,
-  Security as SecurityIcon,
-  CloudDone as CloudDoneIcon,
-  Error as ErrorIcon,
-  Assignment as AssignmentIcon,
-  School as SchoolIcon,
-} from "@mui/icons-material";
+  MdPersonAdd,
+  MdOutlineFitnessCenter,
+  MdEvent,
+  MdSportsSoccer,
+  MdNotifications,
+  MdCheckCircle,
+  MdContactMail,
+  MdCreate,
+  MdWarning,
+  MdRefresh,
+  MdError,
+} from "react-icons/md";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface PendingItem {
   id: string;
@@ -72,18 +46,27 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   onAddAthlete,
   onAddEvent,
   onAddBlog,
-  onAddProgram,
-  onAddAdmission,
 }) => {
+  const router = useRouter();
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const navigateToAdminTab = (tab: string) => {
+    if (window.location.pathname === "/dashboard/admin") {
+      window.dispatchEvent(new CustomEvent("changeTab", { detail: tab }));
+      window.history.replaceState(
+        null,
+        "",
+        tab === "dashboard" ? "/dashboard/admin" : `/dashboard/admin#${tab}`
+      );
+      return;
+    }
 
-  // Mock data - replace with actual API calls
+    router.push(tab === "dashboard" ? "/dashboard/admin" : `/dashboard/admin#${tab}`);
+  };
+
   const loadPendingItems = async () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -95,7 +78,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         title: "New Athlete Registration",
         description: "Samuel Johnson - Forward from Paynesville",
         priority: "high",
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), 
       },
       {
         id: "2",
@@ -103,7 +86,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         title: "Partnership Inquiry",
         description: "Local Sports Club - Training Collaboration",
         priority: "high",
-        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), 
       },
       {
         id: "3",
@@ -111,7 +94,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         title: "Event Registration Full",
         description: "Youth Tournament - Waiting list active",
         priority: "medium",
-        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), 
       },
       {
         id: "4",
@@ -119,7 +102,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         title: "Training Session Review",
         description: "Elite Development - Performance Assessment",
         priority: "low",
-        createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+        createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), 
       },
     ];
 
@@ -160,279 +143,217 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   const getHealthIcon = (status: "healthy" | "warning" | "error") => {
     switch (status) {
       case "healthy":
-        return <CheckCircleIcon color="success" />;
+        return <MdCheckCircle className="text-green-500" size={24} />;
       case "warning":
-        return <WarningIcon color="warning" />;
+        return <MdWarning className="text-amber-500" size={24} />;
       case "error":
-        return <ErrorIcon color="error" />;
+        return <MdError className="text-red-500" size={24} />;
     }
   };
 
-  const getHealthColor = (status: "healthy" | "warning" | "error") => {
-    switch (status) {
-      case "healthy":
-        return "success";
-      case "warning":
-        return "warning";
-      case "error":
-        return "error";
-    }
-  };
-
-  const getPriorityColor = (priority: "high" | "medium" | "low") => {
+  const getPriorityClasses = (priority: "high" | "medium" | "low") => {
     switch (priority) {
       case "high":
-        return "error" as const;
+        return "bg-red-100 text-red-700 border-red-200";
       case "medium":
-        return "warning" as const;
+        return "bg-amber-100 text-amber-700 border-amber-200";
       case "low":
-        return "success" as const;
+        return "bg-green-100 text-green-700 border-green-200";
     }
   };
 
   const getTypeIcon = (type: PendingItem["type"]) => {
     switch (type) {
       case "athlete":
-        return <AthleteIcon />;
+        return <MdOutlineFitnessCenter size={20} className="text-slate-500" />;
       case "user":
-        return <PersonAddIcon />;
+        return <MdPersonAdd size={20} className="text-slate-500" />;
       case "event":
-        return <EventIcon />;
+        return <MdEvent size={20} className="text-slate-500" />;
       case "contact":
-        return <ContactIcon />;
+        return <MdContactMail size={20} className="text-slate-500" />;
       case "training":
-        return <SportsIcon />;
+        return <MdSportsSoccer size={20} className="text-slate-500" />;
       default:
-        return <EventIcon />;
+        return <MdEvent size={20} className="text-slate-500" />;
     }
   };
 
   const quickActionButtons = [
     {
       label: "Add Athlete",
-      icon: <AthleteIcon />,
-      color: "#000054",
-      onClick: onAddAthlete || (() => window.location.href = "/dashboard/admin#athletes"),
+      icon: <MdOutlineFitnessCenter size={18} />,
+      colors: "text-navy border-navy hover:bg-navy/10",
+      onClick: onAddAthlete || (() => navigateToAdminTab("athletes")),
     },
     {
       label: "Add Event",
-      icon: <EventIcon />,
-      color: "#E32845",
-      onClick: onAddEvent || (() => window.location.href = "/dashboard/admin#events"),
+      icon: <MdEvent size={18} />,
+      colors: "text-primary border-primary hover:bg-primary/10",
+      onClick: onAddEvent || (() => navigateToAdminTab("events")),
     },
     {
       label: "Add Blog Post",
-      icon: <BlogIcon />,
-      color: "#4CAF50",
-      onClick: onAddBlog || (() => window.location.href = "/dashboard/admin#blog"),
+      icon: <MdCreate size={18} />,
+      colors: "text-green-600 border-green-600 hover:bg-green-50",
+      onClick: onAddBlog || (() => navigateToAdminTab("blog")),
     },
     {
       label: "Add User",
-      icon: <PersonAddIcon />,
-      color: "#9C27B0",
-      onClick: onAddUser || (() => window.location.href = "/dashboard/admin#users"),
+      icon: <MdPersonAdd size={18} />,
+      colors: "text-purple-600 border-purple-600 hover:bg-purple-50",
+      onClick: onAddUser || (() => navigateToAdminTab("users")),
     },
     {
       label: "View Contacts",
-      icon: <ContactIcon />,
-      color: "#FF9800",
-      onClick: () => window.location.href = "/dashboard/admin#contacts",
+      icon: <MdContactMail size={18} />,
+      colors: "text-orange-500 border-orange-500 hover:bg-orange-50",
+      onClick: () => navigateToAdminTab("contacts"),
     },
   ];
 
   if (loading) {
     return (
-      <Paper
-        elevation={2}
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          background: "white",
-          borderRadius: 2,
-          border: "1px solid rgba(0, 0, 84, 0.1)",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: 200,
-        }}
-      >
-        <CircularProgress />
-      </Paper>
+      <div className="glass-panel rounded-[32px] p-5 sm:p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <Skeleton className="h-7 w-40" />
+          <Skeleton variant="circular" className="h-9 w-9" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-12 rounded-2xl" />
+          ))}
+        </div>
+        <div className="mt-6 space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex gap-3 rounded-2xl border border-slate-100 bg-white/70 p-3">
+              <Skeleton variant="circular" className="h-10 w-10" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
-    <Paper
-      elevation={2}
-      sx={{
-        p: { xs: 1.5, sm: 2 },
-        background: "white",
-        borderRadius: 2,
-        border: "1px solid rgba(0, 0, 84, 0.1)",
-      }}
-    >
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
-      >
-        <Typography variant="h6" sx={{ color: "#000054", fontWeight: "bold" }}>
-          Quick Actions
-        </Typography>
-        <IconButton onClick={handleRefresh} disabled={refreshing} size="small">
-          <RefreshIcon />
-        </IconButton>
-      </Box>
+    <div className="glass-panel rounded-[32px] p-4 sm:p-5">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h3 className="text-lg font-bold text-navy">Quick Actions</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Jump into the areas that need attention first.
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="text-slate-500 hover:text-navy hover:bg-slate-100 p-2 rounded-full transition-colors disabled:opacity-50"
+          aria-label="Refresh actions"
+        >
+          <MdRefresh size={20} className={refreshing ? "animate-spin" : ""} />
+        </button>
+      </div>
 
       {/* Quick Action Buttons */}
-      <Grid container spacing={2} mb={3}>
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-3 mb-6">
         {quickActionButtons.map((action, index) => (
-          <Grid item xs={6} sm={3} key={index}>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={action.icon}
-              onClick={action.onClick}
-              sx={{
-                borderColor: action.color,
-                color: action.color,
-                "&:hover": {
-                  backgroundColor: `${action.color}10`,
-                  borderColor: action.color,
-                },
-                py: 1.5,
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
-              }}
-            >
-              {isMobile ? action.label.split(" ")[1] : action.label}
-            </Button>
-          </Grid>
+          <button
+            key={index}
+            onClick={action.onClick}
+            className={`flex items-center justify-center gap-2 border rounded-md py-2 px-3 text-xs sm:text-sm font-medium transition-colors ${action.colors}`}
+          >
+            {action.icon}
+            <span className="truncate">{action.label}</span>
+          </button>
         ))}
-      </Grid>
+      </div>
 
-      <Divider sx={{ my: 2 }} />
+      <hr className="border-slate-100 mb-5" />
 
       {/* Pending Approvals */}
-      <Box mb={3}>
-        <Typography
-          variant="subtitle1"
-          sx={{ color: "#000054", fontWeight: "bold", mb: 1 }}
-        >
-          Pending Approvals
-          <Badge
-            badgeContent={pendingItems.length}
-            color="error"
-            sx={{ ml: 1 }}
-          >
-            <NotificationsIcon />
-          </Badge>
-        </Typography>
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <h4 className="text-base font-bold text-navy">Pending Approvals</h4>
+          <div className="relative flex items-center justify-center">
+            <MdNotifications size={20} className="text-slate-500" />
+            {pendingItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                {pendingItems.length}
+              </span>
+            )}
+          </div>
+        </div>
 
         {pendingItems.length > 0 ? (
-          <List dense>
+          <div className="space-y-3">
             {pendingItems.slice(0, 3).map((item) => (
-              <ListItem key={item.id} sx={{ px: 0 }}>
-                <ListItemIcon sx={{ minWidth: 35 }}>
+              <div key={item.id} className="flex gap-3 rounded-2xl border border-slate-100 bg-white/70 px-3 py-3 last:border-slate-100 items-start">
+                <div className="mt-1 flex-shrink-0 bg-slate-100 p-1.5 rounded-full">
                   {getTypeIcon(item.type)}
-                </ListItemIcon>
-                <Box sx={{ flex: 1 }}>
-                  <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                    <Typography
-                      variant="body2"
-                      component="span"
-                      sx={{ fontWeight: 500 }}
-                    >
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <p className="text-sm font-medium text-slate-800 truncate">
                       {item.title}
-                    </Typography>
-                    <Chip
-                      label={item.priority}
-                      size="small"
-                      color={getPriorityColor(item.priority)}
-                      variant="outlined"
-                    />
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
+                    </p>
+                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${getPriorityClasses(item.priority)}`}>
+                      {item.priority}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">
                     {item.description}
-                  </Typography>
-                </Box>
-                <IconButton size="small" aria-label={`approve-${item.id}`}>
-                  <CheckCircleIcon color="success" />
-                </IconButton>
-              </ListItem>
+                  </p>
+                </div>
+                <button 
+                  className="text-green-500 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors flex-shrink-0 mt-1"
+                  aria-label={`approve-${item.id}`}
+                >
+                  <MdCheckCircle size={20} />
+                </button>
+              </div>
             ))}
-          </List>
+          </div>
         ) : (
-          <Typography variant="body2" color="text.secondary">
-            No pending approvals
-          </Typography>
+          <p className="text-sm text-slate-500">No pending approvals</p>
         )}
-      </Box>
+      </div>
 
-      <Divider sx={{ my: 2 }} />
+      <hr className="border-slate-100 mb-5" />
 
       {/* System Health */}
-      <Box>
-        <Typography
-          variant="subtitle1"
-          sx={{ color: "#000054", fontWeight: "bold", mb: 1 }}
-        >
-          System Health
-        </Typography>
+      <div>
+        <h4 className="text-base font-bold text-navy mb-3">System Health</h4>
 
         {systemHealth && (
-          <Grid container spacing={1}>
-            <Grid item xs={6} sm={3}>
-              <Card variant="outlined" sx={{ textAlign: "center", py: 1 }}>
-                <CardContent sx={{ py: "8px !important" }}>
-                  {getHealthIcon(systemHealth.database)}
-                  <Typography variant="caption" display="block">
-                    Database
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Card variant="outlined" sx={{ textAlign: "center", py: 1 }}>
-                <CardContent sx={{ py: "8px !important" }}>
-                  {getHealthIcon(systemHealth.storage)}
-                  <Typography variant="caption" display="block">
-                    Storage
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Card variant="outlined" sx={{ textAlign: "center", py: 1 }}>
-                <CardContent sx={{ py: "8px !important" }}>
-                  {getHealthIcon(systemHealth.email)}
-                  <Typography variant="caption" display="block">
-                    Email
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Card variant="outlined" sx={{ textAlign: "center", py: 1 }}>
-                <CardContent sx={{ py: "8px !important" }}>
-                  {getHealthIcon(systemHealth.backup)}
-                  <Typography variant="caption" display="block">
-                    Backup
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+          <div className="grid grid-cols-4 gap-2">
+            <div className="border border-slate-100 bg-slate-50 rounded-lg py-2 flex flex-col items-center justify-center gap-1">
+              {getHealthIcon(systemHealth.database)}
+              <span className="text-[10px] text-slate-600 font-medium">Database</span>
+            </div>
+            <div className="border border-slate-100 bg-slate-50 rounded-lg py-2 flex flex-col items-center justify-center gap-1">
+              {getHealthIcon(systemHealth.storage)}
+              <span className="text-[10px] text-slate-600 font-medium">Storage</span>
+            </div>
+            <div className="border border-slate-100 bg-slate-50 rounded-lg py-2 flex flex-col items-center justify-center gap-1">
+              {getHealthIcon(systemHealth.email)}
+              <span className="text-[10px] text-slate-600 font-medium">Email</span>
+            </div>
+            <div className="border border-slate-100 bg-slate-50 rounded-lg py-2 flex flex-col items-center justify-center gap-1">
+              {getHealthIcon(systemHealth.backup)}
+              <span className="text-[10px] text-slate-600 font-medium">Backup</span>
+            </div>
+          </div>
         )}
 
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ mt: 1, display: "block" }}
-        >
+        <p className="text-xs text-slate-400 mt-3 text-right">
           Last updated: {systemHealth?.lastUpdated.toLocaleTimeString()}
-        </Typography>
-      </Box>
-    </Paper>
+        </p>
+      </div>
+    </div>
   );
 };
 

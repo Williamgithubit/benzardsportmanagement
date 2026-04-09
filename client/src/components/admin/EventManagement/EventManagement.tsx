@@ -1,61 +1,26 @@
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
-  Alert,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Switch,
-  Card,
-  CardContent,
-  InputAdornment,
-  useMediaQuery,
-  useTheme,
-  Tooltip,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Refresh as RefreshIcon,
-  Search as SearchIcon,
-  Event as EventIcon,
-  People as PeopleIcon,
-  LocationOn as LocationIcon,
-  AttachMoney as MoneyIcon,
-  Storage as StorageIcon,
-} from "@mui/icons-material";
+  MdAdd,
+  MdEdit,
+  MdDelete,
+  MdRefresh,
+  MdSearch,
+  MdEvent,
+  MdPeople,
+  MdLocationOn,
+  MdClose,
+} from "react-icons/md";
 import {
   Event,
   CreateEventData,
   UpdateEventData,
-  getEvents,
   createEvent,
   updateEvent,
   deleteEvent,
-  getEventsStats,
-  subscribeToEvents,
 } from "@/services/eventService";
+import { fetchAdminEvents } from "@/services/adminDataService";
+import toast, { Toaster } from "react-hot-toast";
+import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
 
 interface EventManagementProps {
   openDialog?: boolean;
@@ -66,14 +31,10 @@ const EventManagement: React.FC<EventManagementProps> = ({
   openDialog = false,
   onCloseDialog,
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [seeding, setSeeding] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,29 +72,15 @@ const EventManagement: React.FC<EventManagementProps> = ({
   });
 
   useEffect(() => {
-    // Subscribe to realtime events
-    setLoading(true);
-    const unsub = subscribeToEvents(
-      (realtimeEvents) => {
-        setEvents(realtimeEvents);
-        // Update stats from realtime collection
-        (async () => {
-          try {
-            const s = await getEventsStats();
-            setStats(s);
-          } catch (e) {
-            // ignore
-          }
-        })();
-        setLoading(false);
-      },
-      (err) => {
-        setError("Failed to subscribe to events");
-        setLoading(false);
-      }
-    );
+    void loadEvents();
 
-    return () => unsub();
+    const intervalId = window.setInterval(() => {
+      void loadEvents(false, false, false);
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   // Handle external dialog open request from parent component
@@ -151,22 +98,40 @@ const EventManagement: React.FC<EventManagementProps> = ({
     filterEvents();
   }, [events, searchTerm, statusFilter, categoryFilter]);
 
-  const loadEvents = async () => {
+  const loadEvents = async (
+    showLoader = true,
+    showToast = true,
+    showRefreshing = !showLoader,
+  ) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (showLoader) {
+        setLoading(true);
+      } else if (showRefreshing) {
+        setRefreshing(true);
+      }
 
-      const [eventsData, statsData] = await Promise.all([
-        getEvents(),
-        getEventsStats(),
-      ]);
+      const { events: eventsData, stats: statsData } = await fetchAdminEvents();
 
       setEvents(eventsData);
       setStats(statsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load events");
+      if (showToast) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to load events",
+        );
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await loadEvents(false, true, true);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -179,7 +144,7 @@ const EventManagement: React.FC<EventManagementProps> = ({
         (event) =>
           event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          event.location.toLowerCase().includes(searchTerm.toLowerCase())
+          event.location.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -195,8 +160,6 @@ const EventManagement: React.FC<EventManagementProps> = ({
 
     setFilteredEvents(filtered);
   };
-
-  // Seed/sample data has been removed for production BSM-focused events
 
   const handleOpenDialog = (event?: Event) => {
     if (event) {
@@ -237,17 +200,24 @@ const EventManagement: React.FC<EventManagementProps> = ({
   };
 
   const handleSubmit = async () => {
+    if (!formData.title || !formData.description || !formData.location) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
     try {
       if (editingEvent) {
         await updateEvent(editingEvent.id, formData);
+        toast.success("Event updated successfully");
       } else {
         await createEvent(formData);
+        toast.success("Event created successfully");
       }
 
       handleCloseDialog();
       await loadEvents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save event");
+      toast.error(err instanceof Error ? err.message : "Failed to save event");
     }
   };
 
@@ -255,9 +225,12 @@ const EventManagement: React.FC<EventManagementProps> = ({
     try {
       setDeleting(id);
       await deleteEvent(id);
+      toast.success("Event deleted successfully");
       await loadEvents();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete event");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete event",
+      );
     } finally {
       setDeleting(null);
     }
@@ -266,34 +239,34 @@ const EventManagement: React.FC<EventManagementProps> = ({
   const getStatusColor = (status: Event["status"]) => {
     switch (status) {
       case "upcoming":
-        return "info";
+        return "bg-blue-100 text-blue-800 border-blue-200";
       case "ongoing":
-        return "success";
+        return "bg-green-100 text-green-800 border-green-200";
       case "completed":
-        return "default";
+        return "bg-slate-100 text-slate-800 border-slate-200";
       case "cancelled":
-        return "error";
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return "default";
+        return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
   const getCategoryColor = (category: Event["category"]) => {
     switch (category) {
       case "tournament":
-        return "primary";
+        return "bg-purple-100 text-purple-800 border-purple-200";
       case "training_camp":
-        return "warning";
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "community_outreach":
-        return "info";
+        return "bg-cyan-100 text-cyan-800 border-cyan-200";
       case "trial":
-        return "secondary";
+        return "bg-pink-100 text-pink-800 border-pink-200";
       case "match":
-        return "success";
+        return "bg-emerald-100 text-emerald-800 border-emerald-200";
       case "clinic":
-        return "default";
+        return "bg-indigo-100 text-indigo-800 border-indigo-200";
       default:
-        return "default";
+        return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
@@ -313,705 +286,529 @@ const EventManagement: React.FC<EventManagementProps> = ({
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
-        <Box textAlign="center">
-          <CircularProgress size={60} />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Loading Events...
-          </Typography>
-        </Box>
-      </Box>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-10 w-56" />
+          <div className="flex gap-2">
+            <Skeleton className="h-11 w-28 rounded-xl" />
+            <Skeleton className="h-11 w-36 rounded-xl" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-9 w-16" />
+                </div>
+                <Skeleton variant="circular" className="h-12 w-12" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+          </div>
+        </div>
+
+        <TableSkeleton rows={6} columns={7} />
+      </div>
     );
   }
 
   return (
-    <Box>
+    <div className="w-full">
+      <Toaster position="top-right" />
+
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          justifyContent: "space-between",
-          alignItems: { xs: "flex-start", sm: "center" },
-          gap: { xs: 2, sm: 0 },
-          mb: 3,
-        }}
-      >
-        <Typography
-          variant="h5"
-          component="h2"
-          sx={{
-            color: "#000054",
-            fontWeight: "bold",
-            fontSize: { xs: "1.25rem", sm: "1.5rem" },
-          }}
-        >
-          Event Management
-        </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            gap: { xs: 1, sm: 2 },
-            width: { xs: "100%", sm: "auto" },
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={loadEvents}
-            disabled={loading}
-            fullWidth={isMobile}
-            size={isMobile ? "small" : "medium"}
-            sx={{
-              borderColor: "#000054",
-              color: "#000054",
-              "&:hover": {
-                borderColor: "#1a1a6e",
-                backgroundColor: "rgba(0, 0, 84, 0.04)",
-              },
-            }}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-[#000054]">
+            Event Management
+          </h2>
+          <p className="text-slate-500 text-sm mt-1">
+            Manage events and registrations
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleRefresh}
+            disabled={loading || refreshing}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-[#000054] text-[#000054] rounded-lg hover:bg-[#000054]/5 transition-colors font-medium disabled:opacity-50 w-full sm:w-auto"
           >
-            {isMobile ? "" : "Refresh"}
-          </Button>
-          {/* Removed seed/sample data button (BSM events are production data only) */}
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
+            <MdRefresh
+              size={20}
+              className={loading || refreshing ? "animate-spin" : ""}
+            />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button
             onClick={() => handleOpenDialog()}
             disabled={loading}
-            fullWidth={isMobile}
-            size={isMobile ? "small" : "medium"}
-            sx={{
-              backgroundColor: "#E32845",
-              "&:hover": {
-                backgroundColor: "#c41e3a",
-              },
-            }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#E32845] text-white rounded-lg hover:bg-[#c41e3a] transition-colors font-medium disabled:opacity-50 shadow-sm w-full sm:w-auto"
           >
-            {isMobile ? "Add" : "Add Event"}
-          </Button>
-        </Box>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+            <MdAdd size={20} />
+            <span>Add Event</span>
+          </button>
+        </div>
+      </div>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    Total Events
-                  </Typography>
-                  <Typography variant="h4">{stats.total}</Typography>
-                </Box>
-                <EventIcon color="primary" sx={{ fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    Upcoming Events
-                  </Typography>
-                  <Typography variant="h4">{stats.upcoming}</Typography>
-                </Box>
-                <EventIcon color="info" sx={{ fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    Total Registrations
-                  </Typography>
-                  <Typography variant="h4">
-                    {stats.totalRegistrations}
-                  </Typography>
-                </Box>
-                <PeopleIcon color="success" sx={{ fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography
-                    color="textSecondary"
-                    gutterBottom
-                    variant="body2"
-                  >
-                    Total Capacity
-                  </Typography>
-                  <Typography variant="h4">{stats.totalCapacity}</Typography>
-                </Box>
-                <LocationIcon color="warning" sx={{ fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-500 font-medium mb-1">
+              Total Events
+            </p>
+            <p className="text-3xl font-bold text-slate-800">{stats.total}</p>
+          </div>
+          <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+            <MdEvent size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-500 font-medium mb-1">
+              Upcoming Events
+            </p>
+            <p className="text-3xl font-bold text-slate-800">
+              {stats.upcoming}
+            </p>
+          </div>
+          <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+            <MdEvent size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-500 font-medium mb-1">
+              Total Registrations
+            </p>
+            <p className="text-3xl font-bold text-slate-800">
+              {stats.totalRegistrations}
+            </p>
+          </div>
+          <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+            <MdPeople size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-500 font-medium mb-1">
+              Total Capacity
+            </p>
+            <p className="text-3xl font-bold text-slate-800">
+              {stats.totalCapacity}
+            </p>
+          </div>
+          <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
+            <MdLocationOn size={24} />
+          </div>
+        </div>
+      </div>
 
       {/* Filters */}
-      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
-        <Grid container spacing={{ xs: 2, sm: 3 }} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              placeholder="Search events..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              size={isMobile ? "small" : "medium"}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon
-                      sx={{ fontSize: { xs: "1.2rem", sm: "1.5rem" } }}
-                    />
-                  </InputAdornment>
-                ),
-                sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-                size={isMobile ? "small" : "medium"}
-              >
-                <MenuItem value="all">All Statuses</MenuItem>
-                <MenuItem value="upcoming">Upcoming</MenuItem>
-                <MenuItem value="ongoing">Ongoing</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={categoryFilter}
-                label="Category"
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                size={isMobile ? "small" : "medium"}
-              >
-                <MenuItem value="all">All Categories</MenuItem>
-                <MenuItem value="tournament">Tournament</MenuItem>
-                <MenuItem value="training_camp">Training Camp</MenuItem>
-                <MenuItem value="community_outreach">
-                  Community Outreach
-                </MenuItem>
-                <MenuItem value="trial">Trial</MenuItem>
-                <MenuItem value="match">Match</MenuItem>
-                <MenuItem value="clinic">Clinic</MenuItem>
-                <MenuItem value="other">Other</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-      </Paper>
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
+        <div className="relative flex-grow">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MdSearch className="text-slate-400" size={20} />
+          </div>
+          <input
+            type="text"
+            placeholder="Search events..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+          />
+        </div>
+
+        <div className="w-full md:w-64 shrink-0">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+          >
+            <option value="all">All Statuses</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <div className="w-full md:w-64 shrink-0">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+          >
+            <option value="all">All Categories</option>
+            <option value="tournament">Tournament</option>
+            <option value="training_camp">Training Camp</option>
+            <option value="community_outreach">Community Outreach</option>
+            <option value="trial">Trial</option>
+            <option value="match">Match</option>
+            <option value="clinic">Clinic</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
 
       {/* Events Table */}
-      <Paper>
-        <TableContainer sx={{ overflowX: "auto" }}>
-          <Table size={isMobile ? "small" : "medium"}>
-            <TableHead>
-              <TableRow>
-                <TableCell>Event</TableCell>
-                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                  Date & Time
-                </TableCell>
-                <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                  Location
-                </TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                  Category
-                </TableCell>
-                <TableCell
-                  align="right"
-                  sx={{ display: { xs: "none", sm: "table-cell" } }}
-                >
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-sm font-bold text-slate-600">
+                <th className="p-4">Event</th>
+                <th className="p-4 hidden sm:table-cell">Date & Time</th>
+                <th className="p-4 hidden md:table-cell">Location</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 hidden md:table-cell">Category</th>
+                <th className="p-4 hidden sm:table-cell text-right">
                   Capacity
-                </TableCell>
-                <TableCell
-                  align="right"
-                  sx={{ display: { xs: "none", lg: "table-cell" } }}
-                >
+                </th>
+                <th className="p-4 hidden lg:table-cell text-right">
                   Registrations
-                </TableCell>
-                <TableCell
-                  align="right"
-                  sx={{ display: { xs: "none", sm: "table-cell" } }}
-                >
-                  Price
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+                </th>
+                <th className="p-4 hidden sm:table-cell text-right">Price</th>
+                <th className="p-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
               {filteredEvents.length > 0 ? (
                 filteredEvents.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell>
-                      <Box>
-                        <Typography
-                          variant="subtitle2"
-                          fontWeight="bold"
-                          sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
-                        >
+                  <tr
+                    key={event.id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="p-4">
+                      <div>
+                        <p className="font-bold text-slate-800 text-sm">
                           {event.title}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="textSecondary"
-                          noWrap
-                          sx={{
-                            fontSize: { xs: "0.75rem", sm: "0.8rem" },
-                            maxWidth: { xs: "150px", sm: "200px", md: "300px" },
-                          }}
-                        >
-                          {event.description.length > (isMobile ? 30 : 60)
-                            ? `${event.description.substring(
-                                0,
-                                isMobile ? 30 : 60
-                              )}...`
-                            : event.description}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell
-                      sx={{ display: { xs: "none", sm: "table-cell" } }}
-                    >
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: { xs: "0.75rem", sm: "0.8rem" } }}
-                        >
-                          {formatDate(event.startDate)}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="textSecondary"
-                          sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
-                        >
-                          to {formatDate(event.endDate)}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell
-                      sx={{ display: { xs: "none", md: "table-cell" } }}
-                    >
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1 max-w-[150px] sm:max-w-[200px] md:max-w-[300px] truncate">
+                          {event.description}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="p-4 hidden sm:table-cell text-sm">
+                      <p className="text-slate-800">
+                        {formatDate(event.startDate)}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        to {formatDate(event.endDate)}
+                      </p>
+                    </td>
+                    <td className="p-4 hidden md:table-cell text-sm text-slate-600">
                       {event.location}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={
-                          isMobile
-                            ? event.status.charAt(0).toUpperCase()
-                            : event.status.charAt(0).toUpperCase() +
-                              event.status.slice(1)
-                        }
-                        size="small"
-                        sx={{
-                          backgroundColor: getStatusColor(event.status),
-                          color: "#fff",
-                          fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                          height: { xs: "20px", sm: "24px" },
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell
-                      sx={{ display: { xs: "none", md: "table-cell" } }}
-                    >
-                      <Chip
-                        label={event.category}
-                        color={getCategoryColor(event.category)}
-                        variant="outlined"
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ display: { xs: "none", sm: "table-cell" } }}
-                    >
-                      {event.capacity}
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ display: { xs: "none", lg: "table-cell" } }}
-                    >
-                      {event.registrations || 0}
-                    </TableCell>
-                    <TableCell
-                      align="right"
-                      sx={{ display: { xs: "none", sm: "table-cell" } }}
-                    >
-                      <Typography variant="body2" fontWeight="bold">
-                        {formatCurrency(event.price)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          gap: { xs: 0, sm: 1 },
-                        }}
+                    </td>
+                    <td className="p-4 text-sm">
+                      <span
+                        className={`px-2 py-1 rounded-md text-xs font-bold border ${getStatusColor(event.status)}`}
                       >
-                        <IconButton
-                          size={isMobile ? "small" : "medium"}
+                        {event.status.charAt(0).toUpperCase() +
+                          event.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="p-4 hidden md:table-cell text-sm">
+                      <span
+                        className={`px-2 py-1 text-xs font-bold rounded-md border ${getCategoryColor(event.category)}`}
+                      >
+                        {event.category
+                          .split("_")
+                          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                          .join(" ")}
+                      </span>
+                    </td>
+                    <td className="p-4 hidden sm:table-cell text-sm text-slate-600 text-right">
+                      {event.capacity}
+                    </td>
+                    <td className="p-4 hidden lg:table-cell text-sm text-slate-600 text-right">
+                      {event.registrations || 0}
+                    </td>
+                    <td className="p-4 hidden sm:table-cell text-sm font-bold text-slate-800 text-right">
+                      {formatCurrency(event.price)}
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
                           onClick={() => handleOpenDialog(event)}
-                          sx={{
-                            color: "#000054",
-                            padding: { xs: 0.5, sm: 1 },
-                          }}
+                          className="p-1.5 text-[#000054] hover:bg-[#000054]/10 rounded-lg transition-colors"
+                          title="Edit"
                         >
-                          <EditIcon
-                            sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
-                          />
-                        </IconButton>
-                        <IconButton
-                          size={isMobile ? "small" : "medium"}
+                          <MdEdit size={20} />
+                        </button>
+                        <button
                           onClick={() => handleDelete(event.id)}
-                          sx={{
-                            color: "#E32845",
-                            padding: { xs: 0.5, sm: 1 },
-                          }}
                           disabled={deleting === event.id}
+                          className="p-1.5 text-[#E32845] hover:bg-[#E32845]/10 rounded-lg transition-colors disabled:opacity-50"
+                          title="Delete"
                         >
                           {deleting === event.id ? (
-                            <CircularProgress size={isMobile ? 16 : 20} />
+                            <div className="w-5 h-5 rounded-full border-2 border-[#E32845]/30 border-t-[#E32845] animate-spin"></div>
                           ) : (
-                            <DeleteIcon
-                              sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
-                            />
+                            <MdDelete size={20} />
                           )}
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={9} align="center">
-                    <Typography color="textSecondary" sx={{ py: 4 }}>
-                      {events.length === 0
-                        ? 'No events found. Click "Add Event" to create your first event.'
-                        : "No events match your current filters."}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={9} className="p-8 text-center text-slate-500">
+                    {events.length === 0
+                      ? 'No events found. Click "Add Event" to create your first event.'
+                      : "No events match your current filters."}
+                  </td>
+                </tr>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Add/Edit Event Dialog */}
-      <Dialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            width: { xs: "95%", sm: "80%", md: "70%" },
-            maxWidth: { xs: "95%", sm: "80%", md: "800px" },
-            p: { xs: 1, sm: 2 },
-          },
-        }}
-      >
-        <DialogTitle sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem" } }}>
-          {editingEvent ? "Edit Event" : "Create New Event"}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                required
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-                InputLabelProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                multiline
-                rows={isMobile ? 3 : 4}
-                required
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-                InputLabelProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Start Date & Time"
-                type="datetime-local"
-                value={formData.startDate.toISOString().slice(0, 16)}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    startDate: new Date(e.target.value),
-                  })
-                }
-                InputLabelProps={{
-                  shrink: true,
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-                required
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="End Date & Time"
-                type="datetime-local"
-                value={formData.endDate.toISOString().slice(0, 16)}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    endDate: new Date(e.target.value),
-                  })
-                }
-                InputLabelProps={{
-                  shrink: true,
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-                required
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Location"
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                required
-                size={isMobile ? "small" : "medium"}
-                InputProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-                InputLabelProps={{
-                  sx: { fontSize: { xs: "0.875rem", sm: "1rem" } },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Capacity"
-                type="number"
-                value={formData.capacity}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    capacity: parseInt(e.target.value) || 0,
-                  })
-                }
-                inputProps={{ min: 1 }}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={formData.status}
-                  label="Status"
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      status: e.target.value as Event["status"],
-                    })
-                  }
-                >
-                  <MenuItem value="upcoming">Upcoming</MenuItem>
-                  <MenuItem value="ongoing">Ongoing</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={formData.category}
-                  label="Category"
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      category: e.target.value as Event["category"],
-                    })
-                  }
-                >
-                  <MenuItem value="tournament">Tournament</MenuItem>
-                  <MenuItem value="training_camp">Training Camp</MenuItem>
-                  <MenuItem value="community_outreach">
-                    Community Outreach
-                  </MenuItem>
-                  <MenuItem value="trial">Trial</MenuItem>
-                  <MenuItem value="match">Match</MenuItem>
-                  <MenuItem value="clinic">Clinic</MenuItem>
-                  <MenuItem value="other">Other</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Price"
-                type="number"
-                value={formData.price}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    price: parseFloat(e.target.value) || 0,
-                  })
-                }
-                inputProps={{ min: 0, step: 0.01 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">$</InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isPublic}
+      {dialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-[#000054] text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <h2 className="font-bold text-lg">
+                {editingEvent ? "Edit Event" : "Create New Event"}
+              </h2>
+              <button
+                onClick={handleCloseDialog}
+                className="text-white/70 hover:text-white transition-colors"
+              >
+                <MdClose size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
                     onChange={(e) =>
-                      setFormData({ ...formData, isPublic: e.target.checked })
+                      setFormData({ ...formData, title: e.target.value })
                     }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                    required
                   />
+                </div>
+
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary resize-y"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Start Date & Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.startDate.toISOString().slice(0, 16)}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        startDate: new Date(e.target.value),
+                      })
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    End Date & Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.endDate.toISOString().slice(0, 16)}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        endDate: new Date(e.target.value),
+                      })
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Location <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) =>
+                      setFormData({ ...formData, location: e.target.value })
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Capacity <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.capacity}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        capacity: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        status: e.target.value as Event["status"],
+                      })
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+                  >
+                    <option value="upcoming">Upcoming</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Category
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        category: e.target.value as Event["category"],
+                      })
+                    }
+                    className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary appearance-none"
+                  >
+                    <option value="tournament">Tournament</option>
+                    <option value="training_camp">Training Camp</option>
+                    <option value="community_outreach">
+                      Community Outreach
+                    </option>
+                    <option value="trial">Trial</option>
+                    <option value="match">Match</option>
+                    <option value="clinic">Clinic</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Price (USD)
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-slate-500 font-medium">$</span>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          price: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full pl-8 p-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1 flex items-end">
+                  <label className="flex items-center gap-2 cursor-pointer h-[46px] p-2 rounded-lg bg-slate-50 border border-slate-200 hover:bg-white transition-colors w-full">
+                    <input
+                      type="checkbox"
+                      checked={formData.isPublic}
+                      onChange={(e) =>
+                        setFormData({ ...formData, isPublic: e.target.checked })
+                      }
+                      className="w-4 h-4 text-[#000054] focus:ring-[#000054] border-slate-300 rounded"
+                    />
+                    <span className="text-sm font-bold text-slate-700">
+                      Public Event
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+              <button
+                onClick={handleCloseDialog}
+                className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 bg-white font-medium hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={
+                  !formData.title || !formData.description || !formData.location
                 }
-                label="Public Event"
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, gap: { xs: 1, sm: 2 } }}>
-          <Button
-            onClick={handleCloseDialog}
-            size={isMobile ? "small" : "medium"}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={
-              !formData.title || !formData.description || !formData.location
-            }
-            size={isMobile ? "small" : "medium"}
-            sx={{
-              backgroundColor: "#E32845",
-              "&:hover": {
-                backgroundColor: "#c41e3a",
-              },
-            }}
-          >
-            {editingEvent
-              ? isMobile
-                ? "Update"
-                : "Update Event"
-              : isMobile
-              ? "Create"
-              : "Create Event"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                className="px-5 py-2.5 rounded-lg bg-[#E32845] text-white font-bold hover:bg-[#c41e3a] shadow-sm disabled:opacity-50 transition-colors"
+              >
+                {editingEvent ? "Update Event" : "Create Event"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

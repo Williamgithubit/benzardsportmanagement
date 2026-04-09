@@ -1,54 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Card,
-  CardMedia,
-  CardContent,
-  CardActions,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  CircularProgress,
-  Alert,
-  Snackbar,
-  useTheme,
-  useMediaQuery,
-  Tabs,
-  Tab,
-  LinearProgress,
-  Menu,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Avatar,
-  Badge,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  CloudUpload as UploadIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Download as DownloadIcon,
-  Search as SearchIcon,
-  ViewModule as GridViewIcon,
-  ViewList as ListViewIcon,
-  Image as ImageIcon,
-  VideoFile as VideoIcon,
-  MoreVert as MoreIcon,
-  PhotoLibrary as MediaIcon,
-  ContentCopy as CopyIcon,
-} from "@mui/icons-material";
+  MdCloudUpload,
+  MdDelete,
+  MdSearch,
+  MdViewModule,
+  MdViewList,
+  MdImage,
+  MdVideoFile,
+  MdMoreVert,
+  MdPhotoLibrary,
+  MdContentCopy,
+} from "react-icons/md";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/services/firebase";
 import {
@@ -59,17 +21,17 @@ import {
   BSM_MEDIA_TAGS,
 } from "@/types/media";
 import {
-  uploadMediaToBSM,
   bulkUploadMedia,
   getMediaAssets,
   deleteMediaAsset,
-  updateMediaAsset,
   generateOptimizedUrl,
 } from "@/services/cloudinaryService";
 import {
   getUserMediaPermissions,
   canUserPerformAction,
 } from "@/services/bsmMediaService";
+import toast, { Toaster } from "react-hot-toast";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface BSMMediaLibraryProps {
   onSelectMedia?: (media: MediaAsset) => void;
@@ -90,52 +52,64 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] =
     useState<BulkUploadProgress | null>(null);
-  const [editingMedia, setEditingMedia] = useState<MediaAsset | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [mediaToDelete, setMediaToDelete] = useState<MediaAsset | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentTab, setCurrentTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState<MediaFilters>({
+  const [filters] = useState<MediaFilters>({
     search: "",
     category: category || "",
     resourceType: "",
     folder: "",
     tags: [],
   });
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [menuMedia, setMenuMedia] = useState<MediaAsset | null>(null);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success" as "success" | "error" | "info" | "warning",
-  });
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const userRole = "admin"; // TODO: Get from auth context
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // TODO: Get real role from context
+  const userRole = "admin";
   const permissions = getUserMediaPermissions(userRole);
 
   useEffect(() => {
-    loadMediaAssets();
-  }, [filters]);
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const loadMediaAssets = async () => {
+  const loadMediaAssets = async (showLoader = true, showToast = true) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      }
       const { assets } = await getMediaAssets(filters, 1, 50);
       setMediaAssets(assets);
     } catch (error) {
       console.error("Error loading media assets:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to load media assets",
-        severity: "error",
-      });
+      if (showToast) {
+        toast.error("Failed to load media assets");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadMediaAssets();
+
+    const intervalId = window.setInterval(() => {
+      void loadMediaAssets(false, false);
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [filters]);
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || !user || !permissions.canUpload) return;
@@ -145,11 +119,7 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
     // Validate files
     for (const file of fileArray) {
       if (file.size > permissions.maxFileSize) {
-        setSnackbar({
-          open: true,
-          message: `File ${file.name} exceeds size limit`,
-          severity: "error",
-        });
+        toast.error(`File ${file.name} exceeds size limit`);
         return;
       }
     }
@@ -168,23 +138,14 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
           category: category || "general",
           tags: [BSM_MEDIA_TAGS.FEATURED],
         },
-        (progress) => setUploadProgress(progress)
+        (progress) => setUploadProgress(progress),
       );
 
-      setSnackbar({
-        open: true,
-        message: "Files uploaded successfully",
-        severity: "success",
-      });
-
+      toast.success("Files uploaded successfully");
       loadMediaAssets();
     } catch (error) {
       console.error("Error uploading files:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to upload files",
-        severity: "error",
-      });
+      toast.error("Failed to upload files");
     } finally {
       setUploading(false);
       setUploadProgress(null);
@@ -201,25 +162,16 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
     try {
       await deleteMediaAsset(
         mediaToDelete.publicId,
-        mediaToDelete.resourceType
+        mediaToDelete.resourceType,
       );
 
-      setSnackbar({
-        open: true,
-        message: "Media deleted successfully",
-        severity: "success",
-      });
-
+      toast.success("Media deleted successfully");
       setDeleteConfirmOpen(false);
       setMediaToDelete(null);
       loadMediaAssets();
     } catch (error) {
       console.error("Error deleting media:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to delete media",
-        severity: "error",
-      });
+      toast.error("Failed to delete media");
     }
   };
 
@@ -229,11 +181,19 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
       format: "auto",
     });
     navigator.clipboard.writeText(optimizedUrl);
-    setSnackbar({
-      open: true,
-      message: "URL copied to clipboard",
-      severity: "success",
-    });
+    toast.success("URL copied to clipboard");
+  };
+
+  const handleMenuClick = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    mediaId: string,
+  ) => {
+    event.stopPropagation();
+    setActiveMenuId(activeMenuId === mediaId ? null : mediaId);
+  };
+
+  const handleMenuClose = () => {
+    setActiveMenuId(null);
   };
 
   const filteredAssets = mediaAssets.filter((asset) => {
@@ -258,333 +218,433 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
 
   const currentAssets = Object.values(assetsByType)[currentTab] || [];
 
-  if (loading) {
+  const renderTabs = () => {
+    const tabs = [
+      { id: 0, label: "All Files", count: assetsByType.all.length, icon: null },
+      {
+        id: 1,
+        label: "Images",
+        count: assetsByType.image.length,
+        icon: <MdImage size={18} />,
+      },
+      {
+        id: 2,
+        label: "Videos",
+        count: assetsByType.video.length,
+        icon: <MdVideoFile size={18} />,
+      },
+    ];
+
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="400px"
-      >
-        <CircularProgress size={50} />
-        <Typography variant="h6" sx={{ ml: 2 }}>
-          Loading media library...
-        </Typography>
-      </Box>
+      <div className="flex overflow-x-auto hide-scrollbar border-b border-slate-200 mb-6 bg-white rounded-t-xl px-2 pt-2 shadow-sm">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setCurrentTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-3 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${
+              currentTab === tab.id
+                ? "border-[#000054] text-[#000054]"
+                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+            <span
+              className={`inline-flex items-center justify-center px-2 py-0.5 ml-1 text-xs font-bold rounded-full ${
+                currentTab === tab.id
+                  ? "bg-[#000054] text-white"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
     );
-  }
+  };
+
+  const renderMainMenu = (asset: MediaAsset) => (
+    <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-10 animate-in fade-in zoom-in-95 duration-100">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleCopyUrl(asset);
+          handleMenuClose();
+        }}
+        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+      >
+        <MdContentCopy size={18} className="text-slate-400" /> Copy URL
+      </button>
+
+      {permissions.canDelete && (
+        <>
+          <div className="h-px bg-slate-100 my-1"></div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMediaToDelete(asset);
+              setDeleteConfirmOpen(true);
+              handleMenuClose();
+            }}
+            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left font-medium"
+          >
+            <MdDelete size={18} className="text-red-500" /> Delete
+          </button>
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <Box>
+    <div className="w-full relative">
+      <Toaster position="top-right" />
+
       {/* Header */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
-      >
-        {/* Use a non-heading container to avoid nested heading tags when this component is rendered inside dialogs that already provide a heading */}
-        <Typography
-          variant="h5"
-          component="div"
-          sx={{
-            fontWeight: "bold",
-            color: "#03045e",
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-          }}
-        >
-          <MediaIcon />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="font-bold text-2xl md:text-3xl text-[#000054] flex items-center gap-2">
+          <MdPhotoLibrary size={32} />
           BSM Media Library
-        </Typography>
-        <Box display="flex" gap={1}>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           {permissions.canUpload && (
-            <>
+            <label className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#000054] text-white rounded-lg hover:bg-[#1a1a6e] transition-colors font-bold shadow-sm cursor-pointer disabled:opacity-50 flex-grow sm:flex-grow-0">
+              <MdCloudUpload size={20} />
+              <span>Upload</span>
               <input
                 accept="image/*,video/*"
-                style={{ display: "none" }}
-                id="file-upload"
+                className="hidden"
                 type="file"
                 multiple
+                disabled={uploading}
                 onChange={(e) => handleFileUpload(e.target.files)}
               />
-              <label htmlFor="file-upload">
-                <Button
-                  variant="contained"
-                  component="span"
-                  startIcon={<UploadIcon />}
-                  disabled={uploading}
-                  sx={{
-                    backgroundColor: "#ADF802",
-                    color: "#03045e",
-                    "&:hover": {
-                      backgroundColor: "#9DE002",
-                    },
-                  }}
-                >
-                  Upload
-                </Button>
-              </label>
-            </>
+            </label>
           )}
-          <IconButton
-            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-          >
-            {viewMode === "grid" ? <ListViewIcon /> : <GridViewIcon />}
-          </IconButton>
-        </Box>
-      </Box>
+
+          <div className="flex bg-white rounded-lg border border-slate-200 overflow-hidden shrink-0">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-2 transition-colors ${viewMode === "grid" ? "bg-slate-100 text-[#000054]" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              <MdViewModule size={24} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 transition-colors ${viewMode === "list" ? "bg-slate-100 text-[#000054]" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              <MdViewList size={24} />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Upload Progress */}
       {uploading && uploadProgress && (
-        <Box sx={{ mb: 2 }}>
-          <LinearProgress
-            variant="determinate"
-            value={(uploadProgress.completed / uploadProgress.total) * 100}
-          />
-          <Typography variant="caption" color="text.secondary">
-            Uploading {uploadProgress.current}... ({uploadProgress.completed}/
-            {uploadProgress.total})
-          </Typography>
-        </Box>
+        <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex justify-between text-sm font-bold text-slate-700 mb-2">
+            <span>
+              Uploading {uploadProgress.current}... ({uploadProgress.completed}/
+              {uploadProgress.total})
+            </span>
+            <span>
+              {Math.round(
+                (uploadProgress.completed / uploadProgress.total) * 100,
+              )}
+              %
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 rounded-full h-2">
+            <div
+              className="bg-[#000054] h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${(uploadProgress.completed / uploadProgress.total) * 100}%`,
+              }}
+            ></div>
+          </div>
+        </div>
       )}
 
       {/* Search */}
-      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search media files..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <SearchIcon sx={{ mr: 1, color: "action.active" }} />
-            ),
-          }}
-          size="small"
-        />
-      </Paper>
+      <div className="bg-white p-4 items-center rounded-xl border border-slate-200 shadow-sm mb-6 flex">
+        <div className="relative flex-grow w-full">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MdSearch className="text-slate-400" size={20} />
+          </div>
+          <input
+            type="text"
+            placeholder="Search media files..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
+          />
+        </div>
+      </div>
 
-      {/* File Type Tabs */}
-      <Paper elevation={2} sx={{ mb: 3 }}>
-        <Tabs
-          value={currentTab}
-          onChange={(_, newValue) => setCurrentTab(newValue)}
-          variant="scrollable"
-          scrollButtons="auto"
+      {renderTabs()}
+
+      {/* Content Area */}
+      {loading ? (
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+              : "flex flex-col gap-3"
+          }
         >
-          <Tab
-            label={
-              <Badge badgeContent={assetsByType.all.length} color="primary">
-                All Files
-              </Badge>
-            }
-          />
-          <Tab
-            label={
-              <Badge badgeContent={assetsByType.image.length} color="primary">
-                Images
-              </Badge>
-            }
-            icon={<ImageIcon />}
-          />
-          <Tab
-            label={
-              <Badge badgeContent={assetsByType.video.length} color="primary">
-                Videos
-              </Badge>
-            }
-            icon={<VideoIcon />}
-          />
-        </Tabs>
-      </Paper>
-
-      {/* Media Grid */}
-      {currentAssets.length === 0 ? (
-        <Paper elevation={1} sx={{ p: 4, textAlign: "center" }}>
-          <MediaIcon sx={{ fontSize: 64, color: "text.secondary", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
+          {Array.from({ length: viewMode === "grid" ? 8 : 5 }).map(
+            (_, index) =>
+              viewMode === "grid" ? (
+                <div
+                  key={index}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <Skeleton className="h-48 w-full rounded-none" />
+                  <div className="space-y-3 p-3">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  key={index}
+                  className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                >
+                  <Skeleton className="h-16 w-16 rounded-lg" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-5 w-1/2" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                </div>
+              ),
+          )}
+        </div>
+      ) : currentAssets.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <MdPhotoLibrary size={64} className="mx-auto text-slate-300 mb-4" />
+          <h3 className="text-xl font-bold text-slate-600 mb-2">
             No media files found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Upload some files to get started
-          </Typography>
-        </Paper>
+          </h3>
+          <p className="text-slate-500">Upload some files to get started.</p>
+        </div>
       ) : (
-        <Grid container spacing={2}>
-          {currentAssets.map((asset) => (
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              md={viewMode === "grid" ? 3 : 12}
-              key={asset.id}
-            >
-              <Card
-                sx={{
-                  cursor: selectionMode ? "pointer" : "default",
-                  "&:hover": {
-                    boxShadow: theme.shadows[4],
-                  },
-                }}
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+              : "flex flex-col gap-3"
+          }
+        >
+          {currentAssets.map((asset) =>
+            viewMode === "grid" ? (
+              // Grid View Card
+              <div
+                key={asset.id}
+                className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:border-[#000054] transition-all group ${selectionMode ? "cursor-pointer" : ""}`}
                 onClick={() =>
                   selectionMode && onSelectMedia && onSelectMedia(asset)
                 }
               >
-                {asset.resourceType === "image" ? (
-                  <CardMedia
-                    component="img"
-                    height={viewMode === "grid" ? 200 : 100}
-                    image={generateOptimizedUrl(asset.publicId, {
-                      width: 400,
-                      height: 300,
-                      crop: "fill",
-                      quality: "auto",
-                      format: "auto",
-                    })}
-                    alt={asset.altText || asset.originalFilename}
-                    sx={{ objectFit: "cover" }}
-                  />
-                ) : (
-                  <Box
-                    sx={{
-                      height: viewMode === "grid" ? 200 : 100,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: "grey.100",
-                    }}
-                  >
-                    <VideoIcon sx={{ fontSize: 48 }} />
-                  </Box>
-                )}
-                <CardContent sx={{ pb: 1 }}>
-                  <Typography variant="subtitle2" noWrap>
-                    {asset.originalFilename}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {Math.round(asset.bytes / 1024)} KB •{" "}
+                <div className="h-48 bg-slate-100 flex items-center justify-center relative overflow-hidden">
+                  {asset.resourceType === "image" ? (
+                    <img
+                      src={generateOptimizedUrl(asset.publicId, {
+                        width: 400,
+                        height: 300,
+                        crop: "fill",
+                        quality: "auto",
+                        format: "auto",
+                      })}
+                      alt={asset.altText || asset.originalFilename}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center">
+                      <MdVideoFile size={32} className="text-purple-500" />
+                    </div>
+                  )}
+                  {selectionMode && (
+                    <div className="absolute inset-0 bg-[#000054]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="px-4 py-2 bg-white text-[#000054] font-bold rounded-lg shadow-lg">
+                        Select Media
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-bold text-slate-800 text-sm truncate pr-2">
+                      {asset.originalFilename}
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-slate-500 font-medium mb-2">
+                    {Math.round(asset.bytes / 1024)} KB &bull;{" "}
                     {new Date(asset.uploadedAt).toLocaleDateString()}
-                  </Typography>
+                  </p>
+
                   {asset.tags.length > 0 && (
-                    <Box sx={{ mt: 1 }}>
+                    <div className="flex flex-wrap gap-1 mb-2">
                       {asset.tags.slice(0, 2).map((tag) => (
-                        <Chip
+                        <span
                           key={tag}
-                          label={tag}
-                          size="small"
-                          sx={{ mr: 0.5, mb: 0.5 }}
-                        />
+                          className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded border border-slate-200"
+                        >
+                          {tag}
+                        </span>
                       ))}
                       {asset.tags.length > 2 && (
-                        <Chip
-                          label={`+${asset.tags.length - 2}`}
-                          size="small"
-                        />
+                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded border border-slate-200">
+                          +{asset.tags.length - 2}
+                        </span>
                       )}
-                    </Box>
+                    </div>
                   )}
-                </CardContent>
-                <CardActions sx={{ pt: 0, justifyContent: "space-between" }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {asset.category}
-                  </Typography>
-                  <IconButton
-                    size="small"
+
+                  <div className="flex justify-between items-center mt-2 border-t border-slate-100 pt-2">
+                    <span className="text-xs text-slate-400 uppercase font-bold">
+                      {asset.category}
+                    </span>
+                    <div
+                      className="relative"
+                      ref={activeMenuId === asset.id ? menuRef : null}
+                    >
+                      <button
+                        onClick={(e) => handleMenuClick(e, asset.id)}
+                        className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+                      >
+                        <MdMoreVert size={20} />
+                      </button>
+                      {activeMenuId === asset.id && renderMainMenu(asset)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // List View Card
+              <div
+                key={asset.id}
+                className={`bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:border-[#000054] transition-all flex items-center gap-4 group ${selectionMode ? "cursor-pointer" : ""}`}
+                onClick={() =>
+                  selectionMode && onSelectMedia && onSelectMedia(asset)
+                }
+              >
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
+                  {asset.resourceType === "image" ? (
+                    <img
+                      src={generateOptimizedUrl(asset.publicId, {
+                        width: 100,
+                        height: 100,
+                        crop: "fill",
+                        quality: "auto",
+                        format: "auto",
+                      })}
+                      alt={asset.originalFilename}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <MdVideoFile size={28} className="text-purple-500" />
+                  )}
+                </div>
+
+                <div className="flex-grow min-w-0">
+                  <p className="font-bold text-slate-800 text-sm truncate">
+                    {asset.originalFilename}
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-slate-500 font-medium mt-1">
+                    <span>{Math.round(asset.bytes / 1024)} KB</span>
+                    <span>
+                      {new Date(asset.uploadedAt).toLocaleDateString()}
+                    </span>
+                    <span className="hidden md:inline bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 font-bold text-slate-600">
+                      {asset.category}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0 px-2">
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setAnchorEl(e.currentTarget);
-                      setMenuMedia(asset);
+                      handleCopyUrl(asset);
                     }}
+                    className="p-2 text-slate-400 hover:text-[#000054] hover:bg-slate-100 rounded-lg transition-colors hidden sm:block"
+                    title="Copy URL"
                   >
-                    <MoreIcon />
-                  </IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                    <MdContentCopy size={20} />
+                  </button>
+                  {permissions.canDelete && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMediaToDelete(asset);
+                        setDeleteConfirmOpen(true);
+                      }}
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <MdDelete size={20} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ),
+          )}
+        </div>
       )}
 
-      {/* Context Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem
-          key="copy"
-          onClick={() => {
-            if (menuMedia) handleCopyUrl(menuMedia);
-            setAnchorEl(null);
-          }}
+      {/* Delete Confirmation */}
+      {deleteConfirmOpen && mediaToDelete && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setDeleteConfirmOpen(false)}
         >
-          <ListItemIcon>
-            <CopyIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Copy URL</ListItemText>
-        </MenuItem>
-
-        {permissions.canDelete && <Divider />}
-
-        {permissions.canDelete && (
-          <MenuItem
-            key="delete"
-            onClick={() => {
-              if (menuMedia) {
-                setMediaToDelete(menuMedia);
-                setDeleteConfirmOpen(true);
-              }
-              setAnchorEl(null);
-            }}
-            sx={{ color: "error.main" }}
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
           >
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" color="error" />
-            </ListItemIcon>
-            <ListItemText>Delete</ListItemText>
-          </MenuItem>
-        )}
-      </Menu>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete "{mediaToDelete?.originalFilename}"?
-            This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteMedia} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MdDelete size={32} />
+              </div>
+              <h2 className="text-xl font-bold text-slate-800 mb-2">
+                Delete Media
+              </h2>
+              <p className="text-sm text-slate-600 mb-1">
+                Are you sure you want to delete{" "}
+                <strong className="text-slate-800 break-all">
+                  &quot;{mediaToDelete.originalFilename}&quot;
+                </strong>
+                ?
+              </p>
+              <p className="text-xs text-red-500 font-medium mt-2">
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="bg-slate-50 px-6 py-4 flex gap-3 border-t border-slate-200">
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteMedia}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

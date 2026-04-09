@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getMediaAnalytics } from '@/services/bsmMediaService';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // TODO: Add authentication and authorization check
     // Only admin and media team should access analytics

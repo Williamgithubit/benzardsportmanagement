@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
 import { getFirestore, DocumentData, QueryDocumentSnapshot, Firestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
 import { getApps } from 'firebase-admin/app';
-import { UserRecord, ListUsersResult } from 'firebase-admin/auth';
+import { UserRecord } from 'firebase-admin/auth';
 
 // Configure runtime to use Node.js instead of Edge (required for Firebase Admin SDK)
 export const runtime = 'nodejs';
@@ -45,7 +44,7 @@ export async function GET(request: NextRequest) {
       if (!decodedToken.admin && decodedToken.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
       }
-    } catch (authError) {
+    } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
@@ -76,19 +75,19 @@ export async function GET(request: NextRequest) {
     }
     
     // Format users for the frontend
-    const formattedUsers: FormattedUser[] = listUsersResult.users.map((user: UserRecord) => {
-      const firestoreData: Record<string, any> = firestoreUserMap.get(user.uid) || {};
+    const formattedUsers: FormattedUser[] = listUsersResult.users.map((user: UserRecord): FormattedUser => {
+      const firestoreData: Record<string, unknown> = firestoreUserMap.get(user.uid) || {};
       
       return {
         id: user.uid,
         email: user.email || '',
-        name: user.displayName || firestoreData.displayName || user.email?.split('@')[0] || 'User',
-        role: user.customClaims?.role || firestoreData.role || 'user',
-        status: firestoreData.status || (user.disabled ? 'inactive' : 'active'),
-        lastLogin: firestoreData.lastLogin || null,
+        name: String(user.displayName || firestoreData.displayName || user.email?.split('@')[0] || 'User'),
+        role: String(user.customClaims?.role || firestoreData.role || 'user'),
+        status: String(firestoreData.status || (user.disabled ? 'inactive' : 'active')),
+        lastLogin: firestoreData.lastLogin ? String(firestoreData.lastLogin) : null,
         createdAt: user.metadata.creationTime,
         emailVerified: user.emailVerified,
-        photoURL: user.photoURL || firestoreData.photoURL || null,
+        photoURL: user.photoURL || (firestoreData.photoURL ? String(firestoreData.photoURL) : null),
       };
     });
 
@@ -133,7 +132,7 @@ export async function POST(request: NextRequest) {
       if (!decodedToken.admin && decodedToken.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
       }
-    } catch (authError) {
+    } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 

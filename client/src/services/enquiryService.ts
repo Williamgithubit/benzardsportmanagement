@@ -48,7 +48,7 @@ export const EnquiryService = {
           enquiryId: docRef.id,
         },
         recipientRole: "admin",
-      } as any);
+      });
     } catch (err) {
       console.error("Failed to create notification for enquiry", err);
     }

@@ -1,18 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Paper,
-  Card,
-  CardContent,
-  useTheme,
-  useMediaQuery,
-  CircularProgress,
-  Alert
-} from '@mui/material';
-import Grid from "@/components/ui/Grid";
-import {
   BarChart,
   Bar,
   XAxis,
@@ -28,17 +16,15 @@ import {
   Line
 } from 'recharts';
 import {
-  fetchAllAnalytics,
+  fetchAdminAnalytics,
   RegionalData,
   LevelData,
   GrowthData,
   AnalyticsMetrics
-} from '@/services/analyticsService';
+} from '@/services/adminDataService';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const SportsAnalytics = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
   const [regionData, setRegionData] = useState<RegionalData[]>([]);
   const [levelData, setLevelData] = useState<LevelData[]>([]);
   const [growthData, setGrowthData] = useState<GrowthData[]>([]);
@@ -47,11 +33,13 @@ const SportsAnalytics = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadAnalytics = async () => {
+    const loadAnalytics = async (showLoader = true) => {
       try {
-        setLoading(true);
+        if (showLoader) {
+          setLoading(true);
+        }
         setError(null);
-        const data = await fetchAllAnalytics();
+        const data = await fetchAdminAnalytics();
         setRegionData(data.regionalData);
         setLevelData(data.levelData);
         setGrowthData(data.growthData);
@@ -64,202 +52,228 @@ const SportsAnalytics = () => {
       }
     };
 
-    loadAnalytics();
-  }, []);
+    void loadAnalytics();
 
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+    const intervalId = window.setInterval(() => {
+      void loadAnalytics(false);
+    }, 45000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress size={50} />
-        <Typography variant="h6" sx={{ ml: 2 }}>Loading analytics...</Typography>
-      </Box>
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-56" />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="md:col-span-2 rounded-xl border border-slate-100 bg-white p-6">
+            <Skeleton className="h-6 w-56" />
+            <Skeleton className="mt-6 h-[280px] w-full rounded-2xl" />
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-white p-6">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="mt-6 h-[280px] w-full rounded-2xl" />
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-100 bg-white p-6">
+          <Skeleton className="h-6 w-64" />
+          <Skeleton className="mt-6 h-[300px] w-full rounded-2xl" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="rounded-xl border border-slate-100 bg-white p-5 text-center"
+            >
+              <Skeleton className="mx-auto h-10 w-20" />
+              <Skeleton className="mx-auto mt-3 h-4 w-24" />
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
+      <div className="mb-4 p-4 rounded-md bg-red-50 border border-red-200 text-red-700">
         {error}
-      </Alert>
+      </div>
     );
   }
 
   return (
-    <Box>
-      <Typography 
-        variant="h6" 
-        gutterBottom 
-        sx={{ 
-          color: '#000054', 
-          fontWeight: 'bold',
-          mb: 3
-        }}
-      >
+    <div className="w-full">
+      <h2 className="text-xl font-bold text-navy mb-6">
         Sports Analytics Overview
-      </Typography>
+      </h2>
 
-      <Grid container spacing={3}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Athlete Growth Chart */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2, height: 350 }}>
-            <Typography variant="h6" gutterBottom>
+        <div className="md:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-[380px]">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
               Athlete & Event Growth (6 Months)
-            </Typography>
+            </h3>
             {growthData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={growthData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="athletes" 
-                    stroke="#E32845" 
-                    strokeWidth={3}
-                    name="Athletes"
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="events" 
-                    stroke="#000054" 
-                    strokeWidth={3}
-                    name="Events"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={growthData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="month" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="athletes" 
+                      stroke="#E32845" 
+                      strokeWidth={3}
+                      name="Athletes"
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="events" 
+                      stroke="#000054" 
+                      strokeWidth={3}
+                      name="Events"
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
-              <Box display="flex" justifyContent="center" alignItems="center" height={280}>
-                <Typography variant="body2" color="text.secondary">
+              <div className="flex justify-center items-center h-[280px]">
+                <p className="text-slate-500 text-sm">
                   No growth data available yet. Add athletes and events to see trends.
-                </Typography>
-              </Box>
+                </p>
+              </div>
             )}
-          </Paper>
-        </Grid>
+          </div>
+        </div>
 
         {/* Level Distribution */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, height: 350 }}>
-            <Typography variant="h6" gutterBottom>
+        <div className="md:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-[380px]">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
               Athletes by Level
-            </Typography>
+            </h3>
             {levelData.some(d => d.value > 0) ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={levelData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : '0'}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {levelData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={levelData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : '0'}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {levelData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
-              <Box display="flex" justifyContent="center" alignItems="center" height={280}>
-                <Typography variant="body2" color="text.secondary">
+              <div className="flex justify-center items-center h-[280px]">
+                <p className="text-slate-500 text-sm">
                   No athlete level data available yet.
-                </Typography>
-              </Box>
+                </p>
+              </div>
             )}
-          </Paper>
-        </Grid>
+          </div>
+        </div>
 
         {/* Regional Distribution */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2, height: 350 }}>
-            <Typography variant="h6" gutterBottom>
+        <div className="md:col-span-3">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-[400px]">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
               Athletes & Events by Region (Liberia)
-            </Typography>
+            </h3>
             {regionData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={regionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="athletes" fill="#E32845" name="Athletes" />
-                  <Bar dataKey="events" fill="#000054" name="Events" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-[300px] w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={regionData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
+                    <Tooltip 
+                      cursor={{ fill: '#f8fafc' }}
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Bar dataKey="athletes" fill="#E32845" name="Athletes" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="events" fill="#000054" name="Events" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
-              <Box display="flex" justifyContent="center" alignItems="center" height={280}>
-                <Typography variant="body2" color="text.secondary">
+              <div className="flex justify-center items-center h-[300px]">
+                <p className="text-slate-500 text-sm">
                   No regional data available yet. Add athletes and events with locations.
-                </Typography>
-              </Box>
+                </p>
+              </div>
             )}
-          </Paper>
-        </Grid>
+          </div>
+        </div>
 
         {/* Key Metrics Cards */}
-        <Grid item xs={12}>
-          <Grid container spacing={2}>
-            <Grid item xs={6} md={3}>
-              <Card sx={{ textAlign: 'center', p: 1 }}>
-                <CardContent>
-                  <Typography variant="h4" color="#E32845" fontWeight="bold">
-                    {metrics?.eventAttendanceRate || 0}%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Event Attendance Rate
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <Card sx={{ textAlign: 'center', p: 1 }}>
-                <CardContent>
-                  <Typography variant="h4" color="#000054" fontWeight="bold">
-                    {metrics?.athletesScouted || 0}%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Athletes Scouted
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <Card sx={{ textAlign: 'center', p: 1 }}>
-                <CardContent>
-                  <Typography variant="h4" color="#4caf50" fontWeight="bold">
-                    {metrics?.trainingCompletion || 0}%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Training Completion
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <Card sx={{ textAlign: 'center', p: 1 }}>
-                <CardContent>
-                  <Typography variant="h4" color="#ff9800" fontWeight="bold">
-                    {metrics?.activePrograms || 0}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Active Programs
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Grid>
-    </Box>
+        <div className="md:col-span-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 text-center">
+              <div className="text-3xl font-bold text-primary mb-1">
+                {metrics?.eventAttendanceRate || 0}%
+              </div>
+              <div className="text-sm text-slate-500 font-medium">
+                Event Attendance Rate
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 text-center">
+              <div className="text-3xl font-bold text-navy mb-1">
+                {metrics?.athletesScouted || 0}%
+              </div>
+              <div className="text-sm text-slate-500 font-medium">
+                Athletes Scouted
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 text-center">
+              <div className="text-3xl font-bold text-green-500 mb-1">
+                {metrics?.trainingCompletion || 0}%
+              </div>
+              <div className="text-sm text-slate-500 font-medium">
+                Training Completion
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 text-center">
+              <div className="text-3xl font-bold text-orange-500 mb-1">
+                {metrics?.activePrograms || 0}
+              </div>
+              <div className="text-sm text-slate-500 font-medium">
+                Active Programs
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

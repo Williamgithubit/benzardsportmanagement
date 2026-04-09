@@ -3,9 +3,9 @@ import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUD_NAME,
-  api_key: process.env.NEXT_PUBLIC_CLOUD_API_KEY,
-  api_secret: process.env.NEXT_PUBLIC_CLOUD_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY || process.env.NEXT_PUBLIC_CLOUD_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET || process.env.NEXT_PUBLIC_CLOUD_API_SECRET,
 });
 
 export async function POST(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     let folder: string;
     let publicId: string;
     let resourceType: 'image' | 'raw' = 'image';
-    let transformation: any[] = [];
+    let transformation: Record<string, unknown>[] = [];
 
     if (uploadType === 'admission-image') {
       folder = 'admission-applications/images';
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload to Cloudinary
-    const uploadOptions: any = {
+    const uploadOptions: Record<string, unknown> = {
       folder,
       public_id: publicId,
       overwrite: true,
@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      url: (result as any).secure_url,
-      publicId: (result as any).public_id
+      url: (result as { secure_url: string }).secure_url,
+      publicId: (result as { public_id: string }).public_id
     });
 
   } catch (error) {

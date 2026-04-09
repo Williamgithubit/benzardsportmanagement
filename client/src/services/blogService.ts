@@ -62,13 +62,13 @@ export const createBlogPost = async (
   postData: CreateBlogPostData,
   authorId: string,
   authorName: string,
-  authorEmail: string
+  authorEmail: string,
 ): Promise<string> => {
   try {
     const slug = generateSlug(postData.title);
     const now = serverTimestamp();
 
-    const blogPost: any = {
+    const blogPost: Record<string, unknown> = {
       title: postData.title,
       slug,
       content: postData.content,
@@ -115,17 +115,17 @@ export const createBlogPost = async (
  * Update an existing blog post
  */
 export const updateBlogPost = async (
-  updateData: UpdateBlogPostData
+  updateData: UpdateBlogPostData,
 ): Promise<void> => {
   try {
     const { id, ...data } = updateData;
-    const updatePayload: any = {
+    const updatePayload: Record<string, unknown> = {
       updatedAt: serverTimestamp() as Timestamp,
     };
 
     // Only add fields that have values to avoid undefined
     Object.keys(data).forEach((key) => {
-      const value = (data as any)[key];
+      const value = (data as Record<string, unknown>)[key];
       if (value !== undefined && value !== null) {
         updatePayload[key] = value;
       }
@@ -239,7 +239,7 @@ export const getBlogPost = async (postId: string): Promise<BlogPost | null> => {
  * Get a blog post by slug
  */
 export const getBlogPostBySlug = async (
-  slug: string
+  slug: string,
 ): Promise<BlogPost | null> => {
   try {
     const q = query(collection(db, "blogPosts"), where("slug", "==", slug));

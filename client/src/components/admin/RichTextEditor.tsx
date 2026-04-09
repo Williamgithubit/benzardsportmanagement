@@ -1,47 +1,32 @@
-import React, { useState, useRef, useCallback } from 'react';
+"use client";
+
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
-  Box,
-  Paper,
-  Toolbar,
-  IconButton,
-  Divider,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  FormControlLabel,
-  Switch,
-  Tooltip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  useTheme,
-} from '@mui/material';
-import {
-  FormatBold as BoldIcon,
-  FormatItalic as ItalicIcon,
-  FormatUnderlined as UnderlineIcon,
-  FormatListBulleted as BulletListIcon,
-  FormatListNumbered as NumberListIcon,
-  FormatQuote as QuoteIcon,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  Code as CodeIcon,
-  FormatAlignLeft as AlignLeftIcon,
-  FormatAlignCenter as AlignCenterIcon,
-  FormatAlignRight as AlignRightIcon,
-  Undo as UndoIcon,
-  Redo as RedoIcon,
-  Preview as PreviewIcon,
-  Edit as EditIcon,
-  PhotoLibrary as MediaLibraryIcon,
-} from '@mui/icons-material';
-import MediaLibrary from './MediaLibrary';
-import { MediaFile } from '@/services/mediaService';
+  MdClose,
+  MdEdit,
+  MdFormatAlignCenter,
+  MdFormatAlignLeft,
+  MdFormatAlignRight,
+  MdFormatBold,
+  MdFormatItalic,
+  MdFormatListBulleted,
+  MdFormatListNumbered,
+  MdFormatQuote,
+  MdFormatUnderlined,
+  MdImage,
+  MdLink,
+  MdRedo,
+  MdUndo,
+  MdVisibility,
+} from "react-icons/md";
+import MediaLibrary from "./MediaLibrary";
+import { MediaFile } from "@/services/mediaService";
 
 interface RichTextEditorProps {
   value: string;
@@ -59,418 +44,417 @@ interface LinkDialogData {
   openInNewTab: boolean;
 }
 
+type ToolbarItem =
+  | "divider"
+  | {
+      icon: ReactNode;
+      tooltip: string;
+      command?: string;
+      value?: string;
+      action?: () => void;
+    };
+
+const normalizeUrl = (url: string) => {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url) || url.startsWith("/")) {
+    return url;
+  }
+
+  return `https://${url}`;
+};
+
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
   value,
   onChange,
-  placeholder = 'Start writing...',
+  placeholder = "Start writing...",
   minHeight = 300,
   maxHeight = 600,
   showPreview = true,
   allowMedia = true,
 }) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const selectionRangeRef = useRef<Range | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [linkData, setLinkData] = useState<LinkDialogData>({
-    text: '',
-    url: '',
+    text: "",
+    url: "",
     openInNewTab: true,
   });
-  const [formatMenuAnchor, setFormatMenuAnchor] = useState<null | HTMLElement>(null);
-  
-  const editorRef = useRef<HTMLDivElement>(null);
-  const theme = useTheme();
 
-  // Execute formatting command
-  const execCommand = useCallback((command: string, value?: string) => {
-    document.execCommand(command, false, value);
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
     }
-  }, [onChange]);
+  }, [value]);
 
-  // Handle content change
-  const handleContentChange = useCallback(() => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-    }
-  }, [onChange]);
-
-  // Handle paste to clean up formatting
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
-    handleContentChange();
-  }, [handleContentChange]);
-
-  // Insert link
-  const insertLink = useCallback(() => {
+  const captureSelection = useCallback(() => {
     const selection = window.getSelection();
-    const selectedText = selection?.toString() || '';
-    
+    if (!selection || selection.rangeCount === 0) {
+      selectionRangeRef.current = null;
+      return;
+    }
+
+    selectionRangeRef.current = selection.getRangeAt(0).cloneRange();
+  }, []);
+
+  const restoreSelection = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    selection.removeAllRanges();
+
+    if (selectionRangeRef.current) {
+      selection.addRange(selectionRangeRef.current);
+    }
+  }, []);
+
+  const updateContent = useCallback(() => {
+    onChange(editorRef.current?.innerHTML || "");
+  }, [onChange]);
+
+  const runCommand = useCallback(
+    (command: string, commandValue?: string) => {
+      editorRef.current?.focus();
+      restoreSelection();
+      document.execCommand(command, false, commandValue);
+      captureSelection();
+      updateContent();
+    },
+    [captureSelection, restoreSelection, updateContent]
+  );
+
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const text = event.clipboardData.getData("text/plain");
+      editorRef.current?.focus();
+      restoreSelection();
+      document.execCommand("insertText", false, text);
+      captureSelection();
+      updateContent();
+    },
+    [captureSelection, restoreSelection, updateContent]
+  );
+
+  const openLinkDialog = useCallback(() => {
+    captureSelection();
+    const selection = window.getSelection();
+    const selectedText = selection?.toString() || "";
+
     setLinkData({
       text: selectedText,
-      url: '',
+      url: "",
       openInNewTab: true,
     });
     setLinkDialogOpen(true);
-  }, []);
+  }, [captureSelection]);
 
-  // Confirm link insertion
   const confirmLink = useCallback(() => {
-    const { text, url, openInNewTab } = linkData;
-    if (!url) return;
+    if (!linkData.url) return;
 
-    const linkHtml = `<a href="${url}" ${openInNewTab ? 'target="_blank" rel="noopener noreferrer"' : ''}>${text || url}</a>`;
-    
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(range.createContextualFragment(linkHtml));
-    } else {
-      document.execCommand('insertHTML', false, linkHtml);
-    }
-    
-    handleContentChange();
+    const href = normalizeUrl(linkData.url.trim());
+    const linkHtml = `<a href="${href}" ${
+      linkData.openInNewTab ? 'target="_blank" rel="noopener noreferrer"' : ""
+    }>${linkData.text || href}</a>`;
+
+    editorRef.current?.focus();
+    restoreSelection();
+    document.execCommand("insertHTML", false, linkHtml);
+    captureSelection();
+    updateContent();
+
     setLinkDialogOpen(false);
-    setLinkData({ text: '', url: '', openInNewTab: true });
-  }, [linkData, handleContentChange]);
+    setLinkData({ text: "", url: "", openInNewTab: true });
+  }, [captureSelection, linkData, restoreSelection, updateContent]);
 
-  // Insert media
-  const insertMedia = useCallback((media: MediaFile) => {
-    let mediaHtml = '';
-    
-    if (media.type === 'image') {
-      mediaHtml = `<img src="${media.url}" alt="${media.alt || media.originalName}" style="max-width: 100%; height: auto; margin: 10px 0;" />`;
-    } else if (media.type === 'video') {
-      mediaHtml = `<video controls style="max-width: 100%; height: auto; margin: 10px 0;">
-        <source src="${media.url}" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>`;
-    } else if (media.type === 'audio') {
-      mediaHtml = `<audio controls style="width: 100%; margin: 10px 0;">
-        <source src="${media.url}" type="audio/mpeg">
-        Your browser does not support the audio element.
-      </audio>`;
-    } else {
-      mediaHtml = `<a href="${media.url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 8px 12px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; text-decoration: none; color: #333; margin: 10px 0;">
-        📄 ${media.originalName}
-      </a>`;
-    }
-    
-    document.execCommand('insertHTML', false, mediaHtml);
-    handleContentChange();
-    setMediaLibraryOpen(false);
-  }, [handleContentChange]);
+  const insertMedia = useCallback(
+    (media: MediaFile) => {
+      const mediaHtml =
+        media.type === "image"
+          ? `<img src="${media.url}" alt="${media.alt || media.originalName}" />`
+          : media.type === "video"
+            ? `<video controls><source src="${media.url}" type="video/mp4" />Your browser does not support the video tag.</video>`
+            : media.type === "audio"
+              ? `<audio controls><source src="${media.url}" type="audio/mpeg" />Your browser does not support the audio element.</audio>`
+              : `<a href="${media.url}" target="_blank" rel="noopener noreferrer">${media.originalName}</a>`;
 
-  // Convert HTML to plain text for preview
-  const getPlainTextPreview = (html: string): string => {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent || div.innerText || '';
-  };
+      editorRef.current?.focus();
+      restoreSelection();
+      document.execCommand("insertHTML", false, mediaHtml);
+      captureSelection();
+      updateContent();
+      setMediaLibraryOpen(false);
+    },
+    [captureSelection, restoreSelection, updateContent]
+  );
 
-  // Render markdown-style preview
-  const renderPreview = (html: string): string => {
-    return html
-      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
-      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
-      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
-      .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
-      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
-      .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
-      .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
-      .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
-      .replace(/<u[^>]*>(.*?)<\/u>/gi, '_$1_')
-      .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
-      .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]*>/g, '')
-      .replace(/\n\s*\n\s*\n/g, '\n\n')
-      .trim();
-  };
-
-  const toolbarButtons = [
+  const toolbarItems: ToolbarItem[] = [
     {
-      icon: <BoldIcon />,
-      command: 'bold',
-      tooltip: 'Bold (Ctrl+B)',
+      icon: <MdFormatBold size={18} />,
+      tooltip: "Bold",
+      command: "bold",
     },
     {
-      icon: <ItalicIcon />,
-      command: 'italic',
-      tooltip: 'Italic (Ctrl+I)',
+      icon: <MdFormatItalic size={18} />,
+      tooltip: "Italic",
+      command: "italic",
     },
     {
-      icon: <UnderlineIcon />,
-      command: 'underline',
-      tooltip: 'Underline (Ctrl+U)',
+      icon: <MdFormatUnderlined size={18} />,
+      tooltip: "Underline",
+      command: "underline",
     },
-    'divider',
+    "divider",
     {
-      icon: <BulletListIcon />,
-      command: 'insertUnorderedList',
-      tooltip: 'Bullet List',
-    },
-    {
-      icon: <NumberListIcon />,
-      command: 'insertOrderedList',
-      tooltip: 'Numbered List',
+      icon: <MdFormatListBulleted size={18} />,
+      tooltip: "Bullet List",
+      command: "insertUnorderedList",
     },
     {
-      icon: <QuoteIcon />,
-      command: 'formatBlock',
-      value: 'blockquote',
-      tooltip: 'Quote',
-    },
-    'divider',
-    {
-      icon: <AlignLeftIcon />,
-      command: 'justifyLeft',
-      tooltip: 'Align Left',
+      icon: <MdFormatListNumbered size={18} />,
+      tooltip: "Numbered List",
+      command: "insertOrderedList",
     },
     {
-      icon: <AlignCenterIcon />,
-      command: 'justifyCenter',
-      tooltip: 'Align Center',
+      icon: <MdFormatQuote size={18} />,
+      tooltip: "Quote",
+      command: "formatBlock",
+      value: "blockquote",
+    },
+    "divider",
+    {
+      icon: <MdFormatAlignLeft size={18} />,
+      tooltip: "Align Left",
+      command: "justifyLeft",
     },
     {
-      icon: <AlignRightIcon />,
-      command: 'justifyRight',
-      tooltip: 'Align Right',
+      icon: <MdFormatAlignCenter size={18} />,
+      tooltip: "Align Center",
+      command: "justifyCenter",
     },
-    'divider',
     {
-      icon: <LinkIcon />,
-      action: insertLink,
-      tooltip: 'Insert Link',
+      icon: <MdFormatAlignRight size={18} />,
+      tooltip: "Align Right",
+      command: "justifyRight",
+    },
+    "divider",
+    {
+      icon: <MdLink size={18} />,
+      tooltip: "Insert Link",
+      action: openLinkDialog,
     },
   ];
 
   if (allowMedia) {
-    toolbarButtons.push({
-      icon: <ImageIcon />,
-      action: () => setMediaLibraryOpen(true),
-      tooltip: 'Insert Media',
+    toolbarItems.push({
+      icon: <MdImage size={18} />,
+      tooltip: "Insert Media",
+      action: () => {
+        captureSelection();
+        setMediaLibraryOpen(true);
+      },
     });
   }
 
-  toolbarButtons.push(
-    'divider',
+  toolbarItems.push(
+    "divider",
     {
-      icon: <UndoIcon />,
-      command: 'undo',
-      tooltip: 'Undo (Ctrl+Z)',
+      icon: <MdUndo size={18} />,
+      tooltip: "Undo",
+      command: "undo",
     },
     {
-      icon: <RedoIcon />,
-      command: 'redo',
-      tooltip: 'Redo (Ctrl+Y)',
+      icon: <MdRedo size={18} />,
+      tooltip: "Redo",
+      command: "redo",
     }
   );
 
   if (showPreview) {
-    toolbarButtons.push(
-      'divider',
+    toolbarItems.push(
+      "divider",
       {
-        icon: isPreviewMode ? <EditIcon /> : <PreviewIcon />,
-        action: () => setIsPreviewMode(!isPreviewMode),
-        tooltip: isPreviewMode ? 'Edit Mode' : 'Preview Mode',
+        icon: isPreviewMode ? <MdEdit size={18} /> : <MdVisibility size={18} />,
+        tooltip: isPreviewMode ? "Edit Mode" : "Preview Mode",
+        action: () => setIsPreviewMode((current) => !current),
       }
     );
   }
 
   return (
-    <Box>
-      <Paper elevation={1} sx={{ border: '1px solid', borderColor: 'divider' }}>
-        {/* Toolbar */}
-        <Toolbar variant="dense" sx={{ minHeight: 48, px: 1 }}>
-          {toolbarButtons.map((button, index) => {
-            if (button === 'divider') {
-              return <Divider key={index} orientation="vertical" flexItem sx={{ mx: 0.5 }} />;
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.28)]">
+        <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50/80 px-3 py-3">
+          {toolbarItems.map((item, index) => {
+            if (item === "divider") {
+              return (
+                <div
+                  key={`divider-${index}`}
+                  className="mx-1 hidden h-7 w-px bg-slate-200 sm:block"
+                />
+              );
             }
 
-            const btn = button as any;
             return (
-              <Tooltip key={index} title={btn.tooltip}>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    if (btn.action) {
-                      btn.action();
-                    } else {
-                      execCommand(btn.command, btn.value);
-                    }
-                  }}
-                  sx={{ mx: 0.25 }}
-                >
-                  {btn.icon}
-                </IconButton>
-              </Tooltip>
+              <button
+                key={`tool-${index}`}
+                type="button"
+                title={item.tooltip}
+                onClick={() => {
+                  if (item.action) {
+                    item.action();
+                    return;
+                  }
+
+                  if (item.command) {
+                    runCommand(item.command, item.value);
+                  }
+                }}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-slate-600 transition hover:bg-white hover:text-secondary"
+              >
+                {item.icon}
+              </button>
             );
           })}
-        </Toolbar>
+        </div>
 
-        <Divider />
-
-        {/* Editor/Preview Area */}
-        <Box sx={{ position: 'relative' }}>
-          {isPreviewMode ? (
-            <Box
-              sx={{
-                p: 2,
-                minHeight,
-                maxHeight,
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'monospace',
-                fontSize: '0.9rem',
-                lineHeight: 1.6,
-                backgroundColor: '#f8f9fa',
-              }}
-            >
-              {renderPreview(value) || 'Nothing to preview...'}
-            </Box>
+        <div className="relative bg-white">
+          {!isPreviewMode ? (
+            <>
+              {!value ? (
+                <div className="pointer-events-none absolute left-5 top-5 text-sm italic text-slate-400">
+                  {placeholder}
+                </div>
+              ) : null}
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={updateContent}
+                onPaste={handlePaste}
+                onMouseUp={captureSelection}
+                onKeyUp={captureSelection}
+                className="rich-text-content min-h-[300px] w-full overflow-y-auto px-5 py-5 outline-none"
+                style={{ minHeight, maxHeight }}
+              />
+            </>
           ) : (
-            <Box
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={handleContentChange}
-              onPaste={handlePaste}
-              dangerouslySetInnerHTML={{ __html: value }}
-              sx={{
-                p: 2,
-                minHeight,
-                maxHeight,
-                overflow: 'auto',
-                outline: 'none',
-                '&:empty::before': {
-                  content: `"${placeholder}"`,
-                  color: 'text.secondary',
-                  fontStyle: 'italic',
-                },
-                '& img': {
-                  maxWidth: '100%',
-                  height: 'auto',
-                  display: 'block',
-                  margin: '10px 0',
-                },
-                '& video, & audio': {
-                  maxWidth: '100%',
-                  display: 'block',
-                  margin: '10px 0',
-                },
-                '& blockquote': {
-                  borderLeft: '4px solid #E32845',
-                  paddingLeft: '16px',
-                  margin: '16px 0',
-                  fontStyle: 'italic',
-                  color: 'text.secondary',
-                },
-                '& a': {
-                  color: '#E32845',
-                  textDecoration: 'underline',
-                },
-                '& ul, & ol': {
-                  paddingLeft: '24px',
-                },
-                '& li': {
-                  marginBottom: '4px',
-                },
-                '& h1, & h2, & h3, & h4, & h5, & h6': {
-                  color: '#000054',
-                  fontWeight: 'bold',
-                  margin: '16px 0 8px 0',
-                },
-                '& h1': { fontSize: '2rem' },
-                '& h2': { fontSize: '1.5rem' },
-                '& h3': { fontSize: '1.25rem' },
-                '& p': {
-                  margin: '8px 0',
-                  lineHeight: 1.6,
-                },
-                '& code': {
-                  backgroundColor: '#f5f5f5',
-                  padding: '2px 4px',
-                  borderRadius: '4px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.9em',
-                },
-              }}
-            />
+            <div
+              className="rich-text-content min-h-[300px] overflow-y-auto bg-slate-50/70 px-5 py-5"
+              style={{ minHeight, maxHeight }}
+            >
+              {value ? (
+                <div dangerouslySetInnerHTML={{ __html: value }} />
+              ) : (
+                <p className="text-sm italic text-slate-400">Nothing to preview yet.</p>
+              )}
+            </div>
           )}
-        </Box>
-      </Paper>
+        </div>
+      </div>
 
-      {/* Link Dialog */}
-      <Dialog open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Insert Link</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <TextField
-              fullWidth
-              label="Link Text"
-              value={linkData.text}
-              onChange={(e) => setLinkData({ ...linkData, text: e.target.value })}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="URL"
-              value={linkData.url}
-              onChange={(e) => setLinkData({ ...linkData, url: e.target.value })}
-              margin="normal"
-              placeholder="https://example.com"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={linkData.openInNewTab}
-                  onChange={(e) => setLinkData({ ...linkData, openInNewTab: e.target.checked })}
+      {linkDialogOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg rounded-[32px] bg-white">
+            <div className="flex items-start justify-between border-b border-slate-200/70 px-6 py-5">
+              <div>
+                <h3 className="text-lg font-semibold text-secondary">Insert Link</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Add a destination for the selected text or create a new link.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLinkDialogOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Close link dialog"
+              >
+                <MdClose size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <label className="block text-sm font-medium text-slate-700">
+                Link Text
+                <input
+                  type="text"
+                  value={linkData.text}
+                  onChange={(event) =>
+                    setLinkData((current) => ({
+                      ...current,
+                      text: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-secondary/20 focus:ring-2 focus:ring-secondary/10"
+                  placeholder="Read more"
                 />
-              }
-              label="Open in new tab"
-              sx={{ mt: 1 }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLinkDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmLink} variant="contained" disabled={!linkData.url}>
-            Insert Link
-          </Button>
-        </DialogActions>
-      </Dialog>
+              </label>
 
-      {/* Media Library Dialog */}
-      {allowMedia && (
-        <Dialog
-          open={mediaLibraryOpen}
-          onClose={() => setMediaLibraryOpen(false)}
-          maxWidth="lg"
-          fullWidth
-          fullScreen
-        >
-          <DialogTitle>
-            <Box display="flex" alignItems="center" gap={1}>
-              <MediaLibraryIcon />
-              Select Media
-            </Box>
-          </DialogTitle>
-          <DialogContent sx={{ p: 0 }}>
-            <MediaLibrary
-              selectionMode
-              onSelectMedia={insertMedia}
-              onCloseDialog={() => setMediaLibraryOpen(false)}
-              allowedTypes={['image', 'video', 'audio', 'pdf', 'document']}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-    </Box>
+              <label className="block text-sm font-medium text-slate-700">
+                URL
+                <input
+                  type="url"
+                  value={linkData.url}
+                  onChange={(event) =>
+                    setLinkData((current) => ({
+                      ...current,
+                      url: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-secondary/20 focus:ring-2 focus:ring-secondary/10"
+                  placeholder="https://example.com"
+                />
+              </label>
+
+              <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+                <span className="font-medium">Open in new tab</span>
+                <input
+                  type="checkbox"
+                  checked={linkData.openInNewTab}
+                  onChange={(event) =>
+                    setLinkData((current) => ({
+                      ...current,
+                      openInNewTab: event.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-secondary focus:ring-secondary"
+                />
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-200/70 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setLinkDialogOpen(false)}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmLink}
+                disabled={!linkData.url.trim()}
+                className="rounded-2xl bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-secondary-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Insert Link
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {allowMedia && mediaLibraryOpen ? (
+        <MediaLibrary
+          openDialog={mediaLibraryOpen}
+          onCloseDialog={() => setMediaLibraryOpen(false)}
+          selectionMode
+          onSelectMedia={insertMedia}
+          allowedTypes={["image", "video", "audio", "pdf", "document"]}
+        />
+      ) : null}
+    </div>
   );
 };
 

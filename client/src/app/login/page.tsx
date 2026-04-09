@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { FaUser, FaLock, FaArrowRight, FaSpinner } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { login as loginAction, login, selectCurrentUser, selectAuthError, selectIsAuthenticated, selectAuthLoading } from '@/store/Auth/authSlice';
-import { User, UserRole, LoginCredentials } from '@/types/auth';
-import { useAppDispatch, useAppSelector, AppDispatch } from '@/store/store';
+import { login as loginAction, selectCurrentUser } from '@/store/Auth/authSlice';
+import { UserRole, LoginCredentials } from '@/types/auth';
+import { useAppDispatch, useAppSelector } from '@/store/store';
 
 // Using LoginCredentials from auth types
 
@@ -20,21 +20,11 @@ const Login = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
-  const authStatus = useAppSelector(selectAuthLoading);
-  const authError = useAppSelector(selectAuthError);
   
   // Handle auth state changes
   useEffect(() => {
-    console.log('Auth state changed - user:', user, 'authError:', authError);
-    
-    // If there was an auth error, stop loading and show toast
-    if (authError) {
-      console.log('Auth error detected:', authError);
-      setIsSubmitting(false);
-      toast.error(authError);
-      return;
-    }
-    
+    console.log('Auth state changed - user:', user);
+
     // If user is authenticated, show success toast and redirect
     if (user) {
       console.log('User is authenticated, user:', user);
@@ -60,7 +50,7 @@ const Login = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [user, user?.role, authError, router]);
+  }, [user, router]);
 
   // This effect is now handled in the main auth state effect
   
@@ -129,19 +119,15 @@ const Login = () => {
       };
       
       console.log('Dispatching login action with credentials:', { email: credentials.email });
-      const result = await dispatch(loginAction(credentials)).unwrap();
-      console.log('Login successful, result:', result);
-      
-      // If we get here, login was successful
-      const redirectPath = getRedirectPath(result.role);
-      console.log('Login successful, redirecting to:', redirectPath);
-      if (redirectPath) {
-        router.push(redirectPath);
-      }
-      
+      await dispatch(loginAction(credentials)).unwrap();
     } catch (err) {
       console.error('Login error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
+      const errorMessage =
+        typeof err === 'string'
+          ? err
+          : err instanceof Error
+            ? err.message
+            : 'Login failed. Please check your credentials.';
       toast.error(errorMessage);
       setIsSubmitting(false);
     }

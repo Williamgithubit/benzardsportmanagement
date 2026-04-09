@@ -1,31 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Typography,
-  Paper,
-  Card,
-  CardContent,
-  Button,
-  CircularProgress,
-  Alert,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  LinearProgress,
-  useTheme,
-  useMediaQuery,
-} from '@mui/material';
-import {
-  Refresh as RefreshIcon,
-  People as PeopleIcon,
-  Sports as SportsIcon,
-  Event as EventIcon,
-  Assignment as AssignmentIcon,
-} from '@mui/icons-material';
+  MdRefresh,
+  MdPeople,
+  MdSportsMartialArts,
+  MdEvent,
+  MdAssignment,
+} from "react-icons/md";
 import {
   LineChart,
   Line,
@@ -40,7 +20,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts";
 import {
   getAnalyticsData,
   getUserEngagementMetrics,
@@ -48,32 +28,42 @@ import {
   AnalyticsData,
   ProgramPerformance,
   UserEngagementMetrics,
-} from '@/services/reportsService';
+} from "@/services/reportsService";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+const COLORS = [
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#8884D8",
+  "#82CA9D",
+];
 
 const formatDate = (date: Date | string | undefined): string => {
-  if (!date) return 'N/A';
+  if (!date) return "N/A";
   const d = new Date(date);
-  return d.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+  return d.toLocaleDateString("en-CA"); // YYYY-MM-DD format
 };
 
 const Reports: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-  const [engagementMetrics, setEngagementMetrics] = useState<UserEngagementMetrics | null>(null);
-  const [programPerformance, setProgramPerformance] = useState<Array<{
-    name: string;
-    status: string;
-    startDate: string;
-    endDate: string;
-    enrollments: number;
-    completions: number;
-    completionRate: number;
-    rating: number;
-  }>>([]);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
+    null,
+  );
+  const [engagementMetrics, setEngagementMetrics] =
+    useState<UserEngagementMetrics | null>(null);
+  const [programPerformance, setProgramPerformance] = useState<
+    Array<{
+      name: string;
+      status: string;
+      startDate: string;
+      endDate: string;
+      enrollments: number;
+      completions: number;
+      completionRate: number;
+      rating: number;
+    }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,422 +83,599 @@ const Reports: React.FC = () => {
       ]);
 
       // Transform performance data to match state type
-      const transformedPerformance = performance.map((program: ProgramPerformance) => ({
-        name: program.name,
-        status: program.status,
-        startDate: formatDate(program.startDate),
-        endDate: formatDate(program.endDate),
-        enrollments: program.enrollments,
-        completions: program.completions,
-        completionRate: program.completionRate,
-        rating: parseFloat(program.rating.toString()),
-      }));
+      const transformedPerformance = performance.map(
+        (program: ProgramPerformance) => ({
+          name: program.name,
+          status: program.status,
+          startDate: formatDate(program.startDate),
+          endDate: formatDate(program.endDate),
+          enrollments: program.enrollments,
+          completions: program.completions,
+          completionRate: program.completionRate,
+          rating: parseFloat(program.rating.toString()),
+        }),
+      );
 
       setAnalyticsData(analytics);
       setEngagementMetrics(engagement);
       setProgramPerformance(transformedPerformance);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports data');
+      setError(
+        err instanceof Error ? err.message : "Failed to load reports data",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info' | 'default' => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'error';
-      case 'draft': return 'warning';
-      case 'upcoming': return 'info';
-      default: return 'default';
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "inactive":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "draft":
+        return "bg-amber-100 text-amber-800 border-amber-200";
+      case "upcoming":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      default:
+        return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <Box textAlign="center">
-          <CircularProgress size={60} />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Loading Reports...
-          </Typography>
-        </Box>
-      </Box>
+      <div className="w-full space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        {/* Stats Grid Loading */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
+            >
+              <Skeleton className="h-6 w-20 mb-4" />
+              <Skeleton className="h-8 w-24 mb-2" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Loading */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
+            >
+              <Skeleton className="h-6 w-40 mb-4" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box>
+    <div className="w-full">
       {/* Header */}
-      <Box 
-        sx={{
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between', 
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          gap: { xs: 2, sm: 0 },
-          mb: 3
-        }}
-      >
-        <Typography 
-          variant="h5" 
-          component="h2" 
-          sx={{ 
-            color: '#000054', 
-            fontWeight: 'bold',
-            fontSize: { xs: '1.25rem', sm: '1.5rem' }
-          }}
-        >
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#000054]">
           Reports & Analytics
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
+        </h2>
+        <button
           onClick={loadReportsData}
           disabled={loading}
-          fullWidth={isMobile}
-          size={isMobile ? "small" : "medium"}
-          sx={{
-            borderColor: '#000054',
-            color: '#000054',
-            '&:hover': {
-              borderColor: '#1a1a6e',
-              backgroundColor: 'rgba(0, 0, 84, 0.04)',
-            },
-          }}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border-2 border-[#000054] text-[#000054] hover:bg-[#000054] hover:text-white transition-colors font-bold w-full sm:w-auto disabled:opacity-50"
         >
-          {isMobile ? "Refresh" : "Refresh Data"}
-        </Button>
-      </Box>
+          <MdRefresh size={20} className={loading ? "animate-spin" : ""} />
+          <span>{window.innerWidth < 640 ? "Refresh" : "Refresh Data"}</span>
+        </button>
+      </div>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded flex justify-between items-center group">
+          <div className="flex items-center">
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-500 hover:text-red-700 opacity-50 group-hover:opacity-100 transition-opacity"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
       )}
 
       {analyticsData && (
         <>
           {/* Key Metrics Cards */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Total Users
-                      </Typography>
-                      <Typography variant="h4">
-                        {analyticsData.totalUsers}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {analyticsData.activeUsers} active
-                      </Typography>
-                    </Box>
-                    <PeopleIcon color="primary" sx={{ fontSize: 40 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Box>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-[#ADF802] transition-colors relative overflow-hidden group">
+              <div className="flex justify-between items-start z-10 relative">
+                <div>
+                  <p className="text-sm font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                    Total Users
+                  </p>
+                  <h3 className="text-3xl font-extrabold text-[#000054] mb-1">
+                    {analyticsData.totalUsers}
+                  </h3>
+                  <p className="text-sm font-medium text-green-600 bg-green-50 inline-block px-2 py-0.5 rounded-md border border-green-100">
+                    {analyticsData.activeUsers} active
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 transition-transform group-hover:scale-110">
+                  <MdPeople size={28} />
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-50/50 rounded-full blur-2xl z-0 pointer-events-none"></div>
+            </div>
 
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Training Programs
-                      </Typography>
-                      <Typography variant="h4">
-                        {analyticsData.totalPrograms}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {analyticsData.activePrograms} active
-                      </Typography>
-                    </Box>
-                    <SportsIcon color="primary" sx={{ fontSize: 40 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Box>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-[#ADF802] transition-colors relative overflow-hidden group">
+              <div className="flex justify-between items-start z-10 relative">
+                <div>
+                  <p className="text-sm font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                    Programs
+                  </p>
+                  <h3 className="text-3xl font-extrabold text-[#000054] mb-1">
+                    {analyticsData.totalPrograms}
+                  </h3>
+                  <p className="text-sm font-medium text-green-600 bg-green-50 inline-block px-2 py-0.5 rounded-md border border-green-100">
+                    {analyticsData.activePrograms} active
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 transition-transform group-hover:scale-110">
+                  <MdSportsMartialArts size={28} />
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-purple-50/50 rounded-full blur-2xl z-0 pointer-events-none"></div>
+            </div>
 
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Events
-                      </Typography>
-                      <Typography variant="h4">
-                        {analyticsData.totalEvents}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {analyticsData.upcomingEvents} upcoming
-                      </Typography>
-                    </Box>
-                    <EventIcon color="primary" sx={{ fontSize: 40 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Box>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-[#ADF802] transition-colors relative overflow-hidden group">
+              <div className="flex justify-between items-start z-10 relative">
+                <div>
+                  <p className="text-sm font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                    Events
+                  </p>
+                  <h3 className="text-3xl font-extrabold text-[#000054] mb-1">
+                    {analyticsData.totalEvents}
+                  </h3>
+                  <p className="text-sm font-medium text-amber-600 bg-amber-50 inline-block px-2 py-0.5 rounded-md border border-amber-100">
+                    {analyticsData.upcomingEvents} upcoming
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 transition-transform group-hover:scale-110">
+                  <MdEvent size={28} />
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-amber-50/50 rounded-full blur-2xl z-0 pointer-events-none"></div>
+            </div>
 
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' } }}>
-              <Card>
-                <CardContent>
-                  <Box display="flex" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Training Completion
-                      </Typography>
-                      <Typography variant="h4">
-                        {analyticsData.completionRate}%
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {analyticsData.completedTasks}/{analyticsData.totalTasks} sessions
-                      </Typography>
-                    </Box>
-                    <AssignmentIcon color="primary" sx={{ fontSize: 40 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Box>
-          </Box>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-[#ADF802] transition-colors relative overflow-hidden group">
+              <div className="flex justify-between items-start z-10 relative">
+                <div>
+                  <p className="text-sm font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                    Completion
+                  </p>
+                  <h3 className="text-3xl font-extrabold text-[#000054] mb-1">
+                    {analyticsData.completionRate}%
+                  </h3>
+                  <p className="text-sm font-medium text-slate-600">
+                    {analyticsData.completedTasks}/{analyticsData.totalTasks}{" "}
+                    sessions
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
+                  <MdAssignment size={28} />
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-50/50 rounded-full blur-2xl z-0 pointer-events-none"></div>
+            </div>
+          </div>
 
           {/* Charts Section */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* User Growth Chart */}
-            <Box sx={{ flex: { xs: '1 1 100%', lg: '1 1 calc(66.67% - 12px)' } }}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Athlete & Staff Growth (Last 30 Days)
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={analyticsData.userGrowth}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <h3 className="text-lg font-bold text-[#000054] mb-4">
+                Athlete & Staff Growth (Last 30 Days)
+              </h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={analyticsData.userGrowth}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#E2E8F0"
                     />
-                    <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) =>
+                        new Date(value).toLocaleDateString([], {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      tick={{ fill: "#64748B", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={10}
                     />
-                    <Legend />
+                    <YAxis
+                      tick={{ fill: "#64748B", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      labelFormatter={(value) =>
+                        new Date(value).toLocaleDateString()
+                      }
+                      contentStyle={{
+                        borderRadius: "8px",
+                        border: "none",
+                        boxShadow:
+                          "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Legend
+                      iconType="circle"
+                      wrapperStyle={{ paddingTop: "20px" }}
+                    />
                     <Area
                       type="monotone"
                       dataKey="totalUsers"
                       stackId="1"
-                      stroke="#8884d8"
-                      fill="#8884d8"
+                      stroke="#000054"
+                      fill="url(#colorTotal)"
                       name="Total Users"
+                      strokeWidth={3}
                     />
                     <Area
                       type="monotone"
                       dataKey="newUsers"
                       stackId="2"
-                      stroke="#82ca9d"
-                      fill="#82ca9d"
+                      stroke="#ADF802"
+                      fill="url(#colorNew)"
                       name="New Users"
+                      strokeWidth={3}
                     />
+                    <defs>
+                      <linearGradient
+                        id="colorTotal"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#000054"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#000054"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                      <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                          offset="5%"
+                          stopColor="#ADF802"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#ADF802"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
                   </AreaChart>
                 </ResponsiveContainer>
-              </Paper>
-            </Box>
+              </div>
+            </div>
 
             {/* User Engagement */}
-            <Box sx={{ flex: { xs: '1 1 100%', lg: '1 1 calc(33.33% - 12px)' } }}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  User Engagement
-                </Typography>
-                {engagementMetrics && (
-                  <Box>
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="body2" color="textSecondary" gutterBottom>
-                        Weekly Engagement
-                      </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={engagementMetrics.weeklyEngagement} 
-                        sx={{ mb: 1 }}
-                      />
-                      <Typography variant="body2">
-                        {engagementMetrics.weeklyEngagement}% ({engagementMetrics.activeLastWeek} users)
-                      </Typography>
-                    </Box>
-                    
-                    <Box>
-                      <Typography variant="body2" color="textSecondary" gutterBottom>
-                        Monthly Engagement
-                      </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={engagementMetrics.monthlyEngagement} 
-                        sx={{ mb: 1 }}
-                      />
-                      <Typography variant="body2">
-                        {engagementMetrics.monthlyEngagement}% ({engagementMetrics.activeLastMonth} users)
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-              </Paper>
-            </Box>
-          </Box>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <h3 className="text-lg font-bold text-[#000054] mb-6">
+                User Engagement
+              </h3>
 
-          {/* Training Session Trends */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
-            <Box sx={{ flex: { xs: '1 1 100%', lg: '1 1 calc(66.67% - 12px)' } }}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Training Session Trends (Last 30 Days)
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={analyticsData.taskCompletion}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+              {engagementMetrics && (
+                <div className="space-y-8 mt-4">
+                  <div>
+                    <div className="flex justify-between items-end mb-2">
+                      <p className="text-sm font-bold text-slate-600">
+                        Weekly Engagement
+                      </p>
+                      <span className="text-lg font-extrabold text-[#000054]">
+                        {engagementMetrics.weeklyEngagement}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-3 mb-2">
+                      <div
+                        className="bg-blue-500 h-3 rounded-full"
+                        style={{
+                          width: `${engagementMetrics.weeklyEngagement}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-500 text-right">
+                      <span className="text-blue-600">
+                        {engagementMetrics.activeLastWeek}
+                      </span>{" "}
+                      active users
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-end mb-2">
+                      <p className="text-sm font-bold text-slate-600">
+                        Monthly Engagement
+                      </p>
+                      <span className="text-lg font-extrabold text-[#000054]">
+                        {engagementMetrics.monthlyEngagement}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-3 mb-2">
+                      <div
+                        className="bg-emerald-500 h-3 rounded-full"
+                        style={{
+                          width: `${engagementMetrics.monthlyEngagement}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-500 text-right">
+                      <span className="text-emerald-600">
+                        {engagementMetrics.activeLastMonth}
+                      </span>{" "}
+                      active users
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Training Session Trends & Status */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <h3 className="text-lg font-bold text-[#000054] mb-4">
+                Training Session Trends (Last 30 Days)
+              </h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={analyticsData.taskCompletion}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#E2E8F0"
                     />
-                    <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) =>
+                        new Date(value).toLocaleDateString([], {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      tick={{ fill: "#64748B", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={10}
                     />
-                    <Legend />
+                    <YAxis
+                      tick={{ fill: "#64748B", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      labelFormatter={(value) =>
+                        new Date(value).toLocaleDateString()
+                      }
+                      contentStyle={{
+                        borderRadius: "8px",
+                        border: "none",
+                        boxShadow:
+                          "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Legend
+                      iconType="circle"
+                      wrapperStyle={{ paddingTop: "20px" }}
+                    />
                     <Line
                       type="monotone"
                       dataKey="completed"
-                      stroke="#00C49F"
-                      strokeWidth={2}
+                      stroke="#10B981"
+                      strokeWidth={3}
                       name="Completed"
+                      dot={{ r: 4, strokeWidth: 2 }}
                     />
                     <Line
                       type="monotone"
                       dataKey="pending"
-                      stroke="#FFBB28"
-                      strokeWidth={2}
+                      stroke="#F59E0B"
+                      strokeWidth={3}
                       name="Pending"
+                      dot={{ r: 4, strokeWidth: 2 }}
                     />
                     <Line
                       type="monotone"
                       dataKey="overdue"
-                      stroke="#FF8042"
-                      strokeWidth={2}
+                      stroke="#EF4444"
+                      strokeWidth={3}
                       name="Overdue"
+                      dot={{ r: 4, strokeWidth: 2 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </Paper>
-            </Box>
+              </div>
+            </div>
 
             {/* Training Program Status */}
-            <Box sx={{ flex: { xs: '1 1 100%', lg: '1 1 calc(33.33% - 12px)' } }}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Training Program Status
-                </Typography>
-                <ResponsiveContainer width="100%" height={300}>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <h3 className="text-lg font-bold text-[#000054] mb-4">
+                Program Status
+              </h3>
+              <div className="h-[300px] w-full flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'Active', value: analyticsData.activePrograms },
-                        { name: 'Inactive', value: analyticsData.totalPrograms - analyticsData.activePrograms },
+                        { name: "Active", value: analyticsData.activePrograms },
+                        {
+                          name: "Inactive",
+                          value:
+                            analyticsData.totalPrograms -
+                            analyticsData.activePrograms,
+                        },
                       ]}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
                       dataKey="value"
                     >
-                      {[
-                        { name: 'Active', value: analyticsData.activePrograms },
-                        { name: 'Inactive', value: analyticsData.totalPrograms - analyticsData.activePrograms },
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                      <Cell key="cell-active" fill="#ADF802" />
+                      <Cell key="cell-inactive" fill="#000054" />
                     </Pie>
-                    <Tooltip />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "8px",
+                        border: "none",
+                        boxShadow:
+                          "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                      }}
+                      itemStyle={{ fontWeight: "bold" }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      iconType="circle"
+                    />
                   </PieChart>
                 </ResponsiveContainer>
-              </Paper>
-            </Box>
-          </Box>
+              </div>
+            </div>
+          </div>
 
-          {/* Training Program Performance */}
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Training Program Performance
-            </Typography>
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size={isMobile ? "small" : "medium"}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Training Program</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Start Date</TableCell>
-                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>End Date</TableCell>
-                    <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Athletes</TableCell>
-                    <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Completed</TableCell>
-                    <TableCell align="right">Completion Rate</TableCell>
-                    <TableCell align="right">Rating</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
+          {/* Training Program Performance Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
+              <h3 className="text-lg font-bold text-[#000054]">
+                Training Program Performance
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white border-b border-slate-200 text-sm font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="p-4">Program Name</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 hidden md:table-cell">Duration</th>
+                    <th className="p-4 text-right hidden sm:table-cell">
+                      Athletes
+                    </th>
+                    <th className="p-4 text-center">Progress</th>
+                    <th className="p-4 text-right">Rating</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
                   {programPerformance.map((program, index) => (
-                    <TableRow key={index}>
-                      <TableCell sx={{ maxWidth: { xs: '120px', sm: '200px' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {program.name}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={program.status}
-                          color="default"
-                          size="small"
-                          sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem' } }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{program.startDate}</TableCell>
-                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{program.endDate}</TableCell>
-                      <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{program.enrollments}</TableCell>
-                      <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{program.completions}</TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'flex-end',
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                        }}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={program.completionRate || 0}
-                            sx={{ width: { xs: 40, sm: 60 }, mr: 1 }}
-                          />
-                          {program.completionRate || 0}%
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'flex-end',
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                        }}>
+                    <tr
+                      key={index}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="p-4">
+                        <p className="font-bold text-slate-800 text-sm">
+                          {program.name}
+                        </p>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`px-2 py-1 rounded-md text-xs font-bold border ${getStatusColor(program.status)}`}
+                        >
+                          {program.status.charAt(0).toUpperCase() +
+                            program.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="p-4 hidden md:table-cell">
+                        <div className="text-xs text-slate-600 font-medium">
+                          <span className="block">{program.startDate} to</span>
+                          <span className="block">{program.endDate}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-right hidden sm:table-cell font-bold text-slate-700">
+                        {program.enrollments}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3 justify-center sm:justify-start">
+                          <div className="w-16 sm:w-24 bg-slate-100 rounded-full h-2 hidden sm:block">
+                            <div
+                              className="bg-[#ADF802] h-2 rounded-full"
+                              style={{
+                                width: `${program.completionRate || 0}%`,
+                              }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-bold text-slate-700 w-12 text-right">
+                            {program.completionRate || 0}%
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium text-center sm:text-left mt-1 block sm:hidden">
+                          {program.completions} / {program.enrollments} done
+                        </p>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-1 rounded-md border border-amber-100 font-bold text-xs">
                           ⭐ {program.rating || 0}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
+                  {programPerformance.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="p-8 text-center text-slate-500"
+                      >
+                        No program performance data available.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       )}
-    </Box>
+    </div>
   );
 };
 

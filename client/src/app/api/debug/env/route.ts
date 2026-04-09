@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Check which Firebase environment variables are loaded
     const envCheck = {

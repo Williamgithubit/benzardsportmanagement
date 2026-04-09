@@ -1,35 +1,19 @@
-'use client'
-import React, { useState } from 'react';
+"use client";
+import React, { useState, useRef, useEffect } from "react";
 import {
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Box,
-  Chip,
-  Avatar,
-  IconButton,
-  Menu,
-  MenuItem,
-  Tooltip,
-  Badge,
-  Button
-} from '@mui/material';
-import {
-  MoreVert as MoreVertIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as ViewIcon,
-  LocationOn as LocationIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  SportsFootball as SportsIcon,
-  EmojiEvents as TrophyIcon,
-  Person as PersonIcon,
-  PhotoLibrary as MediaIcon
-} from '@mui/icons-material';
-import { Athlete, UserRole } from '@/types/athlete';
-import toast, { Toaster } from 'react-hot-toast';
+  MdMoreVert,
+  MdEdit,
+  MdDelete,
+  MdVisibility,
+  MdLocationOn,
+  MdEmail,
+  MdPhone,
+  MdSportsSoccer,
+  MdPerson,
+  MdPhotoLibrary,
+} from "react-icons/md";
+import { Athlete, UserRole } from "@/types/athlete";
+import toast, { Toaster } from "react-hot-toast";
 
 interface AthleteCardProps {
   athlete: Athlete;
@@ -50,18 +34,28 @@ export default function AthleteCard({
   onDelete,
   onSelect,
   selected = false,
-  showSelection = false
+  showSelection = false,
 }: AthleteCardProps) {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownRef]);
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    setAnchorEl(event.currentTarget);
+    setDropdownOpen((prev) => !prev);
   };
 
   const handleMenuClose = () => {
-    setAnchorEl(null);
+    setDropdownOpen(false);
   };
 
   const handleCardClick = () => {
@@ -72,34 +66,45 @@ export default function AthleteCard({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'active': return 'success';
-      case 'scouted': return 'warning';
-      case 'signed': return 'info';
-      case 'inactive': return 'default';
-      default: return 'default';
+      case "active":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "scouted":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "signed":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "inactive":
+        return "bg-slate-100 text-slate-700 border-slate-200";
+      default:
+        return "bg-slate-100 text-slate-700 border-slate-200";
     }
   };
 
-  const getLevelColor = (level: string) => {
+  const getLevelStyle = (level: string) => {
     switch (level) {
-      case 'grassroots': return 'info';
-      case 'semi-pro': return 'warning';
-      case 'professional': return 'success';
-      default: return 'default';
+      case "grassroots":
+        return "bg-blue-50 text-blue-600 border-blue-200";
+      case "semi-pro":
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
+      case "professional":
+        return "bg-green-50 text-green-600 border-green-200";
+      default:
+        return "bg-slate-50 text-slate-600 border-slate-200";
     }
   };
 
   const getSportIcon = (sport: string) => {
     switch (sport) {
-      case 'football': return <SportsIcon />;
-      default: return <SportsIcon />;
+      case "football":
+        return <MdSportsSoccer className="text-current" />;
+      default:
+        return <MdSportsSoccer className="text-current" />;
     }
   };
 
   const getProfileImage = () => {
-    const profilePhoto = athlete.media?.find(m => m.type === 'photo');
+    const profilePhoto = athlete.media?.find((m) => m.type === "photo");
     return profilePhoto?.url;
   };
 
@@ -111,12 +116,12 @@ export default function AthleteCard({
       const calculatedAge = today.getFullYear() - birthDate.getFullYear();
       return `${calculatedAge} years`;
     }
-    return 'Age unknown';
+    return "Age unknown";
   };
 
   const handleViewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.loading('Loading athlete details...');
+    toast.loading("Loading athlete details...");
     setTimeout(() => {
       onView(athlete);
       toast.dismiss();
@@ -125,7 +130,7 @@ export default function AthleteCard({
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.loading('Loading edit form...');
+    toast.loading("Loading edit form...");
     setTimeout(() => {
       onEdit(athlete);
       toast.dismiss();
@@ -134,7 +139,7 @@ export default function AthleteCard({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.loading('Deleting athlete...');
+    toast.loading("Deleting athlete...");
     setTimeout(() => {
       onDelete(athlete.id);
       toast.dismiss();
@@ -144,523 +149,196 @@ export default function AthleteCard({
   return (
     <>
       <Toaster position="top-right" />
-      <Card 
-        sx={{ 
-          height: '100%', 
-          position: 'relative',
-          cursor: 'pointer',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          border: selected ? '2px solid #ADF802' : 'none',
-          backgroundColor: selected ? 'rgba(173, 248, 2, 0.05)' : 'white',
-          borderRadius: 3,
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          width: 300, // Decreased width of the card
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
-            '& .athlete-actions': {
-              opacity: 1
-            },
-            '& .athlete-image': {
-              transform: 'scale(1.1)' // Enhanced image scaling on hover
-            },
-            '& .athlete-overlay': {
-              opacity: 1
-            }
-          }
-        }}
+      <div
+        className={`group relative flex flex-col h-full w-[300px] bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden border-2 ${
+          selected ? "border-[#E32845] bg-[#E32845]/5" : "border-transparent"
+        }`}
         onClick={handleCardClick}
       >
-        {/* Selection Checkbox */}
+        {/* Selection Checkbox/Badge */}
         {showSelection && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              zIndex: 2
-            }}
-          >
-            <Badge
-              color="primary"
-              variant="dot"
-              invisible={!selected}
-              sx={{
-                '& .MuiBadge-badge': {
-                  backgroundColor: '#ADF802',
-                  width: 12,
-                  height: 12
-                }
-              }}
+          <div className="absolute top-2 left-2 z-10">
+            <div
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                selected ? "border-[#E32845] bg-[#E32845]" : "border-black/30 bg-transparent"
+              }`}
             >
-              <Box
-                sx={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: selected ? '#ADF802' : 'rgba(0,0,0,0.3)',
-                  backgroundColor: selected ? '#ADF802' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              />
-            </Badge>
-          </Box>
+              {selected && <div className="w-2.5 h-2.5 bg-[#03045e] rounded-full"></div>}
+            </div>
+          </div>
         )}
 
-        {/* Profile Image or Avatar */}
-        <Box sx={{ position: 'relative', height: 180, overflow: 'hidden' }}> {/* Increased height for better image display */}
+        {/* Profile Image */}
+        <div className="relative h-[180px] overflow-hidden bg-gradient-to-br from-[#03045e] to-[#000054] flex items-center justify-center">
           {getProfileImage() ? (
             <>
-              <CardMedia
-                component="img"
-                height="180"
-                image={getProfileImage()}
+              <img
+                src={getProfileImage()}
                 alt={athlete.name}
-                className="athlete-image"
-                sx={{ 
-                  objectFit: 'cover',
-                  width: '100%', // Ensure image fills the card width
-                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
               />
-              {/* Gradient Overlay */}
-              <Box
-                className="athlete-overlay"
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '50%',
-                  background: 'linear-gradient(transparent, rgba(3, 4, 94, 0.8))',
-                  opacity: 0,
-                  transition: 'opacity 0.3s ease'
-                }}
-              />
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#03045e]/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </>
           ) : (
-            <Box
-              sx={{
-                height: 180,
-                background: 'linear-gradient(135deg, #03045e 0%, #000054 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}
-            >
-              <Avatar
-                sx={{
-                  bgcolor: '#ADF802',
-                  color: '#03045e',
-                  width: 70,
-                  height: 70,
-                  fontSize: '2rem',
-                  boxShadow: '0 4px 20px rgba(173, 248, 2, 0.3)'
-                }}
-              >
-                <PersonIcon fontSize="large" />
-              </Avatar>
-              {/* Decorative elements */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 20,
-                  right: 20,
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  border: '2px solid rgba(173, 248, 2, 0.2)',
-                  '@keyframes pulse': {
-                    '0%': {
-                      transform: 'scale(1)',
-                      opacity: 0.7,
-                    },
-                    '50%': {
-                      transform: 'scale(1.1)',
-                      opacity: 0.4,
-                    },
-                    '100%': {
-                      transform: 'scale(1)',
-                      opacity: 0.7,
-                    },
-                  },
-                  animation: 'pulse 2s infinite'
-                }}
-              />
-            </Box>
+            <>
+              <div className="w-[70px] h-[70px] rounded-full bg-[#E32845] flex items-center justify-center text-[#03045e] shadow-[0_4px_20px_rgba(173,248,2,0.3)] z-10">
+                <MdPerson size={36} />
+              </div>
+              <div className="absolute top-5 right-5 w-[60px] h-[60px] rounded-full border-2 border-[#E32845]/20 animate-pulse opacity-75" />
+            </>
           )}
 
           {/* Media Count Badge */}
           {athlete.media && athlete.media.length > 0 && (
-            <Chip
-              icon={<MediaIcon />}
-              label={athlete.media.length}
-              size="small"
-              sx={{
-                position: 'absolute',
-                top: 12,
-                right: 12,
-                backgroundColor: 'rgba(173, 248, 2, 0.9)',
-                color: '#03045e',
-                fontWeight: 'bold',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                '& .MuiChip-icon': { color: '#03045e' }
-              }}
-            />
+            <div className="absolute top-3 right-3 bg-[#E32845]/90 text-[#03045e] font-bold px-2 py-1 flex items-center gap-1 rounded backdrop-blur text-xs border border-white/20">
+              <MdPhotoLibrary size={14} />
+              <span>{athlete.media.length}</span>
+            </div>
           )}
 
-          {/* Actions Menu */}
-          <Box
-            className="athlete-actions"
-            sx={{
-              position: 'absolute',
-              top: 12,
-              right: showSelection ? 52 : 12,
-              opacity: 0,
-              transition: 'all 0.3s ease',
-              transform: 'translateY(-10px)',
-              '&:hover': {
-                transform: 'translateY(0)'
-              }
-            }}
-          >
-            <IconButton
-              onClick={handleMenuClick}
-              size="small"
-              sx={{
-                backgroundColor: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                '&:hover': { 
-                  backgroundColor: 'white',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.2)'
-                },
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <MoreVertIcon sx={{ color: '#03045e' }} />
-            </IconButton>
-          </Box>
-        </Box>
+          {/* Actions Menu Trigger */}
+          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 -translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+            <div ref={dropdownRef} className="relative">
+              <button
+                onClick={handleMenuClick}
+                className="bg-white/95 backdrop-blur border border-white/20 shadow rounded p-1 hover:bg-white hover:scale-110 transition-all"
+              >
+                <MdMoreVert size={20} className="text-[#03045e]" />
+              </button>
+              {dropdownOpen && (
+                <div className="absolute right-0 top-0 mt-8 w-40 bg-white rounded-md shadow-lg z-20 py-1 overflow-hidden border border-slate-100 text-sm">
+                  <button
+                    onClick={(e) => {
+                      handleViewClick(e);
+                      handleMenuClose();
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                  >
+                    <MdVisibility size={16} /> View Details
+                  </button>
+                  {(userRole.role === "admin" || userRole.permissions.canEdit) && (
+                    <button
+                      onClick={(e) => {
+                        handleEditClick(e);
+                        handleMenuClose();
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                    >
+                      <MdEdit size={16} /> Edit
+                    </button>
+                  )}
+                  {(userRole.role === "admin" || userRole.permissions.canDelete) && (
+                    <button
+                      onClick={(e) => {
+                        handleDeleteClick(e);
+                        handleMenuClose();
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-red-600"
+                    >
+                      <MdDelete size={16} /> Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-        <CardContent sx={{ p: 2, pt: 1.5 }}>
+        <div className="p-4 pt-3 flex flex-col flex-grow">
           {/* Name and Basic Info */}
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontWeight: 700, 
-              mb: 1, 
-              color: '#03045e',
-              fontSize: '1.1rem',
-              lineHeight: 1.2
-            }}
-          >
+          <h3 className="font-bold text-[#03045e] text-[1.1rem] leading-tight mb-2">
             {athlete.name}
-          </Typography>
+          </h3>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <Box
-              sx={{
-                p: 0.5,
-                borderRadius: 1,
-                backgroundColor: 'rgba(173, 248, 2, 0.1)',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-1 rounded bg-[#E32845]/10 text-[#03045e] flex items-center">
               {getSportIcon(athlete.sport)}
-            </Box>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: 'text.secondary',
-                fontWeight: 500,
-                fontSize: '0.875rem'
-              }}
-            >
+            </div>
+            <p className="text-slate-500 font-medium text-sm">
               {athlete.position} • {formatAge(athlete.age, athlete.dateOfBirth)}
-            </Typography>
-          </Box>
+            </p>
+          </div>
 
           {/* Location */}
           {(athlete.location || athlete.county) && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-              <LocationIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-              <Typography variant="body2" color="text.secondary">
-                {athlete.county ? `${athlete.county}${athlete.location ? `, ${athlete.location}` : ''}` : athlete.location}
-              </Typography>
-            </Box>
+            <div className="flex items-center gap-1.5 mb-2 text-slate-500 text-sm">
+              <MdLocationOn size={16} />
+              <span>
+                {athlete.county ? `${athlete.county}${athlete.location ? `, ${athlete.location}` : ""}` : athlete.location}
+              </span>
+            </div>
           )}
 
           {/* Bio */}
           {athlete.bio && (
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                mb: 1.5, 
-                minHeight: 32,
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                fontSize: '0.8rem',
-                color: 'text.secondary'
-              }}
-            >
+            <p className="mb-3 text-[0.8rem] text-slate-500 line-clamp-2 min-h-[32px]">
               {athlete.bio}
-            </Typography>
+            </p>
           )}
 
           {/* Status Chips */}
-          <Box sx={{ display: 'flex', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
-            <Chip
-              label={athlete.level}
-              size="small"
-              sx={{ 
-                textTransform: 'capitalize',
-                backgroundColor: getLevelColor(athlete.level) === 'success' ? 'rgba(76, 175, 80, 0.1)' : 
-                               getLevelColor(athlete.level) === 'warning' ? 'rgba(255, 152, 0, 0.1)' : 
-                               'rgba(33, 150, 243, 0.1)',
-                color: getLevelColor(athlete.level) === 'success' ? '#2e7d32' : 
-                       getLevelColor(athlete.level) === 'warning' ? '#f57c00' : 
-                       '#1976d2',
-                fontWeight: 600,
-                border: '1px solid',
-                borderColor: getLevelColor(athlete.level) === 'success' ? 'rgba(76, 175, 80, 0.3)' : 
-                            getLevelColor(athlete.level) === 'warning' ? 'rgba(255, 152, 0, 0.3)' : 
-                            'rgba(33, 150, 243, 0.3)'
-              }}
-            />
-            <Chip
-              label={athlete.scoutingStatus}
-              size="small"
-              sx={{ 
-                textTransform: 'capitalize',
-                backgroundColor: getStatusColor(athlete.scoutingStatus) === 'success' ? 'rgba(173, 248, 2, 0.15)' : 
-                               getStatusColor(athlete.scoutingStatus) === 'warning' ? 'rgba(255, 193, 7, 0.15)' : 
-                               getStatusColor(athlete.scoutingStatus) === 'info' ? 'rgba(3, 4, 94, 0.1)' :
-                               'rgba(158, 158, 158, 0.1)',
-                color: getStatusColor(athlete.scoutingStatus) === 'success' ? '#03045e' : 
-                       getStatusColor(athlete.scoutingStatus) === 'warning' ? '#f57c00' : 
-                       getStatusColor(athlete.scoutingStatus) === 'info' ? '#03045e' :
-                       '#757575',
-                fontWeight: 600,
-                border: '1px solid',
-                borderColor: getStatusColor(athlete.scoutingStatus) === 'success' ? 'rgba(173, 248, 2, 0.3)' : 
-                            getStatusColor(athlete.scoutingStatus) === 'warning' ? 'rgba(255, 193, 7, 0.3)' : 
-                            getStatusColor(athlete.scoutingStatus) === 'info' ? 'rgba(3, 4, 94, 0.2)' :
-                            'rgba(158, 158, 158, 0.3)'
-              }}
-            />
-          </Box>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            <span className={`capitalize px-2 py-0.5 text-xs font-semibold rounded border ${getLevelStyle(athlete.level)}`}>
+              {athlete.level}
+            </span>
+            <span className={`capitalize px-2 py-0.5 text-xs font-semibold rounded border ${getStatusStyle(athlete.scoutingStatus)}`}>
+              {athlete.scoutingStatus}
+            </span>
+          </div>
 
           {/* Stats */}
           {athlete.stats && (
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(3, 1fr)', 
-              gap: 1,
-              p: 1.5,
-              backgroundColor: 'rgba(173, 248, 2, 0.08)',
-              borderRadius: 1.5,
-              mb: 2,
-              border: '1px solid rgba(173, 248, 2, 0.2)'
-            }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    color: '#03045e', 
-                    fontWeight: 800,
-                    fontSize: '1.2rem',
-                    lineHeight: 1
-                  }}
-                >
-                  {athlete.stats.goals || 0}
-                </Typography>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'text.secondary',
-                    fontWeight: 600,
-                    fontSize: '0.65rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.3
-                  }}
-                >
-                  Goals
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    color: '#03045e', 
-                    fontWeight: 800,
-                    fontSize: '1.2rem',
-                    lineHeight: 1
-                  }}
-                >
-                  {athlete.stats.assists || 0}
-                </Typography>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'text.secondary',
-                    fontWeight: 600,
-                    fontSize: '0.65rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.3
-                  }}
-                >
-                  Assists
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    color: '#03045e', 
-                    fontWeight: 800,
-                    fontSize: '1.2rem',
-                    lineHeight: 1
-                  }}
-                >
-                  {athlete.stats.matches || 0}
-                </Typography>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'text.secondary',
-                    fontWeight: 600,
-                    fontSize: '0.65rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.3
-                  }}
-                >
-                  Matches
-                </Typography>
-              </Box>
-            </Box>
+            <div className="grid grid-cols-3 gap-2 p-3 bg-[#E32845]/10 rounded-xl mb-4 border border-[#E32845]/20">
+              <div className="text-center">
+                <p className="text-[#03045e] font-extrabold text-xl leading-none mb-1">{athlete.stats.goals || 0}</p>
+                <p className="text-slate-500 font-semibold text-[0.65rem] uppercase tracking-wider">Goals</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[#03045e] font-extrabold text-xl leading-none mb-1">{athlete.stats.assists || 0}</p>
+                <p className="text-slate-500 font-semibold text-[0.65rem] uppercase tracking-wider">Assists</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[#03045e] font-extrabold text-xl leading-none mb-1">{athlete.stats.matches || 0}</p>
+                <p className="text-slate-500 font-semibold text-[0.65rem] uppercase tracking-wider">Matches</p>
+              </div>
+            </div>
           )}
 
-          {/* Contact Info */}
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-            {athlete.contact?.email && (
-              <Tooltip title={athlete.contact.email}>
-                <IconButton size="small" sx={{ color: '#03045e' }}>
-                  <EmailIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {athlete.contact?.phone && (
-              <Tooltip title={athlete.contact.phone}>
-                <IconButton size="small" sx={{ color: '#03045e' }}>
-                  <PhoneIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
+          <div className="mt-auto">
+            {/* Contact Info */}
+            <div className="flex justify-center gap-2 mb-3">
+              {athlete.contact?.email && (
+                <button title={athlete.contact.email} className="p-1 text-[#03045e] hover:bg-slate-100 rounded-full transition-colors">
+                  <MdEmail size={18} />
+                </button>
+              )}
+              {athlete.contact?.phone && (
+                <button title={athlete.contact.phone} className="p-1 text-[#03045e] hover:bg-slate-100 rounded-full transition-colors">
+                  <MdPhone size={18} />
+                </button>
+              )}
+            </div>
 
-          {/* Quick Actions */}
-          <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleViewClick}
-              sx={{
-                flex: 1,
-                borderColor: '#03045e',
-                color: '#03045e',
-                fontWeight: 600,
-                borderRadius: 1.5,
-                py: 0.5,
-                textTransform: 'none',
-                fontSize: '0.8rem',
-                minHeight: 32,
-                '&:hover': {
-                  borderColor: '#ADF802',
-                  backgroundColor: 'rgba(173, 248, 2, 0.1)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 2px 8px rgba(173, 248, 2, 0.2)'
-                },
-                transition: 'all 0.2s ease'
-              }}
-            >
-              View
-            </Button>
-            {userRole.permissions.canEdit && (
-              <Button
-                size="small"
-                variant="contained"
-                onClick={handleEditClick}
-                sx={{
-                  flex: 1,
-                  backgroundColor: '#ADF802',
-                  color: '#03045e',
-                  fontWeight: 700,
-                  borderRadius: 1.5,
-                  py: 0.5,
-                  textTransform: 'none',
-                  fontSize: '0.8rem',
-                  minHeight: 32,
-                  boxShadow: '0 1px 4px rgba(173, 248, 2, 0.3)',
-                  '&:hover': {
-                    backgroundColor: '#9de002',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 3px 8px rgba(173, 248, 2, 0.4)'
-                  },
-                  transition: 'all 0.2s ease'
-                }}
+            {/* Quick Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleViewClick}
+                className="flex-1 py-1.5 text-sm font-semibold rounded-md border border-[#03045e] text-[#03045e] hover:border-[#E32845] hover:bg-[#E32845]/10 hover:-translate-y-[1px] hover:shadow-[0_2px_8px_rgba(173,248,2,0.2)] transition-all"
               >
-                Edit
-              </Button>
-            )}
-          </Box>
-        </CardContent>
-
-        {/* Context Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={open}
-          onClose={handleMenuClose}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* View Details - Available to all users */}
-          <MenuItem onClick={(e) => { handleViewClick(e); handleMenuClose(); }}>
-            <ViewIcon sx={{ mr: 1 }} />
-            View Details
-          </MenuItem>
-          
-          {/* Edit - Show for admin users */}
-          {(userRole.role === 'admin' || userRole.permissions.canEdit) && (
-            <MenuItem onClick={(e) => { handleEditClick(e); handleMenuClose(); }}>
-              <EditIcon sx={{ mr: 1 }} />
-              Edit
-            </MenuItem>
-          )}
-          
-          {/* Delete - Show only for admin users */}
-          {(userRole.role === 'admin' || userRole.permissions.canDelete) && (
-            <MenuItem 
-              onClick={(e) => { handleDeleteClick(e); handleMenuClose(); }}
-              sx={{ color: 'error.main' }}
-            >
-              <DeleteIcon sx={{ mr: 1 }} />
-              Delete
-            </MenuItem>
-          )}
-        </Menu>
-      </Card>
+                View
+              </button>
+              {userRole.permissions.canEdit && (
+                <button
+                  onClick={handleEditClick}
+                  className="flex-1 py-1.5 text-sm font-bold rounded-md bg-[#E32845] text-[#03045e] hover:bg-[#9de002] hover:-translate-y-[1px] shadow-[0_1px_4px_rgba(173,248,2,0.3)] hover:shadow-[0_3px_8px_rgba(173,248,2,0.4)] transition-all"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

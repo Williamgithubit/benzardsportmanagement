@@ -1,14 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/services/firebase';
 import { useRouter } from 'next/navigation';
 import BlogManagement from '@/components/admin/BlogManagement';
+import AdminDashboardShell from '@/components/dashboard/AdminDashboardShell';
+import type { AdminTabId } from '@/components/dashboard/admin-navigation';
 
 export default function AdminBlogPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleTabChange = (tab: AdminTabId) => {
+    router.push(tab === 'dashboard' ? '/dashboard/admin' : `/dashboard/admin#${tab}`);
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -29,14 +36,15 @@ export default function AdminBlogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Blog Management</h1>
-          <p className="mt-2 text-gray-600">Create, edit, and manage blog posts for your website.</p>
-        </div>
-        <BlogManagement />
-      </div>
-    </div>
+    <AdminDashboardShell
+      activeTab="blog"
+      onTabChange={handleTabChange}
+      onAddNew={() => setDialogOpen(true)}
+    >
+      <BlogManagement
+        openDialog={dialogOpen}
+        onCloseDialog={() => setDialogOpen(false)}
+      />
+    </AdminDashboardShell>
   );
 }

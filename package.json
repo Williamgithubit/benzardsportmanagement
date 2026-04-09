@@ -1,0 +1,13 @@
+{
+  "name": "benzard-sports-management",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "dev": "pnpm --filter client dev",
+    "build": "pnpm --filter client build",
+    "lint": "pnpm --filter client lint",
+    "admin:create": "pnpm --filter client admin:create",
+    "update:dashboard": "pnpm --filter client update:dashboard",
+    "functions:deploy": "pnpm --filter bsm-functions deploy"
+  }
+}

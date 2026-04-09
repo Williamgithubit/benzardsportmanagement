@@ -1,0 +1,303 @@
+
+> client@0.1.0 lint /home/william-t-johnson-jr/Desktop/benzardsportmanagement/client
+> next lint
+
+`next lint` is deprecated and will be removed in Next.js 16.
+For new projects, use create-next-app to choose your preferred linter.
+For existing projects, migrate to the ESLint CLI:
+npx @next/codemod@canary next-lint-to-eslint-cli .
+
+
+./src/app/api/debug/env/route.ts
+2:10  Warning: 'NextRequest' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/debug/firebase/route.ts
+2:10  Warning: 'NextRequest' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/media/analytics/route.ts
+1:10  Warning: 'NextRequest' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/test/route.ts
+2:10  Warning: 'NextRequest' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/events/page.tsx
+36:6  Warning: React Hook useEffect has a missing dependency: 'setLoading'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Header.tsx
+7:10  Warning: 'FaBars' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/admin/AthleteManagement.tsx
+2:27  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/admin/BSMMediaLibrary.tsx
+112:6  Warning: React Hook useEffect has a missing dependency: 'loadMediaAssets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+455:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+540:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/admin/BlogManagement.tsx
+161:15  Warning: '_featuredImageFile' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+204:15  Warning: '_featuredImageFile' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+250:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+251:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+252:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+570:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+839:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/admin/ContactManagement.tsx
+93:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+125:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+155:22  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+183:23  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+218:8  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+291:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+324:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+341:18  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+349:20  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/admin/EventManagement/EventManagement.tsx
+16:3  Warning: 'UpdateEventData' is defined but never used.  @typescript-eslint/no-unused-vars
+99:6  Warning: React Hook useEffect has a missing dependency: 'filterEvents'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/admin/MediaLibrary.tsx
+8:3  Warning: 'MdFilterList' is defined but never used.  @typescript-eslint/no-unused-vars
+11:3  Warning: 'MdFolder' is defined but never used.  @typescript-eslint/no-unused-vars
+19:3  Warning: 'MdInfo' is defined but never used.  @typescript-eslint/no-unused-vars
+73:10  Warning: 'tags' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+74:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+108:6  Warning: React Hook useEffect has a missing dependency: 'loadMediaFiles'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+503:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+552:22  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+661:20  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+773:94  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+773:123  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/components/admin/MediaPicker.tsx
+81:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+83:14  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/admin/Reports.tsx
+34:7  Warning: 'COLORS' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/admin/Settings/ProfileTab.tsx
+78:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+204:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/admin/Settings/SecurityTab.tsx
+116:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/admin/UserManagement.tsx
+122:6  Warning: React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+360:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/athletes/AthleteCard.tsx
+175:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/athletes/AthleteDirectory.tsx
+269:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+362:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+387:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+410:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/athletes/AthleteProfile.tsx
+118:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+354:25  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/auth/AdminProtectedRoute.tsx
+80:18  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/components/blog/BlogReactions.tsx
+45:6  Warning: React Hook useEffect has a missing dependency: 'loadUserReaction'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/ui/Button.tsx
+9:6  Warning: 'Url' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/ui/ConfirmationModal.tsx
+3:8  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+61:9  Warning: 'handleBackdropClick' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+67:9  Warning: 'handleKeyDown' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/ui/FileUpload.tsx
+78:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/ui/SplashScreen.tsx
+26:5  Error: 'minTimeoutId' is never reassigned. Use 'const' instead.  prefer-const
+
+./src/hooks/useSplashScreen.ts
+11:3  Warning: 'minDisplayTime' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useUserRole.ts
+37:33  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+121:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/lib/auth-utils.ts
+5:35  Warning: 'req' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/firebase-admin.ts
+24:15  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+25:16  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+26:14  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+42:28  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/lib/firebase.ts
+78:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/api.js
+56:27  Warning: 'userId' is defined but never used.  @typescript-eslint/no-unused-vars
+56:35  Warning: 'programId' is defined but never used.  @typescript-eslint/no-unused-vars
+81:28  Warning: 'userId' is defined but never used.  @typescript-eslint/no-unused-vars
+81:36  Warning: 'eventId' is defined but never used.  @typescript-eslint/no-unused-vars
+90:30  Warning: 'messageData' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/athleteService.ts
+16:3  Warning: 'Timestamp' is defined but never used.  @typescript-eslint/no-unused-vars
+29:3  Warning: 'PaginationState' is defined but never used.  @typescript-eslint/no-unused-vars
+45:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+52:22  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+92:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+170:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+270:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+271:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+513:13  Warning: 'headers' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+527:34  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+528:43  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+554:26  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+562:24  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+637:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+638:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/blogService.ts
+4:3  Warning: 'setDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+71:21  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+122:26  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+128:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/bsmMediaService.ts
+12:3  Warning: 'Timestamp' is defined but never used.  @typescript-eslint/no-unused-vars
+23:3  Warning: 'UserMediaRole' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/cloudinaryService.ts
+437:15  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+440:14  Warning: 'parseErr' is defined but never used.  @typescript-eslint/no-unused-vars
+543:48  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+573:15  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+576:14  Warning: 'parseErr' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/dashboardService.ts
+9:3  Warning: 'getDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'doc' is defined but never used.  @typescript-eslint/no-unused-vars
+12:3  Warning: 'collectionGroup' is defined but never used.  @typescript-eslint/no-unused-vars
+58:7  Warning: 'eventsCount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+65:7  Warning: 'trainingProgramsCount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+66:7  Warning: 'recentRegistrationsCount' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/emailService.ts
+52:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/enquiryService.ts
+51:12  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/eventService.ts
+12:3  Warning: 'QueryDocumentSnapshot' is defined but never used.  @typescript-eslint/no-unused-vars
+272:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/fcm.ts
+15:50  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/firebase.ts
+19:13  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/firebaseAdmissionAdminService.ts
+11:3  Warning: 'Timestamp' is defined but never used.  @typescript-eslint/no-unused-vars
+12:3  Warning: 'connectFirestoreEmulator' is defined but never used.  @typescript-eslint/no-unused-vars
+83:23  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/firebaseAdmissionService.ts
+7:3  Warning: 'deleteDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/globalSearchService.ts
+4:3  Warning: 'query' is defined but never used.  @typescript-eslint/no-unused-vars
+5:3  Warning: 'where' is defined but never used.  @typescript-eslint/no-unused-vars
+6:3  Warning: 'orderBy' is defined but never used.  @typescript-eslint/no-unused-vars
+7:12  Warning: 'firestoreLimit' is defined but never used.  @typescript-eslint/no-unused-vars
+8:3  Warning: 'Timestamp' is defined but never used.  @typescript-eslint/no-unused-vars
+19:10  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/mediaService.ts
+6:3  Warning: 'listAll' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'getMetadata' is defined but never used.  @typescript-eslint/no-unused-vars
+8:3  Warning: 'updateMetadata' is defined but never used.  @typescript-eslint/no-unused-vars
+9:3  Warning: 'FullMetadata' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/notificationService.ts
+43:50  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+74:29  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+85:66  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+104:46  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+126:29  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/services/reportsService.ts
+9:3  Warning: 'getDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'doc' is defined but never used.  @typescript-eslint/no-unused-vars
+19:10  Warning: 'startOfWeek' is defined but never used.  @typescript-eslint/no-unused-vars
+19:23  Warning: 'endOfWeek' is defined but never used.  @typescript-eslint/no-unused-vars
+22:11  Warning: 'UserDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+36:11  Warning: 'EventDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+42:11  Warning: 'TaskDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/settingsService.ts
+2:3  Warning: 'collection' is defined but never used.  @typescript-eslint/no-unused-vars
+4:3  Warning: 'addDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+6:3  Warning: 'deleteDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'getDocs' is defined but never used.  @typescript-eslint/no-unused-vars
+9:3  Warning: 'query' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'where' is defined but never used.  @typescript-eslint/no-unused-vars
+11:3  Warning: 'orderBy' is defined but never used.  @typescript-eslint/no-unused-vars
+16:3  Warning: 'updateEmail' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/userManagementService.js
+2:56  Warning: 'deleteAuthUser' is defined but never used.  @typescript-eslint/no-unused-vars
+26:7  Warning: 'generatePassword' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+70:23  Warning: '_' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/userManagementService.ts
+6:3  Warning: 'deleteDoc' is defined but never used.  @typescript-eslint/no-unused-vars
+761:38  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+808:78  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/store/Admin/userManagementSlice.js
+94:46  Warning: 'action' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/store/store.ts
+17:13  Warning: '_key' is defined but never used.  @typescript-eslint/no-unused-vars
+23:16  Warning: '_key' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/store/types.ts
+1:10  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
+94:13  Error: An interface declaring no members is equivalent to its supertype.  @typescript-eslint/no-empty-object-type
+
+./src/types/athlete.ts
+261:10  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/types/blog.ts
+54:14  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+55:14  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+62:14  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/types/globals.d.ts
+7:15  Error: An interface declaring no members is equivalent to its supertype.  @typescript-eslint/no-empty-object-type
+7:50  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+7:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/types/media.ts
+72:20  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+73:11  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/types/next-auth.d.ts
+1:8  Warning: 'NextAuth' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/types/notification.ts
+6:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+9:15  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+ ELIFECYCLE  Command failed with exit code 1.

@@ -1,53 +1,22 @@
 "use client";
 import React, { useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Box,
-  Typography,
-  Button,
-  Avatar,
-  Chip,
-  Divider,
-  Card,
-  CardContent,
-  IconButton,
-  Tabs,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  ImageList,
-  ImageListItem,
-  ImageListItemBar,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  Close as CloseIcon,
-  Edit as EditIcon,
-  LocationOn as LocationIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  Cake as CakeIcon,
-  Height as HeightIcon,
-  FitnessCenter as WeightIcon,
-  SportsFootball as SportsIcon,
-  EmojiEvents as TrophyIcon,
-  School as SchoolIcon,
-  Person as PersonIcon,
-  PlayArrow as PlayIcon,
-  Download as DownloadIcon,
-  Share as ShareIcon,
-  Instagram as InstagramIcon,
-  Twitter as TwitterIcon,
-  Facebook as FacebookIcon,
-} from "@mui/icons-material";
+  MdClose,
+  MdEdit,
+  MdLocationOn,
+  MdEmail,
+  MdPhone,
+  MdCake,
+  MdHeight,
+  MdFitnessCenter,
+  MdSportsSoccer,
+  MdEmojiEvents,
+  MdSchool,
+  MdPerson,
+  MdDownload,
+  MdPhotoLibrary
+} from "react-icons/md";
+import { FaInstagram, FaTwitter, FaFacebook } from "react-icons/fa";
 import { Athlete, UserRole } from "@/types/athlete";
 
 interface AthleteProfileProps {
@@ -58,28 +27,6 @@ interface AthleteProfileProps {
   userRole: UserRole;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`athlete-tabpanel-${index}`}
-      aria-labelledby={`athlete-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
-
 export default function AthleteProfile({
   athlete,
   open,
@@ -87,44 +34,42 @@ export default function AthleteProfile({
   onEdit,
   userRole,
 }: AthleteProfileProps) {
-  const [tabValue, setTabValue] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
 
-  if (!athlete) return null;
+  if (!open || !athlete) return null;
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
+  const tabs = ["Overview", "Statistics", "Media", "Contact", "History"];
 
   const getProfileImage = () => {
     const profilePhoto = athlete.media?.find((m) => m.type === "photo");
     return profilePhoto?.url;
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
       case "active":
-        return "success";
+        return "bg-green-100 text-green-700 border-green-200";
       case "scouted":
-        return "warning";
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
       case "signed":
-        return "info";
+        return "bg-blue-100 text-blue-700 border-blue-200";
       case "inactive":
-        return "default";
+        return "bg-slate-100 text-slate-700 border-slate-200";
       default:
-        return "default";
+        return "bg-slate-100 text-slate-700 border-slate-200";
     }
   };
 
-  const getLevelColor = (level: string) => {
+  const getLevelStyle = (level: string) => {
     switch (level) {
       case "grassroots":
-        return "info";
+        return "bg-blue-50 text-blue-600 border-blue-200";
       case "semi-pro":
-        return "warning";
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
       case "professional":
-        return "success";
+        return "bg-green-50 text-green-600 border-green-200";
       default:
-        return "default";
+        return "bg-slate-50 text-slate-600 border-slate-200";
     }
   };
 
@@ -136,768 +81,582 @@ export default function AthleteProfile({
     });
   };
 
-  const calculateAge = (dateOfBirth: string) => {
-    const birthDate = new Date(dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-    return age;
-  };
-
   const photos = athlete.media?.filter((m) => m.type === "photo") || [];
   const videos = athlete.media?.filter((m) => m.type === "video") || [];
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{
-        sx: {
-          minHeight: "80vh",
-          maxHeight: "90vh",
-        },
-      }}
-    >
-      <DialogTitle
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          backgroundColor: "#03045e",
-          color: "white",
-        }}
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 sm:p-6 bg-[#03045e]/80 backdrop-blur-sm">
+      <div 
+        className="bg-slate-50 w-full max-w-5xl h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
       >
-        <Typography variant="h5" component="div" sx={{ fontWeight: "bold" }}>
-          Athlete Profile
-        </Typography>
-        <Box>
-          {userRole.permissions.canEdit && (
-            <IconButton
-              onClick={() => onEdit(athlete)}
-              sx={{ color: "white", mr: 1 }}
-            >
-              <EditIcon />
-            </IconButton>
-          )}
-          <IconButton onClick={onClose} sx={{ color: "white" }}>
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 0 }}>
         {/* Header Section */}
-        <Box
-          sx={{
-            background: "linear-gradient(135deg, #03045e 0%, #000054 100%)",
-            color: "white",
-            p: 3,
-          }}
-        >
-          <Grid container spacing={3} alignItems="center">
-            <Grid item>
+        <div className="bg-gradient-to-r from-[#03045e] to-[#000054] text-white p-6 relative shrink-0">
+          <div className="absolute top-4 right-4 flex gap-2">
+            {userRole.permissions.canEdit && (
+              <button
+                onClick={() => onEdit(athlete)}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                title="Edit Athlete"
+              >
+                <MdEdit size={22} />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              title="Close"
+            >
+              <MdClose size={24} />
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-4 sm:mt-0">
+            {/* Avatar */}
+            <div className="shrink-0">
               {getProfileImage() ? (
-                <Avatar
+                <img
                   src={getProfileImage()}
-                  sx={{ width: 120, height: 120, border: "4px solid #ADF802" }}
+                  alt={athlete.name}
+                  className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-[#E32845] shadow-lg"
                 />
               ) : (
-                <Avatar
-                  sx={{
-                    width: 120,
-                    height: 120,
-                    bgcolor: "#ADF802",
-                    color: "#03045e",
-                    fontSize: "3rem",
-                    border: "4px solid #ADF802",
-                  }}
-                >
-                  <PersonIcon fontSize="large" />
-                </Avatar>
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#E32845] text-[#03045e] flex items-center justify-center border-4 border-[#E32845] shadow-[0_0_20px_rgba(173,248,2,0.3)]">
+                  <MdPerson size={64} />
+                </div>
               )}
-            </Grid>
-            <Grid item xs>
-              <Typography variant="h4" sx={{ fontWeight: "bold", mb: 1 }}>
-                {athlete.name}
-              </Typography>
-              <Typography variant="h6" sx={{ mb: 2, opacity: 0.9 }}>
-                {athlete.position} • {athlete.sport}
-              </Typography>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <Chip
-                  label={athlete.level}
-                  color={getLevelColor(athlete.level) as any}
-                  sx={{ color: "white" }}
-                />
-                <Chip
-                  label={athlete.scoutingStatus}
-                  color={getStatusColor(athlete.scoutingStatus) as any}
-                  sx={{ color: "white" }}
-                />
+            </div>
+
+            {/* Basic Info */}
+            <div className="flex-grow">
+              <h1 className="text-3xl font-extrabold mb-1">{athlete.name}</h1>
+              <p className="text-lg text-white/80 font-medium mb-3 flex items-center gap-2">
+                <MdSportsSoccer className="text-[#E32845]" />
+                {athlete.position} • <span className="capitalize">{athlete.sport}</span>
+              </p>
+              
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase border ${getLevelStyle(athlete.level)}`}>
+                  {athlete.level}
+                </span>
+                <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase border ${getStatusStyle(athlete.scoutingStatus)}`}>
+                  {athlete.scoutingStatus}
+                </span>
                 {athlete.county && (
-                  <Chip
-                    icon={<LocationIcon />}
-                    label={athlete.county}
-                    variant="outlined"
-                    sx={{ color: "white", borderColor: "white" }}
-                  />
+                  <span className="px-2.5 py-1 rounded border border-white/30 bg-white/10 text-white text-xs font-medium flex items-center gap-1 backdrop-blur-sm">
+                    <MdLocationOn />
+                    {athlete.county}
+                  </span>
                 )}
-              </Box>
-            </Grid>
-          </Grid>
-        </Box>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            aria-label="athlete profile tabs"
-          >
-            <Tab label="Overview" />
-            <Tab label="Statistics" />
-            <Tab label="Media" />
-            <Tab label="Contact" />
-            <Tab label="History" />
-          </Tabs>
-        </Box>
+        <div className="flex overflow-x-auto bg-white border-b border-slate-200 shrink-0 hide-scrollbar pt-2 px-4">
+          {tabs.map((tab, idx) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(idx)}
+              className={`px-5 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === idx
+                  ? "border-[#03045e] text-[#03045e]"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-        {/* Tab Panels */}
-        <Box sx={{ p: 3 }}>
+        {/* Tab Content Area */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50">
+          
           {/* Overview Tab */}
-          <TabPanel value={tabValue} index={0}>
-            <Grid container spacing={3}>
+          {activeTab === 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Personal Information */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography
-                      variant="h6"
-                      sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                    >
-                      Personal Information
-                    </Typography>
-                    <Box
-                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                    >
-                      {athlete.age && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <CakeIcon sx={{ color: "#03045e" }} />
-                          <Typography>
-                            <strong>Age:</strong> {athlete.age} years
-                          </Typography>
-                        </Box>
-                      )}
-                      {athlete.dateOfBirth && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <CakeIcon sx={{ color: "#03045e" }} />
-                          <Typography>
-                            <strong>Date of Birth:</strong>{" "}
-                            {formatDate(athlete.dateOfBirth)}
-                          </Typography>
-                        </Box>
-                      )}
-                      {athlete.height && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <HeightIcon sx={{ color: "#03045e" }} />
-                          <Typography>
-                            <strong>Height:</strong> {athlete.height} cm
-                          </Typography>
-                        </Box>
-                      )}
-                      {athlete.weight && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <WeightIcon sx={{ color: "#03045e" }} />
-                          <Typography>
-                            <strong>Weight:</strong> {athlete.weight} kg
-                          </Typography>
-                        </Box>
-                      )}
-                      {athlete.preferredFoot && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <SportsIcon sx={{ color: "#03045e" }} />
-                          <Typography>
-                            <strong>Preferred Foot:</strong>{" "}
-                            {athlete.preferredFoot}
-                          </Typography>
-                        </Box>
-                      )}
-                      {athlete.nationality && (
-                        <Typography>
-                          <strong>Nationality:</strong> {athlete.nationality}
-                        </Typography>
-                      )}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-100 pb-2">
+                  Personal Information
+                </h3>
+                <div className="space-y-3">
+                  {athlete.age && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-500 rounded-lg shrink-0 mt-0.5"><MdCake size={18} /></div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Age</p>
+                        <p className="text-slate-800 font-medium">{athlete.age} years</p>
+                      </div>
+                    </div>
+                  )}
+                  {athlete.dateOfBirth && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-500 rounded-lg shrink-0 mt-0.5"><MdCake size={18} /></div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Date of Birth</p>
+                        <p className="text-slate-800 font-medium">{formatDate(athlete.dateOfBirth)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {athlete.height && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-500 rounded-lg shrink-0 mt-0.5"><MdHeight size={18} /></div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Height</p>
+                        <p className="text-slate-800 font-medium">{athlete.height} cm</p>
+                      </div>
+                    </div>
+                  )}
+                  {athlete.weight && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-500 rounded-lg shrink-0 mt-0.5"><MdFitnessCenter size={18} /></div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Weight</p>
+                        <p className="text-slate-800 font-medium">{athlete.weight} kg</p>
+                      </div>
+                    </div>
+                  )}
+                  {athlete.preferredFoot && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-500 rounded-lg shrink-0 mt-0.5"><MdSportsSoccer size={18} /></div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Preferred Foot</p>
+                        <p className="text-slate-800 font-medium capitalize">{athlete.preferredFoot}</p>
+                      </div>
+                    </div>
+                  )}
+                  {athlete.nationality && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-500 rounded-lg shrink-0 mt-0.5"><MdLocationOn size={18} /></div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Nationality</p>
+                        <p className="text-slate-800 font-medium">{athlete.nationality}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Bio and Training */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography
-                      variant="h6"
-                      sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                    >
-                      Bio & Training
-                    </Typography>
-                    {athlete.bio && (
-                      <Typography sx={{ mb: 2 }}>{athlete.bio}</Typography>
-                    )}
-                    {athlete.trainingProgram && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography
-                          variant="subtitle2"
-                          sx={{ fontWeight: "bold", color: "#03045e" }}
-                        >
-                          Training Program:
-                        </Typography>
-                        <Typography>{athlete.trainingProgram}</Typography>
-                      </Box>
-                    )}
-                    {athlete.performanceNotes && (
-                      <Box>
-                        <Typography
-                          variant="subtitle2"
-                          sx={{ fontWeight: "bold", color: "#03045e" }}
-                        >
-                          Performance Notes:
-                        </Typography>
-                        <Typography>{athlete.performanceNotes}</Typography>
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-100 pb-2">
+                    Bio & Training
+                  </h3>
+                  {athlete.bio ? (
+                    <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{athlete.bio}</p>
+                  ) : (
+                    <p className="text-slate-400 text-sm italic">No bio available.</p>
+                  )}
+                </div>
+
+                {athlete.trainingProgram && (
+                  <div>
+                    <h4 className="text-sm font-bold text-[#03045e] mb-1 flex items-center gap-1.5 break-words">
+                      <span className="w-1.5 h-1.5 bg-[#E32845] rounded-full"></span>
+                      Training Program
+                    </h4>
+                    <p className="text-slate-600 text-sm leading-relaxed">{athlete.trainingProgram}</p>
+                  </div>
+                )}
+                
+                {athlete.performanceNotes && (
+                  <div>
+                    <h4 className="text-sm font-bold text-[#03045e] mb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-accent rounded-full"></span>
+                      Performance Notes
+                    </h4>
+                    <p className="text-slate-600 text-sm leading-relaxed">{athlete.performanceNotes}</p>
+                  </div>
+                )}
+              </div>
 
               {/* Achievements */}
               {athlete.achievements && athlete.achievements.length > 0 && (
-                <Grid item xs={12}>
-                  <Card>
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:col-span-2">
+                  <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <MdEmojiEvents className="text-[#E32845]" />
+                    Achievements
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {athlete.achievements.map((achievement, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1.5 bg-[#E32845]/10 border border-[#E32845]/30 text-[#03045e] text-sm font-medium rounded-full flex items-center gap-1.5"
                       >
-                        <TrophyIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-                        Achievements
-                      </Typography>
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                        {athlete.achievements.map((achievement, index) => (
-                          <Chip
-                            key={index}
-                            label={achievement}
-                            color="primary"
-                            variant="outlined"
-                          />
-                        ))}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                        <span className="w-1.5 h-1.5 bg-[#E32845] rounded-full"></span>
+                        {achievement}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
-            </Grid>
-          </TabPanel>
+            </div>
+          )}
 
           {/* Statistics Tab */}
-          <TabPanel value={tabValue} index={1}>
-            {athlete.stats ? (
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Card>
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                      >
-                        Performance Statistics
-                      </Typography>
-                      <TableContainer>
-                        <Table>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell sx={{ fontWeight: "bold" }}>
-                                Metric
-                              </TableCell>
-                              <TableCell sx={{ fontWeight: "bold" }}>
-                                Value
-                              </TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {Object.entries(athlete.stats).map(
-                              ([key, value]) => (
-                                <TableRow key={key}>
-                                  <TableCell
-                                    sx={{ textTransform: "capitalize" }}
-                                  >
-                                    {key.replace(/([A-Z])/g, " $1").trim()}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      fontWeight: "bold",
-                                      color: "#03045e",
-                                    }}
-                                  >
-                                    {value}
-                                  </TableCell>
-                                </TableRow>
-                              )
-                            )}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            ) : (
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                textAlign="center"
-              >
-                No statistics available for this athlete.
-              </Typography>
-            )}
-          </TabPanel>
+          {activeTab === 1 && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden max-w-3xl mx-auto">
+              <div className="p-5 border-b border-slate-100 bg-slate-50">
+                <h3 className="text-lg font-bold text-[#03045e]">
+                  Performance Statistics
+                </h3>
+              </div>
+              
+              {athlete.stats ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="px-6 py-3 shrink-0">Metric</th>
+                        <th className="px-6 py-3">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {Object.entries(athlete.stats).map(([key, value]) => (
+                        <tr key={key} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-3.5 font-medium text-slate-800 capitalize">
+                            {key.replace(/([A-Z])/g, " $1").trim()}
+                          </td>
+                          <td className="px-6 py-3.5 text-[#03045e] font-bold text-base">
+                            {value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-10 text-center">
+                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <MdSportsSoccer size={32} />
+                  </div>
+                  <p className="text-slate-500">No statistics available for this athlete.</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Media Tab */}
-          <TabPanel value={tabValue} index={2}>
-            <Grid container spacing={3}>
+          {activeTab === 2 && (
+            <div className="space-y-8">
               {/* Photos */}
               {photos.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography
-                    variant="h6"
-                    sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                  >
+                <div>
+                  <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-200 pb-2">
                     Photos ({photos.length})
-                  </Typography>
-                  <ImageList cols={4} rowHeight={200}>
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {photos.map((photo) => (
-                      <ImageListItem key={photo.id}>
+                      <div key={photo.id} className="group relative rounded-xl overflow-hidden shadow-sm border border-slate-200 aspect-square bg-slate-100">
                         <img
                           src={photo.url}
                           alt={photo.caption || "Athlete photo"}
                           loading="lazy"
-                          style={{ objectFit: "cover" }}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                         {photo.caption && (
-                          <ImageListItemBar
-                            title={photo.caption}
-                            actionIcon={
-                              <IconButton
-                                sx={{ color: "rgba(255, 255, 255, 0.54)" }}
-                              >
-                                <DownloadIcon />
-                              </IconButton>
-                            }
-                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-8 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                            <p className="text-white text-xs font-medium truncate">{photo.caption}</p>
+                          </div>
                         )}
-                      </ImageListItem>
+                        <a 
+                          href={photo.url} 
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-[#E32845] hover:text-[#03045e] text-white rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                          title="Download"
+                        >
+                          <MdDownload size={18} />
+                        </a>
+                      </div>
                     ))}
-                  </ImageList>
-                </Grid>
+                  </div>
+                </div>
               )}
 
               {/* Videos */}
               {videos.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography
-                    variant="h6"
-                    sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                  >
+                <div>
+                  <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-200 pb-2">
                     Videos ({videos.length})
-                  </Typography>
-                  <Grid container spacing={2}>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {videos.map((video) => (
-                      <Grid item xs={12} sm={6} md={4} key={video.id}>
-                        <Card>
-                          <Box
-                            sx={{ position: "relative", paddingTop: "56.25%" }}
+                      <div key={video.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="aspect-video bg-black relative">
+                          <video
+                            controls
+                            className="absolute inset-0 w-full h-full"
                           >
-                            <video
-                              controls
-                              style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                height: "100%",
-                              }}
-                            >
-                              <source src={video.url} type={video.mimeType} />
-                              Your browser does not support the video tag.
-                            </video>
-                          </Box>
-                          {video.caption && (
-                            <CardContent>
-                              <Typography variant="body2">
-                                {video.caption}
-                              </Typography>
-                            </CardContent>
-                          )}
-                        </Card>
-                      </Grid>
+                            <source src={video.url} type={video.mimeType} />
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                        {video.caption && (
+                          <div className="p-3 bg-white">
+                            <p className="text-sm text-slate-700 font-medium">{video.caption}</p>
+                          </div>
+                        )}
+                      </div>
                     ))}
-                  </Grid>
-                </Grid>
+                  </div>
+                </div>
               )}
 
               {photos.length === 0 && videos.length === 0 && (
-                <Grid item xs={12}>
-                  <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    textAlign="center"
-                  >
-                    No media files available for this athlete.
-                  </Typography>
-                </Grid>
+                <div className="p-12 text-center bg-white rounded-xl shadow-sm border border-slate-200 max-w-2xl mx-auto mt-8">
+                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MdPhotoLibrary size={32} />
+                  </div>
+                  <h4 className="text-lg font-bold text-slate-700 mb-1">No Media Found</h4>
+                  <p className="text-slate-500">There are no photos or videos available for this athlete yet.</p>
+                </div>
               )}
-            </Grid>
-          </TabPanel>
+            </div>
+          )}
 
           {/* Contact Tab */}
-          <TabPanel value={tabValue} index={3}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography
-                      variant="h6"
-                      sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                    >
-                      Contact Information
-                    </Typography>
-                    <Box
-                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                    >
-                      {athlete.contact?.email && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <EmailIcon sx={{ color: "#03045e" }} />
-                          <Typography>{athlete.contact.email}</Typography>
-                        </Box>
-                      )}
-                      {athlete.contact?.phone && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <PhoneIcon sx={{ color: "#03045e" }} />
-                          <Typography>{athlete.contact.phone}</Typography>
-                        </Box>
-                      )}
-                      {athlete.contact?.address && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: 1,
-                          }}
-                        >
-                          <LocationIcon sx={{ color: "#03045e", mt: 0.5 }} />
-                          <Box>
-                            <Typography
-                              variant="subtitle2"
-                              sx={{ fontWeight: "bold" }}
-                            >
-                              Address:
-                            </Typography>
-                            <Typography>
-                              {athlete.contact.address.street &&
-                                `${athlete.contact.address.street}, `}
-                              {athlete.contact.address.city &&
-                                `${athlete.contact.address.city}, `}
-                              {athlete.contact.address.county &&
-                                `${athlete.contact.address.county}, `}
-                              {athlete.contact.address.country}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      )}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+          {activeTab === 3 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              {/* Primary Contact */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+                <h3 className="text-lg font-bold text-[#03045e] mb-5 border-b border-slate-100 pb-2">
+                  Contact Information
+                </h3>
+                
+                <div className="space-y-4 flex-grow">
+                  {athlete.contact?.email ? (
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <MdEmail size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Email Address</p>
+                        <a href={`mailto:${athlete.contact.email}`} className="text-[#03045e] font-medium hover:text-blue-600 transition-colors">
+                          {athlete.contact.email}
+                        </a>
+                      </div>
+                    </div>
+                  ) : null}
 
-              {/* Emergency Contact */}
-              {athlete.contact?.emergencyContact && (
-                <Grid item xs={12} md={6}>
-                  <Card>
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                      >
-                        Emergency Contact
-                      </Typography>
-                      <Typography>
-                        <strong>Name:</strong>{" "}
-                        {athlete.contact.emergencyContact.name}
-                      </Typography>
-                      <Typography>
-                        <strong>Phone:</strong>{" "}
-                        {athlete.contact.emergencyContact.phone}
-                      </Typography>
-                      <Typography>
-                        <strong>Relationship:</strong>{" "}
-                        {athlete.contact.emergencyContact.relationship}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
+                  {athlete.contact?.phone ? (
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                        <MdPhone size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Phone Number</p>
+                        <a href={`tel:${athlete.contact.phone}`} className="text-[#03045e] font-medium hover:text-green-600 transition-colors">
+                          {athlete.contact.phone}
+                        </a>
+                      </div>
+                    </div>
+                  ) : null}
 
-              {/* Social Media */}
-              {athlete.socialMedia && (
-                <Grid item xs={12}>
-                  <Card>
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                      >
-                        Social Media
-                      </Typography>
-                      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                        {athlete.socialMedia.instagram && (
-                          <Button
-                            startIcon={<InstagramIcon />}
-                            href={athlete.socialMedia.instagram}
-                            target="_blank"
-                            variant="outlined"
-                          >
-                            Instagram
-                          </Button>
-                        )}
-                        {athlete.socialMedia.twitter && (
-                          <Button
-                            startIcon={<TwitterIcon />}
-                            href={athlete.socialMedia.twitter}
-                            target="_blank"
-                            variant="outlined"
-                          >
-                            Twitter
-                          </Button>
-                        )}
-                        {athlete.socialMedia.facebook && (
-                          <Button
-                            startIcon={<FacebookIcon />}
-                            href={athlete.socialMedia.facebook}
-                            target="_blank"
-                            variant="outlined"
-                          >
-                            Facebook
-                          </Button>
-                        )}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
-            </Grid>
-          </TabPanel>
+                  {athlete.contact?.address ? (
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                        <MdLocationOn size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mailing Address</p>
+                        <p className="text-slate-700 text-sm leading-relaxed">
+                          {athlete.contact.address.street && `${athlete.contact.address.street}, `}
+                          <br className="hidden sm:block" />
+                          {athlete.contact.address.city && `${athlete.contact.address.city}, `}
+                          {athlete.contact.address.county && `${athlete.contact.address.county}, `}
+                          {athlete.contact.address.country}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!athlete.contact?.email && !athlete.contact?.phone && !athlete.contact?.address && (
+                    <p className="text-slate-500 italic text-sm">No primary contact information provided.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Emergency Contact & Socials */}
+              <div className="space-y-6 flex flex-col">
+                {/* Emergency Contact */}
+                {athlete.contact?.emergencyContact && (
+                  <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6 relative overflow-hidden flex-grow">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                    <h3 className="text-lg font-bold text-red-700 mb-4 border-b border-red-100 pb-2 relative z-10 flex items-center gap-2">
+                       Emergency Contact
+                    </h3>
+                    
+                    <div className="space-y-3 relative z-10">
+                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-slate-500 text-sm font-medium">Name</span>
+                        <span className="font-bold text-slate-800">{athlete.contact.emergencyContact.name}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-slate-500 text-sm font-medium">Relationship</span>
+                        <span className="font-medium text-slate-700 capitalize">{athlete.contact.emergencyContact.relationship}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-slate-500 text-sm font-medium">Phone</span>
+                        <a href={`tel:${athlete.contact.emergencyContact.phone}`} className="font-bold text-[#03045e] hover:text-[#E32845] transition-colors flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                           <MdPhone size={14}/> {athlete.contact.emergencyContact.phone}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Social Media */}
+                {(athlete.socialMedia?.instagram || athlete.socialMedia?.twitter || athlete.socialMedia?.facebook) && (
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0">
+                    <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-100 pb-2">
+                      Social Media
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                      {athlete.socialMedia.instagram && (
+                        <a
+                          href={athlete.socialMedia.instagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 text-white rounded-lg hover:shadow-md hover:-translate-y-0.5 transition-all text-sm font-medium"
+                        >
+                          <FaInstagram size={18} /> Instagram
+                        </a>
+                      )}
+                      {athlete.socialMedia.twitter && (
+                        <a
+                          href={athlete.socialMedia.twitter}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 bg-[#1DA1F2] text-white rounded-lg hover:shadow-md hover:-translate-y-0.5 transition-all text-sm font-medium"
+                        >
+                          <FaTwitter size={18} /> Twitter
+                        </a>
+                      )}
+                      {athlete.socialMedia.facebook && (
+                        <a
+                          href={athlete.socialMedia.facebook}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 bg-[#4267B2] text-white rounded-lg hover:shadow-md hover:-translate-y-0.5 transition-all text-sm font-medium"
+                        >
+                          <FaFacebook size={18} /> Facebook
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* History Tab */}
-          <TabPanel value={tabValue} index={4}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography
-                      variant="h6"
-                      sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                    >
-                      System Information
-                    </Typography>
-                    <Typography sx={{ mb: 1 }}>
-                      <strong>Created:</strong> {formatDate(athlete.createdAt)}
-                    </Typography>
-                    <Typography sx={{ mb: 1 }}>
-                      <strong>Last Updated:</strong>{" "}
-                      {formatDate(athlete.updatedAt)}
-                    </Typography>
-                    {athlete.createdBy && (
-                      <Typography>
-                        <strong>Created By:</strong> {athlete.createdBy}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-
+          {activeTab === 4 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              
               {/* Previous Clubs */}
-              {athlete.previousClubs && athlete.previousClubs.length > 0 && (
-                <Grid item xs={12} md={6}>
-                  <Card>
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                      >
-                        <SchoolIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-                        Previous Clubs
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 1,
-                        }}
-                      >
-                        {athlete.previousClubs.map((club, index) => (
-                          <Chip key={index} label={club} variant="outlined" />
-                        ))}
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
+                <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+                  <MdSchool className="text-slate-400" />
+                  Previous Clubs
+                </h3>
+                {athlete.previousClubs && athlete.previousClubs.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {athlete.previousClubs.map((club, index) => (
+                      <span key={index} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg">
+                        {club}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-sm italic">No previous clubs listed.</p>
+                )}
+              </div>
+
+               {/* Medical Information */}
+               {athlete.medicalInfo && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
+                  <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-100 pb-2">
+                    Medical Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {athlete.medicalInfo.allergies && athlete.medicalInfo.allergies.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Allergies</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {athlete.medicalInfo.allergies.map((item, idx) => (
+                            <span key={idx} className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-100 rounded text-xs font-medium">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {athlete.medicalInfo.conditions && athlete.medicalInfo.conditions.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Conditions</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {athlete.medicalInfo.conditions.map((item, idx) => (
+                            <span key={idx} className="px-2.5 py-1 bg-orange-50 text-orange-700 border border-orange-100 rounded text-xs font-medium">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {athlete.medicalInfo.bloodType && (
+                       <div>
+                        <h4 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Blood Type</h4>
+                        <span className="px-3 py-1.5 bg-red-600 text-white rounded font-bold">
+                           {athlete.medicalInfo.bloodType}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {athlete.medicalInfo.notes && (
+                      <div className="md:col-span-2 mt-2">
+                        <h4 className="text-sm font-bold text-slate-700 mb-1 uppercase tracking-wide">Medical Notes</h4>
+                        <p className="text-slate-600 text-sm bg-slate-50 p-3 rounded-lg border border-slate-200">{athlete.medicalInfo.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
-              {/* Medical Information */}
-              {athlete.medicalInfo && (
-                <Grid item xs={12}>
-                  <Card>
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        sx={{ mb: 2, color: "#03045e", fontWeight: "bold" }}
-                      >
-                        Medical Information
-                      </Typography>
-                      <Grid container spacing={2}>
-                        {athlete.medicalInfo.allergies &&
-                          athlete.medicalInfo.allergies.length > 0 && (
-                            <Grid item xs={12} md={6}>
-                              <Typography
-                                variant="subtitle2"
-                                sx={{ fontWeight: "bold", mb: 1 }}
-                              >
-                                Allergies:
-                              </Typography>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 1,
-                                }}
-                              >
-                                {athlete.medicalInfo.allergies.map(
-                                  (allergy, index) => (
-                                    <Chip
-                                      key={index}
-                                      label={allergy}
-                                      color="warning"
-                                      size="small"
-                                    />
-                                  )
-                                )}
-                              </Box>
-                            </Grid>
-                          )}
-                        {athlete.medicalInfo.injuries &&
-                          athlete.medicalInfo.injuries.length > 0 && (
-                            <Grid item xs={12} md={6}>
-                              <Typography
-                                variant="subtitle2"
-                                sx={{ fontWeight: "bold", mb: 1 }}
-                              >
-                                Previous Injuries:
-                              </Typography>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 1,
-                                }}
-                              >
-                                {athlete.medicalInfo.injuries.map(
-                                  (injury, index) => (
-                                    <Chip
-                                      key={index}
-                                      label={injury}
-                                      color="error"
-                                      size="small"
-                                    />
-                                  )
-                                )}
-                              </Box>
-                            </Grid>
-                          )}
-                        <Grid item xs={12}>
-                          <Typography>
-                            <strong>Medical Clearance:</strong>{" "}
-                            <Chip
-                              label={
-                                athlete.medicalInfo.medicalClearance
-                                  ? "Cleared"
-                                  : "Pending"
-                              }
-                              color={
-                                athlete.medicalInfo.medicalClearance
-                                  ? "success"
-                                  : "warning"
-                              }
-                              size="small"
-                            />
-                          </Typography>
-                          {athlete.medicalInfo.lastMedicalCheck && (
-                            <Typography sx={{ mt: 1 }}>
-                              <strong>Last Medical Check:</strong>{" "}
-                              {formatDate(athlete.medicalInfo.lastMedicalCheck)}
-                            </Typography>
-                          )}
-                        </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
-            </Grid>
-          </TabPanel>
-        </Box>
-      </DialogContent>
+              {/* System Information */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
+                <h3 className="text-lg font-bold text-[#03045e] mb-4 border-b border-slate-100 pb-2">
+                  System Information
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Created</span>
+                    <span className="text-slate-800 font-medium">{formatDate(athlete.createdAt)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Last Updated</span>
+                    <span className="text-slate-800 font-medium">{formatDate(athlete.updatedAt)}</span>
+                  </div>
+                  {athlete.createdBy && (
+                    <div>
+                      <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Created By</span>
+                      <span className="text-slate-800 font-medium text-xs break-all">{athlete.createdBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+            </div>
+          )}
 
-      <DialogActions sx={{ p: 2, backgroundColor: "#f5f5f5" }}>
-        <Button onClick={onClose} variant="outlined">
-          Close
-        </Button>
-        {userRole.permissions.canEdit && (
-          <Button
-            onClick={() => onEdit(athlete)}
-            variant="contained"
-            sx={{
-              backgroundColor: "#ADF802",
-              color: "#03045e",
-              "&:hover": { backgroundColor: "#9de002" },
-            }}
-          >
-            Edit Athlete
-          </Button>
-        )}
-      </DialogActions>
-    </Dialog>
+        </div>
+      </div>
+    </div>
   );
 }

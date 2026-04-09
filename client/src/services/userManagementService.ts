@@ -758,14 +758,14 @@ export const fetchSubjects = () => userManagementService.getSubjects();
 export const fetchClasses = () => userManagementService.getClasses();
 
 // Export individual functions for compatibility with existing imports
-export const createUser = (userData: any) => {
+export const createUser = (userData: { employeeId?: string; studentId?: string; studentIds?: string[]; [key: string]: unknown }) => {
   // Determine user type and call appropriate method
   if (userData.employeeId) {
-    return userManagementService.createTeacher(userData);
+    return userManagementService.createTeacher(userData as unknown as CreateTeacherData);
   } else if (userData.studentId) {
-    return userManagementService.createStudent(userData);
+    return userManagementService.createStudent(userData as unknown as CreateStudentData);
   } else if (userData.studentIds) {
-    return userManagementService.createParent(userData);
+    return userManagementService.createParent(userData as unknown as CreateParentData);
   }
   throw new Error('Invalid user data: cannot determine user type');
 };
@@ -805,7 +805,7 @@ export const getAllUsers = async () => {
   return allUsers;
 };
 
-export const updateUserRole = async (userId: string, role: string, userData: any) => {
+export const updateUserRole = async (userId: string, role: string, userData: Record<string, unknown>) => {
   switch (role) {
     case 'teacher':
       return userManagementService.updateTeacher(userId, userData);

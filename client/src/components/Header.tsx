@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { RootState, useAppDispatch } from "@/store/store";
 import { performLogout } from "@/store/Auth/logoutAction";
-import { FaBars, FaTimes, FaUserCircle } from "react-icons/fa";
+import { FaTimes, FaUserCircle } from "react-icons/fa";
 import { FaBarsStaggered } from "react-icons/fa6";
 import { FiLogIn, FiLogOut } from "react-icons/fi";
 import Image from "next/image";

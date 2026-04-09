@@ -74,27 +74,15 @@ const Blog = () => {
   });
 
   // Function to safely format dates
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: { toDate?: () => Date } | string | number | null | undefined) => {
     try {
-      // Handle Firebase Timestamp
-      if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
-        timestamp = timestamp.toDate();
+      if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
+        return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(timestamp.toDate());
       }
-      
-      const date = timestamp ? new Date(timestamp) : new Date();
-      
-      if (isNaN(date.getTime())) {
-        console.error('Invalid date:', timestamp);
-        return 'Date not available';
-      }
-      
-      return new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }).format(date);
-    } catch (error) {
-      console.error('Error formatting date:', error, 'Timestamp:', timestamp);
+      const date = timestamp ? new Date(timestamp as string | number) : new Date();
+      if (isNaN(date.getTime())) return 'Date not available';
+      return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+    } catch {
       return 'Date not available';
     }
   };

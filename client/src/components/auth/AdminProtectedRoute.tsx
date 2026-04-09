@@ -77,7 +77,7 @@ const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({
       <Card className="p-6 text-center">
         <h2 className="text-xl font-semibold text-red-600 mb-4">Access Denied</h2>
         <p className="text-gray-600 mb-4">
-          You don't have administrator privileges to access this page.
+          You don&apos;t have administrator privileges to access this page.
         </p>
         <div className="space-x-4">
           <Button as="link" href="/dashboard" variant="outline">

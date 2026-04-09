@@ -8,13 +8,13 @@ Setup & Deploy
 
 1. Install Firebase CLI: https://firebase.google.com/docs/cli
 2. From this folder run:
-   npm install
+   pnpm install
 3. Initialize firebase in the project root (if not already):
    firebase init functions
    - choose existing project
    - select JavaScript
 4. Deploy
-   npm run deploy
+   pnpm deploy
 
 Notes
 

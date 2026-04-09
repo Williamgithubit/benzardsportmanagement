@@ -11,10 +11,9 @@ export async function GET() {
         initialized: false,
         environment: {
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'set' : 'not set',
-          clientEmail: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
-          adminPrivateKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
+          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
           privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
-          adminSdkKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY ? 'set' : 'not set'
+          adminSdkKey: (process.env.FIREBASE_ADMIN_SDK_KEY || process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY) ? 'set' : 'not set'
         }
       }, { status: 500 });
     }
@@ -29,38 +28,37 @@ export async function GET() {
         userCount: listUsersResult.users.length,
         environment: {
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'set' : 'not set',
-          clientEmail: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
-          adminPrivateKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
+          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
           privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
-          adminSdkKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY ? 'set' : 'not set'
+          adminSdkKey: (process.env.FIREBASE_ADMIN_SDK_KEY || process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY) ? 'set' : 'not set'
         }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
       return NextResponse.json({ 
         status: 'error', 
         message: 'Firebase Admin SDK initialized but failed to list users',
-        error: error.message,
+        error: msg,
         initialized: true,
         environment: {
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'set' : 'not set',
-          clientEmail: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
-          adminPrivateKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
+          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
           privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
-          adminSdkKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY ? 'set' : 'not set'
+          adminSdkKey: (process.env.FIREBASE_ADMIN_SDK_KEY || process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY) ? 'set' : 'not set'
         }
       }, { status: 500 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ 
       status: 'error', 
-      message: error.message,
+      message: msg,
       initialized: false,
       environment: {
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'set' : 'not set',
-        clientEmail: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
-        adminPrivateKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'set' : 'not set',
         privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 'set' : 'not set',
-        adminSdkKey: process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY ? 'set' : 'not set'
+        adminSdkKey: (process.env.FIREBASE_ADMIN_SDK_KEY || process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY) ? 'set' : 'not set'
       }
     }, { status: 500 });
   }

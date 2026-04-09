@@ -21,6 +21,15 @@ export default function DashboardLayout({
   if (isParentRoute) requiredRole = 'parent';
   if (isStudentRoute) requiredRole = 'student';
 
+  if (isAdminRoute) {
+    return (
+      <ProtectedRoute requiredRole={requiredRole}>
+        {children}
+        <Toaster position="top-right" />
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute requiredRole={requiredRole}>
       <div className="flex h-screen bg-gray-100">

@@ -119,7 +119,17 @@ export async function POST(request: NextRequest) {
         .end(buffer);
     });
 
-    const result = uploadResult as any;
+    const result = uploadResult as {
+      public_id: string;
+      secure_url: string;
+      format: string;
+      resource_type: string;
+      type: string;
+      bytes: number;
+      width: number;
+      height: number;
+      duration?: number;
+    };
 
     // Create MediaAsset object
     const mediaAsset: Omit<MediaAsset, "id" | "createdAt" | "updatedAt"> = {
@@ -129,8 +139,8 @@ export async function POST(request: NextRequest) {
       filename: sanitizedFilename,
       originalFilename: file.name,
       format: result.format,
-      resourceType: result.resource_type,
-      type: result.type,
+      resourceType: result.resource_type as "image" | "video" | "raw",
+      type: result.type as "upload" | "private" | "authenticated",
       bytes: result.bytes,
       width: result.width,
       height: result.height,

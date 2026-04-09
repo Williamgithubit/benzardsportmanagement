@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
 import { UserRecord } from 'firebase-admin/auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('Testing Firebase Admin SDK...');
     

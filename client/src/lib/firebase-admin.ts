@@ -7,10 +7,23 @@ import {
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 
+const normalizePrivateKey = (value?: string | null) => {
+  if (!value) {
+    return undefined;
+  }
+
+  return value
+    .trim()
+    .replace(/\\n/g, "\n")
+    .replace(/^"|"$/g, "")
+    .replace(/"\s*,?\s*$/, "")
+    .trim();
+};
+
 // Initialize Firebase Admin with proper error handling
-let adminApp: any = null;
-let adminAuth: any = null;
-let adminDb: any = null;
+let adminApp: ReturnType<typeof initAdminApp> | null = null;
+let adminAuth: ReturnType<typeof getAdminAuth> | null = null;
+let adminDb: ReturnType<typeof getAdminFirestore> | null = null;
 
 try {
   // Try multiple approaches to initialize Firebase Admin SDK
@@ -18,13 +31,17 @@ try {
   // Approach 1: Check for individual credential environment variables
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+  const privateKey = normalizePrivateKey(
+    process.env.FIREBASE_ADMIN_PRIVATE_KEY,
+  );
 
   // Approach 2: Check for complete service account JSON
-  const serviceAccountKey = process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY;
+  const serviceAccountKey =
+    process.env.FIREBASE_ADMIN_SDK_KEY ||
+    process.env.NEXT_PUBLIC_FIREBASE_ADMIN_SDK_KEY;
 
   // Determine which approach to use
-  let firebaseAdminConfig: any = null;
+  let firebaseAdminConfig: Record<string, unknown> | null = null;
 
   // Log credential availability (safely)
   console.log("Firebase Admin credential check:", {
@@ -37,21 +54,21 @@ try {
   if (projectId && clientEmail && privateKey) {
     // Use individual credential variables
     console.log(
-      "Initializing Firebase Admin SDK with individual credential variables"
+      "Initializing Firebase Admin SDK with individual credential variables",
     );
     try {
       firebaseAdminConfig = {
         credential: cert({
           projectId,
           clientEmail,
-          privateKey: privateKey.replace(/\\n/g, "\n"),
+          privateKey,
         }),
       };
       console.log("Successfully created cert with individual credentials");
     } catch (certError) {
       console.error(
         "Failed to create cert with individual credentials:",
-        certError
+        certError,
       );
       throw certError;
     }
@@ -74,7 +91,7 @@ try {
         credential: cert({
           projectId: serviceAccount.project_id,
           clientEmail: serviceAccount.client_email,
-          privateKey: serviceAccount.private_key.replace(/\\n/g, "\n"),
+          privateKey: normalizePrivateKey(serviceAccount.private_key),
         }),
       };
     } catch (parseError) {
@@ -83,7 +100,7 @@ try {
     }
   } else {
     console.warn(
-      "Firebase Admin SDK credentials not found. Admin features will be disabled."
+      "Firebase Admin SDK credentials not found. Admin features will be disabled.",
     );
   }
 

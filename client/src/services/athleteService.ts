@@ -13,20 +13,18 @@ import {
   startAfter,
   QueryDocumentSnapshot,
   DocumentData,
-  Timestamp,
   writeBatch,
   onSnapshot,
   Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
-import { 
+import {
   uploadAthleteMedia as uploadAthleteMediaToCloudinary,
-  deleteAthleteMediaFromCloudinary 
+  deleteAthleteMediaFromCloudinary,
 } from "@/services/cloudinaryService";
 import {
   Athlete,
   AthleteFilters,
-  PaginationState,
   AthleteMedia,
   BulkAction,
 } from "@/types/athlete";
@@ -36,20 +34,20 @@ const COLLECTION_NAME = "athletes";
 export class AthleteService {
   // Create a new athlete
   static async createAthlete(
-    athleteData: Omit<Athlete, "id" | "createdAt" | "updatedAt">
+    athleteData: Omit<Athlete, "id" | "createdAt" | "updatedAt">,
   ): Promise<string> {
     try {
       const now = new Date().toISOString();
-      
+
       // Filter out undefined values to avoid Firebase errors
-      const filteredAthleteData: any = {};
+      const filteredAthleteData: Record<string, unknown> = {};
       Object.entries(athleteData).forEach(([key, value]) => {
         if (value !== undefined) {
           filteredAthleteData[key] = value;
         }
       });
-      
-      const athlete: any = {
+
+      const athlete: Record<string, unknown> = {
         ...filteredAthleteData,
         createdAt: now,
         updatedAt: now,
@@ -83,19 +81,19 @@ export class AthleteService {
   // Update athlete
   static async updateAthlete(
     id: string,
-    updates: Partial<Athlete>
+    updates: Partial<Athlete>,
   ): Promise<void> {
     try {
       const docRef = doc(db, COLLECTION_NAME, id);
-      
+
       // Filter out undefined values to avoid Firebase errors
-      const filteredUpdates: any = {};
+      const filteredUpdates: Record<string, unknown> = {};
       Object.entries(updates).forEach(([key, value]) => {
         if (value !== undefined) {
           filteredUpdates[key] = value;
         }
       });
-      
+
       await updateDoc(docRef, {
         ...filteredUpdates,
         updatedAt: new Date().toISOString(),
@@ -125,7 +123,7 @@ export class AthleteService {
   static async getAthletes(
     filters: AthleteFilters,
     pagination: { page: number; pageSize: number },
-    lastDoc?: QueryDocumentSnapshot<DocumentData>
+    lastDoc?: QueryDocumentSnapshot<DocumentData>,
   ): Promise<{
     athletes: Athlete[];
     lastDoc?: QueryDocumentSnapshot<DocumentData>;
@@ -167,12 +165,18 @@ export class AthleteService {
       let usedFallback = false;
       try {
         querySnapshot = await getDocs(q);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Firestore may require a composite index for certain queries.
         // Fall back to client-side filtering by fetching all docs if that happens.
-        if (err && err.message && err.message.includes("requires an index")) {
+        const errorMessage = (err as { message?: string })?.message;
+        if (
+          err &&
+          errorMessage &&
+          typeof errorMessage === "string" &&
+          errorMessage.includes("requires an index")
+        ) {
           console.warn(
-            "Firestore index required for query; falling back to client-side filtering."
+            "Firestore index required for query; falling back to client-side filtering.",
           );
           querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
           usedFallback = true;
@@ -188,15 +192,35 @@ export class AthleteService {
       if (usedFallback) {
         processedDocs = docs.filter((d) => {
           const data = d.data() as Athlete;
-          if (filters.sport && filters.sport !== "all" && data.sport !== filters.sport)
+          if (
+            filters.sport &&
+            filters.sport !== "all" &&
+            data.sport !== filters.sport
+          )
             return false;
-          if (filters.level && filters.level !== "all" && data.level !== filters.level)
+          if (
+            filters.level &&
+            filters.level !== "all" &&
+            data.level !== filters.level
+          )
             return false;
-          if (filters.county && filters.county !== "all" && data.county !== filters.county)
+          if (
+            filters.county &&
+            filters.county !== "all" &&
+            data.county !== filters.county
+          )
             return false;
-          if (filters.scoutingStatus && filters.scoutingStatus !== "all" && data.scoutingStatus !== filters.scoutingStatus)
+          if (
+            filters.scoutingStatus &&
+            filters.scoutingStatus !== "all" &&
+            data.scoutingStatus !== filters.scoutingStatus
+          )
             return false;
-          if (filters.position && filters.position !== "all" && data.position !== filters.position)
+          if (
+            filters.position &&
+            filters.position !== "all" &&
+            data.position !== filters.position
+          )
             return false;
           return true;
         });
@@ -204,7 +228,9 @@ export class AthleteService {
 
       // Process results
       const hasMore = processedDocs.length > pagination.pageSize;
-      const docsToProcess = hasMore ? processedDocs.slice(0, -1) : processedDocs;
+      const docsToProcess = hasMore
+        ? processedDocs.slice(0, -1)
+        : processedDocs;
 
       docsToProcess.forEach((doc) => {
         const data = doc.data();
@@ -220,7 +246,7 @@ export class AthleteService {
             athlete.name.toLowerCase().includes(searchTerm) ||
             athlete.position?.toLowerCase().includes(searchTerm) ||
             athlete.location?.toLowerCase().includes(searchTerm) ||
-            athlete.bio?.toLowerCase().includes(searchTerm)
+            athlete.bio?.toLowerCase().includes(searchTerm),
         );
       }
 
@@ -265,18 +291,20 @@ export class AthleteService {
     } catch (error) {
       // If index required, fetch all and filter client-side
       try {
+        const errorMessage = (error as { message?: string })?.message;
         if (
           error &&
-          (error as any).message &&
-          (error as any).message.includes("requires an index")
+          errorMessage &&
+          typeof errorMessage === "string" &&
+          errorMessage.includes("requires an index")
         ) {
           console.warn(
-            "Firestore index required for count query; falling back to client-side count."
+            "Firestore index required for count query; falling back to client-side count.",
           );
           const allDocs = await getDocs(collection(db, COLLECTION_NAME));
           let athletes: Athlete[] = [];
           allDocs.forEach((doc) =>
-            athletes.push({ id: doc.id, ...doc.data() } as Athlete)
+            athletes.push({ id: doc.id, ...doc.data() } as Athlete),
           );
 
           // Apply same filters
@@ -288,7 +316,7 @@ export class AthleteService {
             athletes = athletes.filter((a) => a.county === filters.county);
           if (filters.scoutingStatus && filters.scoutingStatus !== "all")
             athletes = athletes.filter(
-              (a) => a.scoutingStatus === filters.scoutingStatus
+              (a) => a.scoutingStatus === filters.scoutingStatus,
             );
 
           return athletes.length;
@@ -307,7 +335,7 @@ export class AthleteService {
     athleteId: string,
     file: File,
     type: "photo" | "video",
-    caption?: string
+    caption?: string,
   ): Promise<AthleteMedia> {
     try {
       // Upload to Cloudinary
@@ -315,7 +343,7 @@ export class AthleteService {
         file,
         athleteId,
         type,
-        caption
+        caption,
       );
 
       const media: AthleteMedia = {
@@ -349,7 +377,7 @@ export class AthleteService {
   // Delete athlete media using Cloudinary
   static async deleteAthleteMedia(
     athleteId: string,
-    mediaId?: string
+    mediaId?: string,
   ): Promise<void> {
     try {
       if (mediaId) {
@@ -362,7 +390,7 @@ export class AthleteService {
             await deleteAthleteMediaFromCloudinary(
               athleteId,
               mediaItem.id,
-              mediaItem.type
+              mediaItem.type,
             );
 
             // Update athlete document
@@ -379,8 +407,8 @@ export class AthleteService {
             deleteAthleteMediaFromCloudinary(
               athleteId,
               mediaItem.id,
-              mediaItem.type
-            )
+              mediaItem.type,
+            ),
           );
           await Promise.all(deletePromises);
 
@@ -403,30 +431,36 @@ export class AthleteService {
         case "updateStatus":
           action.athleteIds.forEach((id) => {
             const docRef = doc(db, COLLECTION_NAME, id);
-            batch.update(docRef, {
-              status: action.data.status,
-              updatedAt: new Date().toISOString(),
-            });
+            if (action.data) {
+              batch.update(docRef, {
+                status: action.data.status,
+                updatedAt: new Date().toISOString(),
+              });
+            }
           });
           break;
 
         case "updateLevel":
           action.athleteIds.forEach((id) => {
             const docRef = doc(db, COLLECTION_NAME, id);
-            batch.update(docRef, {
-              level: action.data.level,
-              updatedAt: new Date().toISOString(),
-            });
+            if (action.data) {
+              batch.update(docRef, {
+                level: action.data.level,
+                updatedAt: new Date().toISOString(),
+              });
+            }
           });
           break;
 
         case "assignProgram":
           action.athleteIds.forEach((id) => {
             const docRef = doc(db, COLLECTION_NAME, id);
-            batch.update(docRef, {
-              trainingProgram: action.data.program,
-              updatedAt: new Date().toISOString(),
-            });
+            if (action.data) {
+              batch.update(docRef, {
+                trainingProgram: action.data.program,
+                updatedAt: new Date().toISOString(),
+              });
+            }
           });
           break;
 
@@ -492,7 +526,7 @@ export class AthleteService {
             athlete.stats?.assists || "",
             athlete.stats?.matches || "",
             athlete.createdAt,
-          ].join(",")
+          ].join(","),
         ),
       ].join("\n");
 
@@ -506,11 +540,10 @@ export class AthleteService {
   // Import athletes from CSV
   static async importAthletesFromCSV(
     csvContent: string,
-    userId: string
+    userId: string,
   ): Promise<{ success: number; errors: string[] }> {
     try {
       const lines = csvContent.split("\n");
-      const headers = lines[0].split(",").map((h) => h.replace(/"/g, ""));
       const errors: string[] = [];
       let success = 0;
 
@@ -519,13 +552,14 @@ export class AthleteService {
 
         try {
           const values = lines[i].split(",").map((v) => v.replace(/"/g, ""));
-          
+
           // Build athlete data without undefined values for Firebase compatibility
           const athleteData: Partial<Athlete> = {
             name: values[0] || "",
             sport: values[3] || "football",
-            level: (values[4] as any) || "grassroots",
-            scoutingStatus: (values[7] as any) || "active",
+            level: (values[4] as Athlete["level"]) || "grassroots",
+            scoutingStatus:
+              (values[7] as Athlete["scoutingStatus"]) || "active",
             createdBy: userId,
             status: "active",
           };
@@ -551,7 +585,7 @@ export class AthleteService {
           }
 
           // Handle contact info
-          const contact: any = {};
+          const contact: Record<string, string> = {};
           if (values[8]) contact.email = values[8];
           if (values[9]) contact.phone = values[9];
           if (Object.keys(contact).length > 0) {
@@ -559,10 +593,13 @@ export class AthleteService {
           }
 
           // Handle stats
-          const stats: any = {};
-          if (values[12] && !isNaN(parseInt(values[12]))) stats.goals = parseInt(values[12]);
-          if (values[13] && !isNaN(parseInt(values[13]))) stats.assists = parseInt(values[13]);
-          if (values[14] && !isNaN(parseInt(values[14]))) stats.matches = parseInt(values[14]);
+          const stats: Record<string, number> = {};
+          if (values[12] && !isNaN(parseInt(values[12])))
+            stats.goals = parseInt(values[12]);
+          if (values[13] && !isNaN(parseInt(values[13])))
+            stats.assists = parseInt(values[13]);
+          if (values[14] && !isNaN(parseInt(values[14])))
+            stats.matches = parseInt(values[14]);
           if (Object.keys(stats).length > 0) {
             athleteData.stats = stats;
           }
@@ -573,14 +610,14 @@ export class AthleteService {
           }
 
           await this.createAthlete(
-            athleteData as Omit<Athlete, "id" | "createdAt" | "updatedAt">
+            athleteData as Omit<Athlete, "id" | "createdAt" | "updatedAt">,
           );
           success++;
         } catch (error) {
           errors.push(
             `Row ${i + 1}: ${
               error instanceof Error ? error.message : "Unknown error"
-            }`
+            }`,
           );
         }
       }
@@ -595,7 +632,7 @@ export class AthleteService {
   // Real-time subscription to athletes
   static subscribeToAthletes(
     filters: AthleteFilters,
-    callback: (athletes: Athlete[]) => void
+    callback: (athletes: Athlete[]) => void,
   ): Unsubscribe {
     try {
       let q = query(collection(db, COLLECTION_NAME));
@@ -625,7 +662,7 @@ export class AthleteService {
             (athlete) =>
               athlete.name.toLowerCase().includes(searchTerm) ||
               athlete.position?.toLowerCase().includes(searchTerm) ||
-              athlete.location?.toLowerCase().includes(searchTerm)
+              athlete.location?.toLowerCase().includes(searchTerm),
           );
         }
 
@@ -633,12 +670,14 @@ export class AthleteService {
       });
     } catch (error) {
       // If index is required, fall back to subscribing to entire collection and filtering client-side
+      const errorMessage = (error as { message?: string })?.message;
       if (
-        (error as any).message &&
-        (error as any).message.includes("requires an index")
+        errorMessage &&
+        typeof errorMessage === "string" &&
+        errorMessage.includes("requires an index")
       ) {
         console.warn(
-          "Firestore index required for subscription query; falling back to client-side subscribe."
+          "Firestore index required for subscription query; falling back to client-side subscribe.",
         );
         return onSnapshot(collection(db, COLLECTION_NAME), (querySnapshot) => {
           const athletes: Athlete[] = [];
@@ -649,11 +688,11 @@ export class AthleteService {
           let filteredAthletes = athletes;
           if (filters.sport && filters.sport !== "all")
             filteredAthletes = filteredAthletes.filter(
-              (a) => a.sport === filters.sport
+              (a) => a.sport === filters.sport,
             );
           if (filters.level && filters.level !== "all")
             filteredAthletes = filteredAthletes.filter(
-              (a) => a.level === filters.level
+              (a) => a.level === filters.level,
             );
 
           if (filters.search) {
@@ -662,7 +701,7 @@ export class AthleteService {
               (athlete) =>
                 athlete.name.toLowerCase().includes(searchTerm) ||
                 athlete.position?.toLowerCase().includes(searchTerm) ||
-                athlete.location?.toLowerCase().includes(searchTerm)
+                athlete.location?.toLowerCase().includes(searchTerm),
             );
           }
 

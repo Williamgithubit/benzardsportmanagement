@@ -1,69 +1,27 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Paper,
-  Tabs,
-  Tab,
-  Alert,
-  Button,
-  useTheme,
-  useMediaQuery,
-} from '@mui/material';
-import {
-  AccountCircle as AccountIcon,
-  Security as SecurityIcon,
-  Notifications as NotificationsIcon,
-  Settings as SettingsIcon,
-  Business as BusinessIcon,
-  Refresh as RefreshIcon,
-} from '@mui/icons-material';
+  MdAccountCircle,
+  MdSecurity,
+  MdNotifications,
+  MdSettings,
+  MdBusiness,
+  MdRefresh,
+} from 'react-icons/md';
 
 // Import components
 import ProfileTab from './ProfileTab';
 import SecurityTab from './SecurityTab';
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`settings-tabpanel-${index}`}
-      aria-labelledby={`settings-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: { xs: 2, sm: 3 } }}>{children}</Box>}
-    </div>
-  );
-}
+import toast, { Toaster } from 'react-hot-toast';
 
 const Settings: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [tabValue, setTabValue] = useState(0);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
 
   const showSuccess = (message: string) => {
-    setSuccess(message);
-    setTimeout(() => setSuccess(null), 3000);
+    toast.success(message);
   };
 
   const showError = (message: string) => {
-    setError(message);
-    setTimeout(() => setError(null), 5000);
+    toast.error(message);
   };
 
   const handleRefresh = () => {
@@ -71,141 +29,86 @@ const Settings: React.FC = () => {
     window.location.reload();
   };
 
-  return (
-    <Box>
-      {/* Header */}
-      <Box 
-        sx={{
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between', 
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          gap: { xs: 2, sm: 0 },
-          mb: 3
-        }}
-      >
-        <Typography 
-          variant="h5" 
-          component="h2" 
-          sx={{ 
-            color: '#000054', 
-            fontWeight: 'bold',
-            fontSize: { xs: '1.25rem', sm: '1.5rem' }
-          }}
-        >
-          Settings
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          fullWidth={isMobile}
-          size={isMobile ? "small" : "medium"}
-          sx={{
-            borderColor: '#000054',
-            color: '#000054',
-            '&:hover': {
-              borderColor: '#1a1a6e',
-              backgroundColor: 'rgba(0, 0, 84, 0.04)',
-            },
-          }}
-        >
-          {isMobile ? "" : "Refresh"}
-        </Button>
-      </Box>
+  const tabs = [
+    { id: 0, label: 'Profile', icon: <MdAccountCircle size={24} />, disabled: false },
+    { id: 1, label: 'Security', icon: <MdSecurity size={24} />, disabled: false },
+    { id: 2, label: 'Notifications', icon: <MdNotifications size={24} />, disabled: true },
+    { id: 3, label: 'System', icon: <MdSettings size={24} />, disabled: true },
+    { id: 4, label: 'Organization', icon: <MdBusiness size={24} />, disabled: true },
+  ];
 
-      {/* Success/Error Messages */}
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+  return (
+    <div className="w-full">
+      <Toaster position="top-right" />
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#000054]">
+          Settings
+        </h2>
+        <button
+          onClick={handleRefresh}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border-2 border-[#000054] text-[#000054] hover:bg-[#000054] hover:text-white transition-colors font-bold w-full sm:w-auto"
+        >
+          <MdRefresh size={20} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
+      </div>
 
       {/* Settings Tabs */}
-      <Paper 
-        sx={{ 
-          mb: 3,
-          background: 'white',
-          borderRadius: 2,
-          border: '1px solid rgba(0, 0, 84, 0.1)',
-          overflow: 'hidden',
-        }}
-      >
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            '& .MuiTab-root': {
-              color: '#000054',
-              fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
-              minHeight: { xs: '48px', sm: '56px' },
-              padding: { xs: '6px 12px', sm: '12px 16px' },
-              '&.Mui-selected': {
-                color: '#E32845',
-              },
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#E32845',
-            },
-          }}
-        >
-          <Tab icon={<AccountIcon sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />} label="Profile" />
-          <Tab icon={<SecurityIcon sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />} label="Security" />
-          <Tab icon={<NotificationsIcon sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />} label="Notifications" disabled />
-          <Tab icon={<SettingsIcon sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />} label="System" disabled />
-          <Tab icon={<BusinessIcon sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />} label="Organization" disabled />
-        </Tabs>
-      </Paper>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+        <div className="flex overflow-x-auto hide-scrollbar border-b border-slate-200">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => !tab.disabled && setTabValue(tab.id)}
+              disabled={tab.disabled}
+              className={`flex items-center gap-2 px-6 py-4 font-bold text-sm whitespace-nowrap border-b-2 transition-colors ${
+                 tab.disabled ? 'opacity-50 cursor-not-allowed text-slate-400 border-transparent' :
+                 tabValue === tab.id
+                  ? 'border-[#E32845] text-[#E32845]'
+                  : 'border-transparent text-[#000054] hover:text-red-500 hover:border-red-200'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Tab Panels */}
-      <TabPanel value={tabValue} index={0}>
-        <ProfileTab onSuccess={showSuccess} onError={showError} />
-      </TabPanel>
+      <div className="p-0 sm:p-2">
+        <div className={tabValue === 0 ? "block" : "hidden"}>
+          <ProfileTab onSuccess={showSuccess} onError={showError} />
+        </div>
 
-      <TabPanel value={tabValue} index={1}>
-        <SecurityTab onSuccess={showSuccess} onError={showError} />
-      </TabPanel>
+        <div className={tabValue === 1 ? "block" : "hidden"}>
+          <SecurityTab onSuccess={showSuccess} onError={showError} />
+        </div>
 
-      <TabPanel value={tabValue} index={2}>
-        <Box textAlign="center" py={4}>
-          <Typography variant="h6" color="textSecondary">
-            Notifications Settings
-          </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Coming soon...
-          </Typography>
-        </Box>
-      </TabPanel>
+        <div className={tabValue === 2 ? "block" : "hidden"}>
+          <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="text-xl font-bold text-slate-600 mb-2">Notifications Settings</h3>
+            <p className="text-slate-500">Coming soon...</p>
+          </div>
+        </div>
 
-      <TabPanel value={tabValue} index={3}>
-        <Box textAlign="center" py={4}>
-          <Typography variant="h6" color="textSecondary">
-            System Settings
-          </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Coming soon...
-          </Typography>
-        </Box>
-      </TabPanel>
+        <div className={tabValue === 3 ? "block" : "hidden"}>
+           <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="text-xl font-bold text-slate-600 mb-2">System Settings</h3>
+            <p className="text-slate-500">Coming soon...</p>
+          </div>
+        </div>
 
-      <TabPanel value={tabValue} index={4}>
-        <Box textAlign="center" py={4}>
-          <Typography variant="h6" color="textSecondary">
-            Organization Settings
-          </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Coming soon...
-          </Typography>
-        </Box>
-      </TabPanel>
-    </Box>
+        <div className={tabValue === 4 ? "block" : "hidden"}>
+           <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="text-xl font-bold text-slate-600 mb-2">Organization Settings</h3>
+            <p className="text-slate-500">Coming soon...</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

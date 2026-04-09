@@ -1,51 +1,24 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Avatar,
-  TablePagination,
-  Alert,
-  Snackbar,
-  CircularProgress,
-  FormHelperText,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  AdminPanelSettings as AdminIcon,
-  Person as PersonIcon,
-  SportsFootball as CoachIcon,
-  FitnessCenter as AthleteIcon,
-  Business as SponsorIcon,
-  Camera as MediaIcon,
-  Refresh as RefreshIcon,
-  LockReset as LockResetIcon,
-} from "@mui/icons-material";
+  MdAdd,
+  MdEdit,
+  MdDelete,
+  MdAdminPanelSettings,
+  MdPerson,
+  MdSportsSoccer,
+  MdOutlineFitnessCenter,
+  MdBusiness,
+  MdCamera,
+  MdRefresh,
+  MdLockReset,
+  MdSearch,
+  MdClose,
+  MdChevronLeft,
+  MdChevronRight,
+} from "react-icons/md";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 // Role types for sports management
 type UserRole = "admin" | "manager" | "coach" | "athlete" | "sponsor" | "media";
@@ -87,12 +60,12 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 const roleIcons: Record<UserRole, React.ReactElement> = {
-  admin: <AdminIcon />,
-  manager: <PersonIcon />,
-  coach: <CoachIcon />,
-  athlete: <AthleteIcon />,
-  sponsor: <SponsorIcon />,
-  media: <MediaIcon />,
+  admin: <MdAdminPanelSettings size={18} />,
+  manager: <MdPerson size={18} />,
+  coach: <MdSportsSoccer size={18} />,
+  athlete: <MdOutlineFitnessCenter size={18} />,
+  sponsor: <MdBusiness size={18} />,
+  media: <MdCamera size={18} />,
 };
 
 const UserManagement: React.FC<UserManagementProps> = ({
@@ -111,9 +84,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
   // Fetch users with Firebase Authentication
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -130,8 +100,12 @@ const UserManagement: React.FC<UserManagementProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        );
       }
 
       const data: User[] = await response.json();
@@ -154,6 +128,17 @@ const UserManagement: React.FC<UserManagementProps> = ({
     }
   }, [openDialog, onCloseDialog]);
 
+  // Toast auto-hide
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
   const handleOpenDialog = (user: User | null = null) => {
     setEditingUser(user);
     setDialogOpen(true);
@@ -173,7 +158,9 @@ const UserManagement: React.FC<UserManagementProps> = ({
       if (!currentUser) throw new Error("User not authenticated");
       const idToken = await currentUser.getIdToken(true);
 
-      const url = editingUser ? `/api/admin/users/${editingUser.id}` : "/api/admin/users";
+      const url = editingUser
+        ? `/api/admin/users/${editingUser.id}`
+        : "/api/admin/users";
       const method = editingUser ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -186,22 +173,33 @@ const UserManagement: React.FC<UserManagementProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(errorData.error || `Failed to ${editingUser ? "update" : "create"} user`);
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error ||
+            `Failed to ${editingUser ? "update" : "create"} user`,
+        );
       }
 
-      setSuccess(`${data.email} ${editingUser ? "updated" : "created"} successfully`);
+      setSuccess(
+        `${data.email} ${editingUser ? "updated" : "created"} successfully`,
+      );
       await fetchUsers();
       handleCloseDialog();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${editingUser ? "update" : "create"} user`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${editingUser ? "update" : "create"} user`,
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this user?")) return;
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
     setIsLoading(true);
     try {
       const currentUser = auth.currentUser;
@@ -217,7 +215,9 @@ const UserManagement: React.FC<UserManagementProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
         throw new Error(errorData.error || "Failed to delete user");
       }
 
@@ -237,7 +237,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
       await sendPasswordResetEmail(auth, user.email);
       setSuccess(`Password reset email sent to ${user.email}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send password reset email");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to send password reset email",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -246,187 +250,267 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const filtered = users.filter(
     (u) =>
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
+      u.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  const paginatedUsers = filtered.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage,
+  );
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "inactive":
+        return "bg-slate-100 text-slate-700 border-slate-200";
+      case "suspended":
+        return "bg-red-100 text-red-700 border-red-200";
+      default:
+        return "bg-slate-100 text-slate-700 border-slate-200";
+    }
+  };
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Typography variant="h5" sx={{ color: "#03045e", fontWeight: "bold" }}>
+    <div className="w-full">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-navy">
           User Management
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
+        </h1>
+        <button
           onClick={() => handleOpenDialog(null)}
-          sx={{ backgroundColor: "#ADF802", color: "#03045e", "&:hover": { backgroundColor: "#9de702" } }}
+          className="flex items-center justify-center gap-2 bg-accent hover:bg-[#9de702] text-navy font-semibold py-2 px-4 rounded-md transition-colors shadow-sm"
         >
-          Add User
-        </Button>
-      </Box>
+          <MdAdd size={20} />
+          <span>Add User</span>
+        </button>
+      </div>
 
-      <Snackbar
-        open={!!success}
-        autoHideDuration={5000}
-        onClose={() => setSuccess(null)}
-      >
-        <Alert severity="success">{success}</Alert>
-      </Snackbar>
-      <Snackbar
-        open={!!error}
-        autoHideDuration={5000}
-        onClose={() => setError(null)}
-      >
-        <Alert severity="error">{error}</Alert>
-      </Snackbar>
+      {/* Toasts */}
+      {success && (
+        <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-200 text-green-700 flex items-center justify-between">
+          <span>{success}</span>
+          <button onClick={() => setSuccess(null)}>
+            <MdClose />
+          </button>
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-700 flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)}>
+            <MdClose />
+          </button>
+        </div>
+      )}
 
-      <Paper>
-        <Box sx={{ p: 2, display: "flex", gap: 2, alignItems: "center" }}>
-          <TextField
-            placeholder="Search users"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-          />
-          <Button startIcon={<RefreshIcon />} onClick={fetchUsers}>
-            Refresh
-          </Button>
-        </Box>
+      {/* Main Content Area */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
+        {/* Controls */}
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-50/50">
+          <div className="relative w-full sm:w-auto sm:max-w-xs">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <MdSearch size={20} />
+            </span>
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(0);
+              }}
+              className="pl-10 w-full rounded-md border border-slate-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={fetchUsers}
+            className="flex items-center gap-2 text-slate-600 hover:text-navy hover:bg-slate-100 py-2 px-3 rounded text-sm font-medium transition-colors border border-slate-200 bg-white"
+          >
+            <MdRefresh size={18} className={isLoading ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
+        </div>
 
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                <th className="px-6 py-3 font-semibold">User</th>
+                <th className="px-6 py-3 font-semibold">Role</th>
+                <th className="px-6 py-3 font-semibold">Status</th>
+                <th className="px-6 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm">
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: "center" }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <Avatar src={u.photoURL || undefined}>
+                <TableSkeleton rows={6} columns={4} />
+              ) : paginatedUsers.length > 0 ? (
+                paginatedUsers.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {u.photoURL ? (
+                          <img
+                            src={u.photoURL}
+                            alt={u.name}
+                            className="w-10 h-10 rounded-full object-cover border border-slate-200"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
                             {roleIcons[u.role]}
-                          </Avatar>
-                          <Box>
-                            <Typography sx={{ fontWeight: 600 }}>
-                              {u.name}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Joined{" "}
-                              {new Date(u.createdAt).toLocaleDateString()}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={roleLabels[u.role]}
-                          size="small"
-                          icon={roleIcons[u.role]}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={u.status}
-                          size="small"
-                          color={u.status === "active" ? "success" : "default"}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton
-                          size="small"
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-slate-800">
+                            {u.name}
+                          </p>
+                          <p className="text-xs text-slate-500">{u.email}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Joined {new Date(u.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200">
+                        {roleIcons[u.role]}
+                        <span>{roleLabels[u.role]}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${getStatusColor(u.status)}`}
+                      >
+                        {u.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2 text-slate-500">
+                        <button
                           onClick={() => handleOpenDialog(u)}
-                          aria-label="edit"
+                          className="p-1.5 rounded hover:bg-slate-100 hover:text-navy transition-colors"
+                          title="Edit User"
                         >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
+                          <MdEdit size={18} />
+                        </button>
+                        <button
                           onClick={() => handleResetPassword(u)}
-                          aria-label="reset"
+                          className="p-1.5 rounded hover:bg-slate-100 hover:text-primary transition-colors"
+                          title="Reset Password"
                         >
-                          <LockResetIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(u.id)}
-                          aria-label="delete"
+                          <MdLockReset size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(u.id, u.name)}
+                          className="p-1.5 rounded hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="Delete User"
                         >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          <MdDelete size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-6 py-10 text-center text-slate-500"
+                  >
+                    No users found matching your search criteria.
+                  </td>
+                </tr>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </tbody>
+          </table>
+        </div>
 
-        <TablePagination
-          component="div"
-          count={filtered.length}
-          page={page}
-          onPageChange={(e, newPage) => setPage(newPage)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => setRowsPerPage(Number(e.target.value))}
-        />
-      </Paper>
+        {/* Pagination */}
+        {!isLoading && filtered.length > 0 && (
+          <div className="px-6 py-3 border-t border-slate-200 flex items-center justify-between text-sm bg-slate-50">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">Rows per page:</span>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setPage(0);
+                }}
+                className="border-slate-300 rounded text-slate-700 bg-white py-1 px-2 focus:ring-primary focus:border-primary focus:outline-none cursor-pointer"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
 
-      <UserFormDialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
-        onSave={handleSaveUser}
-        user={editingUser}
-        isSubmitting={isSubmitting}
-      />
-    </Box>
+            <div className="flex items-center gap-4 text-slate-600">
+              <span>
+                {page * rowsPerPage + 1}-
+                {Math.min((page + 1) * rowsPerPage, filtered.length)} of{" "}
+                {filtered.length}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <MdChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages - 1, p + 1))
+                  }
+                  disabled={page >= totalPages - 1}
+                  className="p-1 rounded hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <MdChevronRight size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Form Dialog Alternative - Overlay Model */}
+      {dialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <UserForm
+              onClose={handleCloseDialog}
+              onSave={handleSaveUser}
+              user={editingUser}
+              isSubmitting={isSubmitting}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-interface UserFormDialogProps {
-  open: boolean;
+interface UserFormProps {
   onClose: () => void;
   onSave: (data: CreateUserData) => Promise<void>;
   user: User | null;
   isSubmitting: boolean;
 }
 
-const UserFormDialog: React.FC<UserFormDialogProps> = ({
-  open,
+const UserForm: React.FC<UserFormProps> = ({
   onClose,
   onSave,
   user,
   isSubmitting,
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [formData, setFormData] = useState<CreateUserData>({
     email: user?.email || "",
     password: "",
@@ -435,27 +519,6 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
     status: user?.status || "active",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        email: user.email,
-        password: "",
-        name: user.name,
-        role: user.role,
-        status: user.status,
-      });
-    } else {
-      setFormData({
-        email: "",
-        password: "",
-        name: "",
-        role: "athlete",
-        status: "active",
-      });
-    }
-    setErrors({});
-  }, [user, open]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -468,7 +531,7 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -481,109 +544,140 @@ const UserFormDialog: React.FC<UserFormDialogProps> = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={isSubmitting ? undefined : onClose}
-      fullWidth
-      maxWidth="sm"
-    >
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>{user ? "Edit User" : "Add User"}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                label="Full name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                fullWidth
-                error={!!errors.name}
-                helperText={errors.name}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                fullWidth
-                error={!!errors.email}
-                helperText={errors.email}
-                disabled={!!user}
-              />
-            </Grid>
-            {!user && (
-              <Grid item xs={12}>
-                <TextField
-                  label="Password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  fullWidth
-                  error={!!errors.password}
-                  helperText={errors.password}
-                />
-              </Grid>
+    <>
+      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h2 className="text-xl font-bold text-navy">
+          {user ? "Edit User" : "Add New User"}
+        </h2>
+        <button
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-200"
+        >
+          <MdClose size={24} />
+        </button>
+      </div>
+
+      <div className="p-6 overflow-y-auto">
+        <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-slate-700 block">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="e.g. John Doe"
+              className={`w-full rounded-md border ${errors.name ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:border-transparent`}
+            />
+            {errors.name && (
+              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
             )}
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Role</InputLabel>
-                <Select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  label="Role"
-                >
-                  <MenuItem value="admin">Admin</MenuItem>
-                  <MenuItem value="manager">Manager</MenuItem>
-                  <MenuItem value="coach">Coach</MenuItem>
-                  <MenuItem value="athlete">Athlete</MenuItem>
-                  <MenuItem value="sponsor">Sponsor</MenuItem>
-                  <MenuItem value="media">Media</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  label="Status"
-                >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                  <MenuItem value="suspended">Suspended</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isSubmitting}
-            sx={{ backgroundColor: "#ADF802", color: "#03045e", "&:hover": { backgroundColor: "#9de702" } }}
-          >
-            {isSubmitting ? (
-              <CircularProgress size={20} />
-            ) : user ? (
-              "Update"
-            ) : (
-              "Create"
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-slate-700 block">
+              Email Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              disabled={!!user}
+              placeholder="johndoe@example.com"
+              className={`w-full rounded-md border ${errors.email ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed`}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
             )}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+          </div>
+
+          {!user && (
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-slate-700 block">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Secure password"
+                className={`w-full rounded-md border ${errors.password ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:border-transparent`}
+              />
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-slate-700 block">
+                Role
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full rounded-md border border-slate-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
+              >
+                <option value="admin">Admin</option>
+                <option value="manager">Manager</option>
+                <option value="coach">Coach</option>
+                <option value="athlete">Athlete</option>
+                <option value="sponsor">Sponsor</option>
+                <option value="media">Media</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-slate-700 block">
+                Status
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full rounded-md border border-slate-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="px-4 py-2 border border-slate-300 rounded font-medium text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="user-form"
+          disabled={isSubmitting}
+          className="px-4 py-2 bg-accent hover:bg-[#9de702] text-navy font-bold rounded flex items-center justify-center min-w-[100px] transition-colors disabled:opacity-50 shadow-sm"
+        >
+          {isSubmitting ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-navy"></div>
+          ) : user ? (
+            "Update User"
+          ) : (
+            "Create User"
+          )}
+        </button>
+      </div>
+    </>
   );
 };
 

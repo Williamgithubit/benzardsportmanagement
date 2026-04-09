@@ -3,9 +3,9 @@ import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUD_NAME,
-  api_key: process.env.NEXT_PUBLIC_CLOUD_API_KEY,
-  api_secret: process.env.NEXT_PUBLIC_CLOUD_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY || process.env.NEXT_PUBLIC_CLOUD_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET || process.env.NEXT_PUBLIC_CLOUD_API_SECRET,
 });
 
 export async function POST(request: NextRequest) {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const publicId = `athletes/${athleteId}/${mediaType}s/${timestamp}_${file.name.replace(/\s+/g, '_')}`;
 
     // Upload to Cloudinary
-    const uploadOptions: any = {
+    const uploadOptions: Record<string, unknown> = {
       public_id: publicId,
       folder: `athletes/${athleteId}/${mediaType}s`,
       resource_type: mediaType === 'video' ? 'video' : 'image',
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       ).end(buffer);
     });
 
-    const uploadResult = result as any;
+    const uploadResult = result as { secure_url: string, public_id: string, format: string, bytes: number };
 
     return NextResponse.json({
       success: true,

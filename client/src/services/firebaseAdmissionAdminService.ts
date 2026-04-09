@@ -80,7 +80,7 @@ export async function getAllAdmissionApplications(): Promise<FirebaseAdmissionAp
     console.error('Detailed error fetching admission applications:', {
       error,
       message: error instanceof Error ? error.message : 'Unknown error',
-      code: (error as any)?.code,
+      code: (error as { code?: string })?.code,
       stack: error instanceof Error ? error.stack : undefined
     });
     throw new Error(`Failed to fetch admission applications: ${error instanceof Error ? error.message : 'Unknown error'}`);

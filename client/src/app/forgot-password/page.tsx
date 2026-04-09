@@ -51,16 +51,18 @@ const ForgotPassword = () => {
         router.push('/login');
       }, 5000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password reset error:', error);
       
       let errorMessage = 'Failed to send password reset email. Please try again.';
       
-      switch (error.code) {
-        case 'auth/user-not-found':
-          errorMessage = 'No account found with this email address.';
-          break;
-        case 'auth/invalid-email':
+      if (error instanceof Error) {
+        const authError = error as { code?: string };
+        switch (authError.code) {
+          case 'auth/user-not-found':
+            errorMessage = 'No account found with this email address.';
+            break;
+          case 'auth/invalid-email':
           errorMessage = 'Please enter a valid email address.';
           break;
         case 'auth/too-many-requests':
@@ -71,6 +73,7 @@ const ForgotPassword = () => {
           break;
         default:
           errorMessage = error.message || errorMessage;
+        }
       }
       
       toast.error(errorMessage);
@@ -99,7 +102,7 @@ const ForgotPassword = () => {
           <div className="p-6 sm:p-8 text-center">
             <div className="mb-6">
               <p className="text-gray-600 mb-4">
-                We've sent a password reset link to:
+                We&apos;ve sent a password reset link to:
               </p>
               <p className="font-semibold text-[#000054] bg-gray-50 p-3 rounded-lg border">
                 {resetEmail}
@@ -107,9 +110,9 @@ const ForgotPassword = () => {
             </div>
             
             <div className="mb-6 text-sm text-gray-500 space-y-2">
-              <p>• Check your spam folder if you don't see the email</p>
+              <p>• Check your spam folder if you don&apos;t see the email</p>
               <p>• The reset link will expire in 1 hour</p>
-              <p>• You'll be redirected to login in 5 seconds</p>
+              <p>• You&apos;ll be redirected to login in 5 seconds</p>
             </div>
             
             <div className="space-y-3">
@@ -200,7 +203,7 @@ const ForgotPassword = () => {
                 </h3>
                 <div className="mt-2 text-sm text-blue-700">
                   <ul className="list-disc list-inside space-y-1">
-                    <li>We'll send a secure reset link to your email</li>
+                    <li>We&apos;ll send a secure reset link to your email</li>
                     <li>Click the link to create a new password</li>
                     <li>The link expires in 1 hour for security</li>
                   </ul>

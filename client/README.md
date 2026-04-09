@@ -2,19 +2,33 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+This repo uses `pnpm`.
+
+1. Install dependencies from the repo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+```
+
+2. Start the web app:
+
+```bash
+pnpm --filter client dev
+```
+
+3. Bootstrap the admin user after your Firebase admin env vars are set:
+
+```bash
+pnpm --filter client admin:create
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can also run from inside the `client` folder:
+
+```bash
+pnpm dev
+```
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

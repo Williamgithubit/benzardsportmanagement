@@ -1,4 +1,4 @@
-import { User } from '@/types/auth';
+import { User } from "@/types/auth";
 
 // Define login credentials type
 export interface LoginCredentials {
@@ -45,7 +45,7 @@ export interface ProgramType {
   description: string;
   startDate: string;
   endDate: string;
-  status: 'active' | 'inactive' | 'completed';
+  status: "active" | "inactive" | "completed";
   capacity: number;
   enrolled: number;
   location: string;
@@ -83,13 +83,19 @@ export interface RootState {
 }
 
 // Export AppDispatch type that will be inferred from the store
-export type AppDispatch = import('@reduxjs/toolkit').ThunkDispatch<
+export type AppDispatch = import("@reduxjs/toolkit").ThunkDispatch<
   RootState,
   unknown,
-  import('@reduxjs/toolkit').UnknownAction
-> & import('redux').Dispatch<import('@reduxjs/toolkit').UnknownAction>;
+  import("@reduxjs/toolkit").UnknownAction
+> &
+  import("redux").Dispatch<import("@reduxjs/toolkit").UnknownAction>;
 
 // Extend the RootState to include all your state slices
-declare module 'react-redux' {
-  interface DefaultRootState extends RootState {}
+declare module "react-redux" {
+  interface DefaultRootState extends RootState {
+    auth: AuthStateType;
+    api: Record<string, unknown>;
+    userManagement: UserManagementState;
+    program: ProgramState;
+  }
 }

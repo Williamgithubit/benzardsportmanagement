@@ -14,7 +14,7 @@ import {
  * @returns Promise<void>
  */
 export async function deleteStudentImageFromCloudinary(
-  certificateNumber: string
+  certificateNumber: string,
 ): Promise<void> {
   try {
     const response = await fetch("/api/delete-image", {
@@ -42,7 +42,7 @@ export async function deleteStudentImageFromCloudinary(
  */
 export async function uploadStudentImageClient(
   file: File,
-  certificateNumber: string
+  certificateNumber: string,
 ): Promise<string> {
   try {
     const formData = new FormData();
@@ -79,7 +79,7 @@ export async function uploadStudentImageClient(
  */
 export async function uploadAdmissionImage(
   file: File,
-  applicantId: string
+  applicantId: string,
 ): Promise<string> {
   try {
     const formData = new FormData();
@@ -117,7 +117,7 @@ export async function uploadAdmissionImage(
  */
 export async function uploadCommunityRecommendation(
   file: File,
-  applicantId: string
+  applicantId: string,
 ): Promise<string> {
   try {
     const formData = new FormData();
@@ -138,7 +138,7 @@ export async function uploadCommunityRecommendation(
 
     if (!data.success) {
       throw new Error(
-        data.error || "Failed to upload community recommendation"
+        data.error || "Failed to upload community recommendation",
       );
     }
 
@@ -146,7 +146,7 @@ export async function uploadCommunityRecommendation(
   } catch (error) {
     console.error(
       "Error uploading community recommendation to Cloudinary:",
-      error
+      error,
     );
     throw new Error("Failed to upload community recommendation to Cloudinary");
   }
@@ -160,7 +160,7 @@ export async function uploadCommunityRecommendation(
  */
 export async function deleteAdmissionFileFromCloudinary(
   applicantId: string,
-  fileType: "image" | "recommendation"
+  fileType: "image" | "recommendation",
 ): Promise<void> {
   try {
     // Add timeout to prevent hanging requests
@@ -183,7 +183,7 @@ export async function deleteAdmissionFileFromCloudinary(
       const data = await response.json();
       if (data.success) {
         console.log(
-          `Successfully deleted ${fileType} for applicant ${applicantId}`
+          `Successfully deleted ${fileType} for applicant ${applicantId}`,
         );
         return;
       }
@@ -197,7 +197,7 @@ export async function deleteAdmissionFileFromCloudinary(
 
     if (response.status === 404) {
       console.log(
-        `${fileType} for applicant ${applicantId} was already deleted or doesn't exist`
+        `${fileType} for applicant ${applicantId} was already deleted or doesn't exist`,
       );
       return; // File not found is success for deletion
     }
@@ -205,7 +205,7 @@ export async function deleteAdmissionFileFromCloudinary(
     if (response.status >= 500) {
       console.warn(
         `Server error deleting ${fileType} for applicant ${applicantId}:`,
-        response.status
+        response.status,
       );
       return; // Don't throw for server errors
     }
@@ -213,14 +213,14 @@ export async function deleteAdmissionFileFromCloudinary(
     // For other errors, log but don't throw
     console.warn(
       `Failed to delete ${fileType} for applicant ${applicantId}:`,
-      response.status
+      response.status,
     );
   } catch (error) {
     // Handle network errors and aborted requests
     if (error instanceof Error) {
       if (error.name === "AbortError") {
         console.warn(
-          `Request timeout deleting ${fileType} for applicant ${applicantId}`
+          `Request timeout deleting ${fileType} for applicant ${applicantId}`,
         );
         return; // Don't throw for timeouts
       }
@@ -231,7 +231,7 @@ export async function deleteAdmissionFileFromCloudinary(
       ) {
         console.warn(
           `Network error deleting ${fileType} for applicant ${applicantId}:`,
-          error.message
+          error.message,
         );
         return; // Don't throw for network errors
       }
@@ -239,7 +239,7 @@ export async function deleteAdmissionFileFromCloudinary(
 
     console.error(
       `Error deleting ${fileType} for applicant ${applicantId}:`,
-      error
+      error,
     );
     // Don't throw error for deletion failures - this prevents blocking the main deletion operation
   }
@@ -257,7 +257,7 @@ export async function uploadAthleteMedia(
   file: File,
   athleteId: string,
   mediaType: "photo" | "video",
-  caption?: string
+  caption?: string,
 ): Promise<{ url: string; publicId: string }> {
   try {
     const formData = new FormData();
@@ -304,7 +304,7 @@ export async function uploadAthleteMedia(
 export async function deleteAthleteMediaFromCloudinary(
   athleteId: string,
   mediaId: string,
-  mediaType: "photo" | "video"
+  mediaType: "photo" | "video",
 ): Promise<void> {
   try {
     const controller = new AbortController();
@@ -325,7 +325,7 @@ export async function deleteAthleteMediaFromCloudinary(
       const data = await response.json();
       if (data.success) {
         console.log(
-          `Successfully deleted ${mediaType} ${mediaId} for athlete ${athleteId}`
+          `Successfully deleted ${mediaType} ${mediaId} for athlete ${athleteId}`,
         );
         return;
       }
@@ -339,7 +339,7 @@ export async function deleteAthleteMediaFromCloudinary(
 
     if (response.status === 404) {
       console.log(
-        `${mediaType} ${mediaId} for athlete ${athleteId} was already deleted or doesn't exist`
+        `${mediaType} ${mediaId} for athlete ${athleteId} was already deleted or doesn't exist`,
       );
       return;
     }
@@ -347,20 +347,20 @@ export async function deleteAthleteMediaFromCloudinary(
     if (response.status >= 500) {
       console.warn(
         `Server error deleting ${mediaType} for athlete ${athleteId}:`,
-        response.status
+        response.status,
       );
       return;
     }
 
     console.warn(
       `Failed to delete ${mediaType} for athlete ${athleteId}:`,
-      response.status
+      response.status,
     );
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === "AbortError") {
         console.warn(
-          `Request timeout deleting ${mediaType} for athlete ${athleteId}`
+          `Request timeout deleting ${mediaType} for athlete ${athleteId}`,
         );
         return;
       }
@@ -371,7 +371,7 @@ export async function deleteAthleteMediaFromCloudinary(
       ) {
         console.warn(
           `Network error deleting ${mediaType} for athlete ${athleteId}:`,
-          error.message
+          error.message,
         );
         return;
       }
@@ -379,7 +379,7 @@ export async function deleteAthleteMediaFromCloudinary(
 
     console.error(
       `Error deleting ${mediaType} for athlete ${athleteId}:`,
-      error
+      error,
     );
   }
 }
@@ -392,7 +392,7 @@ export async function deleteAthleteMediaFromCloudinary(
  */
 export async function uploadMediaToBSM(
   file: File,
-  options: MediaUploadOptions
+  options: MediaUploadOptions,
 ): Promise<MediaAsset> {
   try {
     const formData = new FormData();
@@ -434,14 +434,15 @@ export async function uploadMediaToBSM(
     });
 
     // Try to parse JSON body from server for better diagnostics
-    let data: any = null;
+    let data: { success?: boolean; error?: string; asset?: MediaAsset } | null =
+      null;
     try {
       data = await response.json();
-    } catch (parseErr) {
+    } catch {
       const text = await response.text().catch(() => "");
       if (!response.ok) {
         throw new Error(
-          `Failed to upload media: ${response.status} ${response.statusText} ${text}`.trim()
+          `Failed to upload media: ${response.status} ${response.statusText} ${text}`.trim(),
         );
       }
       // If response is OK but not JSON, treat as failure
@@ -452,12 +453,16 @@ export async function uploadMediaToBSM(
       // If server returned structured error message prefer that
       throw new Error(
         data?.error ||
-          `Failed to upload media: ${response.status} ${response.statusText}`
+          `Failed to upload media: ${response.status} ${response.statusText}`,
       );
     }
 
-    if (!data.success) {
-      throw new Error(data.error || "Failed to upload media");
+    if (!data || !data.success) {
+      throw new Error(data?.error || "Failed to upload media");
+    }
+
+    if (!data.asset) {
+      throw new Error("Failed to upload media: no asset returned");
     }
 
     return data.asset;
@@ -477,7 +482,7 @@ export async function uploadMediaToBSM(
 export async function bulkUploadMedia(
   files: File[],
   options: MediaUploadOptions,
-  onProgress?: (progress: BulkUploadProgress) => void
+  onProgress?: (progress: BulkUploadProgress) => void,
 ): Promise<{
   successful: MediaAsset[];
   failed: Array<{ file: File; error: string }>;
@@ -539,8 +544,11 @@ export async function bulkUploadMedia(
 export async function getMediaAssets(
   filters: MediaFilters,
   page: number = 1,
-  limit: number = 20
-): Promise<{ assets: MediaAsset[]; pagination: any }> {
+  limit: number = 20,
+): Promise<{
+  assets: MediaAsset[];
+  pagination: { page: number; limit: number; total: number; hasMore: boolean };
+}> {
   try {
     const queryParams = new URLSearchParams();
     queryParams.append("page", page.toString());
@@ -570,31 +578,45 @@ export async function getMediaAssets(
     const response = await fetch(`/api/media/list?${queryParams}`);
 
     // Try to parse JSON body (server may provide an error message)
-    let data: any = null;
+    let data: {
+      success?: boolean;
+      error?: string;
+      assets?: MediaAsset[];
+      pagination?: unknown;
+    } | null = null;
     try {
       data = await response.json();
-    } catch (parseErr) {
+    } catch {
       // If response is not JSON, include status text for diagnostics
       const text = await response.text().catch(() => "");
       throw new Error(
-        `Failed to fetch media assets: ${response.status} ${response.statusText} ${text}`.trim()
+        `Failed to fetch media assets: ${response.status} ${response.statusText} ${text}`.trim(),
       );
     }
 
     if (!response.ok) {
       throw new Error(
         data?.error ||
-          `Failed to fetch media assets: ${response.status} ${response.statusText}`
+          `Failed to fetch media assets: ${response.status} ${response.statusText}`,
       );
     }
 
-    if (!data.success) {
-      throw new Error(data.error || "Failed to fetch media assets");
+    if (!data || !data.success) {
+      throw new Error(data?.error || "Failed to fetch media assets");
+    }
+
+    if (!data.assets || !data.pagination) {
+      throw new Error("Failed to fetch media assets: incomplete response");
     }
 
     return {
       assets: data.assets,
-      pagination: data.pagination,
+      pagination: data.pagination as {
+        page: number;
+        limit: number;
+        total: number;
+        hasMore: boolean;
+      },
     };
   } catch (error) {
     console.error("Error fetching media assets:", error);
@@ -610,7 +632,7 @@ export async function getMediaAssets(
  */
 export async function deleteMediaAsset(
   publicId: string,
-  resourceType: "image" | "video" | "raw" = "image"
+  resourceType: "image" | "video" | "raw" = "image",
 ): Promise<void> {
   try {
     const response = await fetch("/api/media/delete", {
@@ -646,7 +668,7 @@ export async function updateMediaAsset(
   publicId: string,
   updates: Partial<
     Pick<MediaAsset, "tags" | "context" | "caption" | "altText" | "description">
-  >
+  >,
 ): Promise<MediaAsset> {
   try {
     const response = await fetch("/api/media/update", {
@@ -682,7 +704,7 @@ export async function updateMediaAsset(
  */
 export function generateOptimizedUrl(
   publicId: string,
-  transformations: MediaTransformation = {}
+  transformations: MediaTransformation = {},
 ): string {
   const cloudName = process.env.NEXT_PUBLIC_CLOUD_NAME;
 
@@ -716,7 +738,7 @@ export function generateOptimizedUrl(
 export async function uploadBlogImage(
   file: File,
   postId?: string,
-  caption?: string
+  caption?: string,
 ): Promise<MediaAsset> {
   const folder = postId
     ? `${BSM_MEDIA_FOLDERS.BLOG}/${postId}`
@@ -744,7 +766,7 @@ export async function uploadBlogImage(
  */
 export async function getEntityMedia(
   entityType: "athlete" | "event" | "blog",
-  entityId: string
+  entityId: string,
 ): Promise<MediaAsset[]> {
   try {
     const { assets } = await getMediaAssets({

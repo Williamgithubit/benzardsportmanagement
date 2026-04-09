@@ -11,7 +11,6 @@ const Events = () => {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const [events, setEvents] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -26,7 +25,7 @@ const Events = () => {
         setEvents(upcoming);
       } catch (err) {
         console.error(err);
-        setError("Failed to load events");
+        console.error('Failed to load events', err);
       } finally {
         setLoading(false);
       }

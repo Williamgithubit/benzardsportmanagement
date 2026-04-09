@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
-import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, type User as FirebaseAuthUser } from 'firebase/auth';
 import { auth, db } from '@/services/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { LoginCredentials, User, UserRole } from '@/types/auth';
@@ -12,6 +12,185 @@ interface AuthState {
   error: string | null;
   isAuthenticated: boolean;
 }
+
+type ClaimsMap = Record<string, unknown>;
+type StoredUserData = Partial<User> &
+  Record<string, unknown> & {
+    displayName?: string;
+    avatar?: string;
+    phone?: string;
+  };
+
+const USER_ROLES: UserRole[] = ['admin', 'teacher', 'parent', 'student', 'user'];
+const USER_STATUSES = ['active', 'inactive', 'suspended'] as const;
+
+const isUserRole = (value: unknown): value is UserRole =>
+  typeof value === 'string' && USER_ROLES.includes(value as UserRole);
+
+const isUserStatus = (
+  value: unknown
+): value is User['status'] =>
+  typeof value === 'string' &&
+  USER_STATUSES.includes(value as User['status']);
+
+const getRoleFromClaims = (claims: ClaimsMap): UserRole | null => {
+  if (claims.admin === true) {
+    return 'admin';
+  }
+
+  return isUserRole(claims.role) ? claims.role : null;
+};
+
+const isPermissionDeniedError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const code =
+    'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
+  const message =
+    'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : '';
+
+  return (
+    code.includes('permission-denied') ||
+    message.includes('Missing or insufficient permissions')
+  );
+};
+
+const getProfileAccessErrorMessage = () =>
+  'Signed in to Firebase, but the app could not read your profile from Firestore. Check your users collection rules or run the admin bootstrap script.';
+
+const getMissingProfileErrorMessage = () =>
+  'Sign-in succeeded, but no user profile or role claim was found. Run the admin bootstrap script to create the admin profile.';
+
+const buildUserProfile = (
+  firebaseUser: FirebaseAuthUser,
+  userData: StoredUserData = {},
+  roleOverride?: UserRole
+): User => {
+  const role =
+    roleOverride ||
+    (isUserRole(userData.role) ? userData.role : 'user');
+  const fallbackName =
+    (typeof userData.displayName === 'string' && userData.displayName) ||
+    firebaseUser.displayName ||
+    firebaseUser.email?.split('@')[0] ||
+    'User';
+  const name =
+    (typeof userData.name === 'string' && userData.name) || fallbackName;
+  const displayName =
+    (typeof userData.displayName === 'string' && userData.displayName) ||
+    firebaseUser.displayName ||
+    undefined;
+  const photoURL =
+    (typeof userData.photoURL === 'string' && userData.photoURL) ||
+    (typeof userData.avatar === 'string' && userData.avatar) ||
+    firebaseUser.photoURL ||
+    undefined;
+  const phoneNumber =
+    (typeof userData.phoneNumber === 'string' && userData.phoneNumber) ||
+    (typeof userData.phone === 'string' && userData.phone) ||
+    firebaseUser.phoneNumber ||
+    undefined;
+
+  return {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    name,
+    displayName,
+    photoURL,
+    role,
+    status: isUserStatus(userData.status) ? userData.status : 'active',
+    phoneNumber,
+    address:
+      typeof userData.address === 'string' ? userData.address : undefined,
+    emailVerified: firebaseUser.emailVerified,
+    metadata: {
+      creationTime: firebaseUser.metadata.creationTime || undefined,
+      lastSignInTime: firebaseUser.metadata.lastSignInTime || undefined,
+    },
+    providerData: firebaseUser.providerData.map((provider) => ({
+      uid: provider.uid,
+      displayName: provider.displayName,
+      email: provider.email,
+      photoURL: provider.photoURL,
+      providerId: provider.providerId,
+    })),
+    createdAt:
+      userData.createdAt || firebaseUser.metadata.creationTime || new Date().toISOString(),
+    updatedAt: userData.updatedAt || new Date().toISOString(),
+    lastLoginAt:
+      userData.lastLoginAt || firebaseUser.metadata.lastSignInTime || undefined,
+  };
+};
+
+const buildFirestoreUserUpdate = (user: User) => ({
+  uid: user.uid,
+  email: user.email,
+  name: user.name,
+  displayName: user.displayName || user.name,
+  role: user.role,
+  status: user.status,
+  photoURL: user.photoURL || null,
+  phoneNumber: user.phoneNumber || null,
+  address: user.address || null,
+  emailVerified: user.emailVerified,
+  metadata: user.metadata,
+  providerData: user.providerData,
+  createdAt: user.createdAt || new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  lastLoginAt: new Date().toISOString(),
+});
+
+const resolveAuthenticatedUser = async (
+  firebaseUser: FirebaseAuthUser,
+  { forceRefreshClaims = false }: { forceRefreshClaims?: boolean } = {}
+): Promise<{ user: User; canPersistProfile: boolean }> => {
+  if (forceRefreshClaims) {
+    await firebaseUser.getIdToken(true);
+  }
+
+  const { claims } = await firebaseUser.getIdTokenResult();
+  const claimedRole = getRoleFromClaims(claims as ClaimsMap);
+  const userDocRef = doc(db, 'users', firebaseUser.uid);
+
+  try {
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      const userData = convertTimestamps(userDoc.data() as StoredUserData);
+
+      return {
+        user: buildUserProfile(firebaseUser, userData, claimedRole || undefined),
+        canPersistProfile: true,
+      };
+    }
+  } catch (error) {
+    if (isPermissionDeniedError(error)) {
+      if (claimedRole) {
+        return {
+          user: buildUserProfile(firebaseUser, {}, claimedRole),
+          canPersistProfile: false,
+        };
+      }
+
+      throw new Error(getProfileAccessErrorMessage());
+    }
+
+    throw error;
+  }
+
+  if (claimedRole) {
+    return {
+      user: buildUserProfile(firebaseUser, {}, claimedRole),
+      canPersistProfile: true,
+    };
+  }
+
+  throw new Error(getMissingProfileErrorMessage());
+};
 
 // Helper function to convert Firebase Timestamp to Date string or return as is
 const convertTimestamps = <T>(obj: T): T => {
@@ -62,51 +241,14 @@ export const initializeAuth = createAsyncThunk<
     try {
       return new Promise<{ user: User | null; isAuthenticated: boolean }>((resolve, reject) => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          unsubscribe();
+
           try {
             if (firebaseUser) {
-              // User is signed in
-              const userId = firebaseUser.uid;
-              const userEmail = firebaseUser.email;
+              const { user } = await resolveAuthenticatedUser(firebaseUser);
 
-              if (!userEmail) {
-                console.error('User email is missing during auth state change');
-                resolve({ user: null, isAuthenticated: false });
-                return;
-              }
-
-              const { claims } = await firebaseUser.getIdTokenResult();
-              const userDocRef = doc(db, 'users', userId);
-              const userDoc = await getDoc(userDocRef);
-              
-              if (!userDoc.exists()) {
-                console.error('User document not found in Firestore during auth state change');
-                await firebaseSignOut(auth);
-                resolve({ user: null, isAuthenticated: false });
-                return;
-              }
-              
-              const userData = userDoc.data();
-              const processedUserData = convertTimestamps(userData);
-
-              // Get role from claims or user data, default to 'student'
-              const userRole = (claims.role as UserRole) || processedUserData.role || 'student';
-
-              // Create a user object with all necessary fields
-              const userUpdate: User = {
-                id: userId,
-                email: userEmail,
-                name: processedUserData.name || firebaseUser.displayName || 'User',
-                role: userRole,
-                status: processedUserData.status || 'active',
-                createdAt: processedUserData.createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                ...(processedUserData.avatar && { avatar: processedUserData.avatar }),
-                ...(processedUserData.phone && { phone: processedUserData.phone }),
-                ...(processedUserData.address && { address: processedUserData.address }),
-              };
-
-              console.log('Auth state changed - user authenticated:', userUpdate);
-              resolve({ user: userUpdate, isAuthenticated: true });
+              console.log('Auth state changed - user authenticated:', user);
+              resolve({ user, isAuthenticated: true });
             } else {
               // User is signed out
               console.log('Auth state changed - user signed out');
@@ -117,9 +259,6 @@ export const initializeAuth = createAsyncThunk<
             reject(error);
           }
         });
-
-        // Store the unsubscribe function for cleanup if needed
-        // In a real app, you might want to store this in the component that calls initializeAuth
       });
     } catch (error) {
       console.error('Initialize auth error:', error);
@@ -185,7 +324,6 @@ export const login = createAsyncThunk<
       }
       
       const firebaseUser = userCredential.user;
-      const userId = firebaseUser.uid;
       const userEmail = firebaseUser.email;
 
       if (!userEmail) {
@@ -193,40 +331,28 @@ export const login = createAsyncThunk<
         return rejectWithValue('User email is missing');
       }
 
-      const { claims } = await firebaseUser.getIdTokenResult();
-      const userDocRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (!userDoc.exists()) {
-        console.error('User document not found in Firestore');
-        await firebaseSignOut(auth);
-        return rejectWithValue('User data not found');
+      const { user: userUpdate, canPersistProfile } = await resolveAuthenticatedUser(
+        firebaseUser,
+        { forceRefreshClaims: true }
+      );
+
+      if (canPersistProfile) {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+
+        try {
+          await setDoc(userDocRef, buildFirestoreUserUpdate(userUpdate), {
+            merge: true,
+          });
+        } catch (error) {
+          if (isPermissionDeniedError(error)) {
+            console.warn(
+              'Skipping profile sync because Firestore denied write access to users/{uid}.'
+            );
+          } else {
+            throw error;
+          }
+        }
       }
-      
-      const userData = userDoc.data();
-
-      // Convert all timestamps in userData
-      const processedUserData = convertTimestamps(userData);
-
-      // Get role from claims or user data, default to 'student'
-      const userRole = (claims.role as UserRole) || processedUserData.role || 'student';
-
-      // Create a user object with all necessary fields
-      const userUpdate: User = {
-        id: userId,
-        email: userEmail,
-        name: processedUserData.name || firebaseUser.displayName || 'User',
-        role: userRole,
-        status: processedUserData.status || 'active',
-        createdAt: processedUserData.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ...(processedUserData.avatar && { avatar: processedUserData.avatar }),
-        ...(processedUserData.phone && { phone: processedUserData.phone }),
-        ...(processedUserData.address && { address: processedUserData.address }),
-      };
-
-      // Update the user document with the latest data
-      await setDoc(userDocRef, userUpdate, { merge: true });
 
       return userUpdate;
     } catch (error) {
@@ -265,6 +391,11 @@ export const updateUser = createAsyncThunk<
       const updatedUser: User = {
         ...currentUser,
         ...updateData,
+        uid: currentUser.uid,
+        role: isUserRole(updateData.role) ? updateData.role : currentUser.role,
+        status: isUserStatus(updateData.status)
+          ? updateData.status
+          : currentUser.status,
       };
       
       console.log('User profile updated successfully:', updatedUser);

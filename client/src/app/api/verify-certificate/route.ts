@@ -76,17 +76,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Format the date
-    const formatDate = (timestamp: any) => {
+    const formatDate = (timestamp: { toDate?: () => Date, seconds?: number } | string | number | null | undefined) => {
       if (!timestamp) return new Date().toISOString();
       try {
-        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
-          return timestamp.toDate().toISOString();
+        if (typeof timestamp === 'object' && timestamp !== null) {
+          if ('toDate' in timestamp && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate().toISOString();
+          }
+          if ('seconds' in timestamp && typeof timestamp.seconds === 'number') {
+            return new Date(timestamp.seconds * 1000).toISOString();
+          }
         }
-        if (timestamp.seconds) {
-          return new Date(timestamp.seconds * 1000).toISOString();
-        }
-        return new Date(timestamp).toISOString();
-      } catch (error) {
+        return new Date(timestamp as string | number).toISOString();
+      } catch {
         return new Date().toISOString();
       }
     };
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(response);
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error. Please try again later.' },
       { status: 500 }

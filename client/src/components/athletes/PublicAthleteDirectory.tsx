@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import { FiSearch, FiMapPin, FiFilter } from "react-icons/fi";
 import AthleteService from "@/services/athleteService";
 import {
@@ -54,7 +53,7 @@ export default function PublicAthleteDirectory() {
 
   return (
     <div className="min-h-screen pt-16 bg-gray-50">
-      <div className="bg-gradient-to-r from-[#000054] to-[#1e1e8f] text-white py-20">
+      <div className="bg-linear-to-r from-[#000054] to-[#1e1e8f] text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Athlete Directory
@@ -68,7 +67,7 @@ export default function PublicAthleteDirectory() {
               <input
                 type="text"
                 placeholder="Search athletes..."
-                className="w-full px-6 py-4 pr-12 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E32845] bg-white"
+                className="w-full px-6 py-4 pr-12 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary bg-white"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

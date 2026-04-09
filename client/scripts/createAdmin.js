@@ -13,6 +13,19 @@ const __dirname = path.dirname(__filename);
 // Also load from .env as fallback
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+const normalizePrivateKey = (value) => {
+  if (!value) {
+    return undefined;
+  }
+
+  return value
+    .trim()
+    .replace(/\\n/g, '\n')
+    .replace(/^"(.*)"$/s, '$1')
+    .replace(/"\s*,?\s*$/, '')
+    .trim();
+};
+
 // Initialize Firebase Admin
 console.log('Initializing Firebase Admin...');
 let adminAuth, db;
@@ -23,7 +36,7 @@ try {
     type: "service_account",
     project_id: process.env.FIREBASE_ADMIN_PROJECT_ID,
     client_email: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-    private_key: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    private_key: normalizePrivateKey(process.env.FIREBASE_ADMIN_PRIVATE_KEY)
   };
   
   // Validate required fields
@@ -51,14 +64,16 @@ try {
 
 async function createAdminUser() {
   console.log('Starting admin user creation process...');
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+  const adminEmail =
+    process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const adminPassword =
+    process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
   if (!adminEmail || !adminPassword) {
     console.error('Error: Admin email and password must be provided in .env file');
     console.log('Please make sure you have the following in your .env file:');
-    console.log('NEXT_PUBLIC_ADMIN_EMAIL=your-email@example.com');
-    console.log('NEXT_PUBLIC_ADMIN_PASSWORD=your-strong-password');
+    console.log('ADMIN_EMAIL=your-email@example.com');
+    console.log('ADMIN_PASSWORD=your-strong-password');
     process.exit(1);
   }
 

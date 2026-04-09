@@ -1,52 +1,16 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Box,
-  Typography,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Paper,
-  Pagination,
-  Chip,
-  IconButton,
-  Menu,
-  Checkbox,
-  FormControlLabel,
-  Divider,
-  Snackbar,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
-  Tooltip,
-  Fab,
-  Collapse,
-  Card,
-  CardContent,
-} from "@mui/material";
-import Grid from "@/components/ui/Grid";
-import {
-  Search as SearchIcon,
-  FilterList as FilterIcon,
-  Add as AddIcon,
-  Download as DownloadIcon,
-  Upload as UploadIcon,
-  MoreVert as MoreVertIcon,
-  ViewModule as GridViewIcon,
-  ViewList as ListViewIcon,
-  Refresh as RefreshIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  Clear as ClearIcon,
-  GetApp as ExportIcon,
-  CloudUpload as ImportIcon,
-} from "@mui/icons-material";
+  MdSearch,
+  MdFilterList,
+  MdAdd,
+  MdClear,
+  MdFileDownload,
+  MdFileUpload,
+  MdViewModule,
+  MdViewList,
+  MdRefresh,
+} from "react-icons/md";
 import {
   Athlete,
   AthleteFilters,
@@ -61,6 +25,9 @@ import AthleteProfile from "./AthleteProfile";
 import AthleteForm from "./AthleteForm";
 import BulkActionsDialog from "./BulkActionsDialog";
 import AthleteService from "@/services/athleteService";
+import toast, { Toaster } from "react-hot-toast";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { fetchAdminAthletes } from "@/services/adminDataService";
 
 interface AthleteDirectoryProps {
   userRole: UserRole;
@@ -74,6 +41,7 @@ export default function AthleteDirectory({
   onCloseDialog,
 }: AthleteDirectoryProps) {
   // State management
+  const [allAthletes, setAllAthletes] = useState<Athlete[]>([]);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,98 +77,149 @@ export default function AthleteDirectory({
     totalPages: 0,
   });
 
-  // Snackbar state
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success" as "success" | "error" | "info" | "warning",
-  });
-
   // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
 
   // Load athletes
   const loadAthletes = useCallback(
-    async (showLoader = true) => {
+    async (
+      showLoader = true,
+      showToast = true,
+      showRefreshing = !showLoader,
+    ) => {
       try {
-        if (showLoader) setLoading(true);
+        if (showLoader) {
+          setLoading(true);
+        } else if (showRefreshing) {
+          setRefreshing(true);
+        }
 
-        const result = await AthleteService.getAthletes(filters, {
-          page: pagination.page,
-          pageSize: pagination.pageSize,
-        });
-
-        setAthletes(result.athletes);
-
-        // Get total count for pagination
-        const totalCount = await AthleteService.getAthletesCount(filters);
-        setPagination((prev) => ({
-          ...prev,
-          total: totalCount,
-          totalPages: Math.ceil(totalCount / prev.pageSize),
-        }));
+        const fetchedAthletes = await fetchAdminAthletes();
+        setAllAthletes(fetchedAthletes);
       } catch (error) {
         console.error("Error loading athletes:", error);
-        setSnackbar({
-          open: true,
-          message: "Failed to load athletes",
-          severity: "error",
-        });
+        if (showToast) {
+          toast.error("Failed to load athletes");
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [filters, pagination.page, pagination.pageSize]
+    [],
   );
 
   // Effects
   useEffect(() => {
-    loadAthletes();
-    
-    // Set up real-time subscription
-    const unsubscribe = AthleteService.subscribeToAthletes(
-      filters,
-      (realTimeAthletes) => {
-        setAthletes(realTimeAthletes);
-        setPagination(prev => ({
-          ...prev,
-          total: realTimeAthletes.length,
-          totalPages: Math.ceil(realTimeAthletes.length / prev.pageSize)
-        }));
-      }
-    );
-    
-    return () => unsubscribe();
+    void loadAthletes();
+
+    const intervalId = window.setInterval(() => {
+      void loadAthletes(false, false, false);
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [loadAthletes]);
+
+  useEffect(() => {
+    let filteredAthletes = [...allAthletes];
+
+    if (filters.sport && filters.sport !== "all") {
+      filteredAthletes = filteredAthletes.filter(
+        (athlete) => athlete.sport === filters.sport,
+      );
+    }
+
+    if (filters.level && filters.level !== "all") {
+      filteredAthletes = filteredAthletes.filter(
+        (athlete) => athlete.level === filters.level,
+      );
+    }
+
+    if (filters.county && filters.county !== "all") {
+      filteredAthletes = filteredAthletes.filter(
+        (athlete) => athlete.county === filters.county,
+      );
+    }
+
+    if (filters.scoutingStatus && filters.scoutingStatus !== "all") {
+      filteredAthletes = filteredAthletes.filter(
+        (athlete) =>
+          (athlete.scoutingStatus || athlete.status) === filters.scoutingStatus,
+      );
+    }
+
+    if (filters.position && filters.position !== "all") {
+      filteredAthletes = filteredAthletes.filter(
+        (athlete) => athlete.position === filters.position,
+      );
+    }
+
+    if (filters.search.trim()) {
+      const searchTerm = filters.search.toLowerCase();
+      filteredAthletes = filteredAthletes.filter(
+        (athlete) =>
+          athlete.name.toLowerCase().includes(searchTerm) ||
+          athlete.position?.toLowerCase().includes(searchTerm) ||
+          athlete.location?.toLowerCase().includes(searchTerm) ||
+          athlete.bio?.toLowerCase().includes(searchTerm),
+      );
+    }
+
+    const total = filteredAthletes.length;
+    const totalPages = total > 0 ? Math.ceil(total / pagination.pageSize) : 0;
+    const safePage = totalPages > 0 ? Math.min(pagination.page, totalPages) : 1;
+    const startIndex = (safePage - 1) * pagination.pageSize;
+
+    setAthletes(
+      filteredAthletes.slice(startIndex, startIndex + pagination.pageSize),
+    );
+    setPagination((prev) => {
+      if (
+        prev.page === safePage &&
+        prev.total === total &&
+        prev.totalPages === totalPages
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        page: safePage,
+        total,
+        totalPages,
+      };
+    });
+  }, [allAthletes, filters, pagination.page, pagination.pageSize]);
 
   useEffect(() => {
     setFormDialogOpen(openDialog);
   }, [openDialog]);
 
   // Event handlers
-  const handleFilterChange = (key: keyof AthleteFilters, value: any) => {
+  const handleFilterChange = (
+    key: keyof AthleteFilters,
+    value: AthleteFilters[keyof AthleteFilters],
+  ) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const handlePageChange = (
-    event: React.ChangeEvent<unknown>,
-    value: number
-  ) => {
-    setPagination((prev) => ({ ...prev, page: value }));
+  const handlePageChange = (page: number) => {
+    setPagination((prev) => ({ ...prev, page }));
   };
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadAthletes(false);
+    void loadAthletes(false);
   };
 
   const handleClearFilters = () => {
     setFilters({
       search: "",
-      sport: "football", // Default to football as requested
+      sport: "football",
       level: "all",
       county: "all",
       scoutingStatus: "all",
@@ -212,15 +231,15 @@ export default function AthleteDirectory({
 
   const handleAthleteSelect = (athleteId: string, selected: boolean) => {
     setSelectedAthletes((prev) =>
-      selected ? [...prev, athleteId] : prev.filter((id) => id !== athleteId)
+      selected ? [...prev, athleteId] : prev.filter((id) => id !== athleteId),
     );
   };
 
-  const handleSelectAll = () => {
-    if (selectedAthletes.length === athletes.length) {
-      setSelectedAthletes([]);
-    } else {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
       setSelectedAthletes(athletes.map((a) => a.id));
+    } else {
+      setSelectedAthletes([]);
     }
   };
 
@@ -237,28 +256,18 @@ export default function AthleteDirectory({
 
   const handleDeleteAthlete = (athleteId: string) => {
     if (!userRole.permissions.canDelete) return;
-    
     setAthleteToDelete(athleteId);
     setDeleteConfirmOpen(true);
   };
 
   const confirmDeleteAthlete = async () => {
     if (!athleteToDelete) return;
-
     try {
       await AthleteService.deleteAthlete(athleteToDelete);
-      setSnackbar({
-        open: true,
-        message: "Athlete deleted successfully",
-        severity: "success",
-      });
-      loadAthletes(false);
+      toast.success("Athlete deleted successfully");
+      void loadAthletes(false);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: "Failed to delete athlete",
-        severity: "error",
-      });
+      toast.error("Failed to delete athlete");
     } finally {
       setDeleteConfirmOpen(false);
       setAthleteToDelete(null);
@@ -271,7 +280,6 @@ export default function AthleteDirectory({
     setFormDialogOpen(true);
   };
 
-  // Updated: accept payload with optional photos/videos
   const handleFormSubmit = async (payload: {
     data: Partial<Athlete>;
     photos?: File[];
@@ -279,32 +287,26 @@ export default function AthleteDirectory({
   }) => {
     try {
       if (formMode === "add") {
-        // Create athlete first
         const id = await AthleteService.createAthlete(
-          payload.data as Omit<Athlete, "id" | "createdAt" | "updatedAt">
+          payload.data as Omit<Athlete, "id" | "createdAt" | "updatedAt">,
         );
 
-        // Upload media if any
         if (payload.photos && payload.photos.length > 0) {
           await Promise.all(
             payload.photos.map((file) =>
-              AthleteService.uploadAthleteMedia(id, file, "photo")
-            )
+              AthleteService.uploadAthleteMedia(id, file, "photo"),
+            ),
           );
         }
         if (payload.videos && payload.videos.length > 0) {
           await Promise.all(
             payload.videos.map((file) =>
-              AthleteService.uploadAthleteMedia(id, file, "video")
-            )
+              AthleteService.uploadAthleteMedia(id, file, "video"),
+            ),
           );
         }
 
-        setSnackbar({
-          open: true,
-          message: "Athlete added successfully",
-          severity: "success",
-        });
+        toast.success("Athlete added successfully");
       } else if (selectedAthlete) {
         await AthleteService.updateAthlete(selectedAthlete.id, payload.data);
 
@@ -314,9 +316,9 @@ export default function AthleteDirectory({
               AthleteService.uploadAthleteMedia(
                 selectedAthlete.id,
                 file,
-                "photo"
-              )
-            )
+                "photo",
+              ),
+            ),
           );
         }
         if (payload.videos && payload.videos.length > 0) {
@@ -325,29 +327,21 @@ export default function AthleteDirectory({
               AthleteService.uploadAthleteMedia(
                 selectedAthlete.id,
                 file,
-                "video"
-              )
-            )
+                "video",
+              ),
+            ),
           );
         }
 
-        setSnackbar({
-          open: true,
-          message: "Athlete updated successfully",
-          severity: "success",
-        });
+        toast.success("Athlete updated successfully");
       }
 
       setFormDialogOpen(false);
       if (onCloseDialog) onCloseDialog();
-      loadAthletes(false);
+      void loadAthletes(false);
     } catch (error) {
       console.error("Form submit error", error);
-      setSnackbar({
-        open: true,
-        message: `Failed to ${formMode} athlete`,
-        severity: "error",
-      });
+      toast.error(`Failed to ${formMode} athlete`);
     }
   };
 
@@ -364,17 +358,9 @@ export default function AthleteDirectory({
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      setSnackbar({
-        open: true,
-        message: "Athletes exported successfully",
-        severity: "success",
-      });
+      toast.success("Athletes exported successfully");
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: "Failed to export athletes",
-        severity: "error",
-      });
+      toast.error("Failed to export athletes");
     }
   };
 
@@ -386,32 +372,29 @@ export default function AthleteDirectory({
       const csvContent = await importFile.text();
       const result = await AthleteService.importAthletesFromCSV(
         csvContent,
-        "current-user-id"
+        "current-user-id",
       );
 
-      setSnackbar({
-        open: true,
-        message: `Import completed: ${result.success} athletes imported${
+      toast.success(
+        `Import completed: ${result.success} athletes imported${
           result.errors.length > 0 ? `, ${result.errors.length} errors` : ""
         }`,
-        severity: result.errors.length > 0 ? "warning" : "success",
-      });
+      );
 
       setImportDialogOpen(false);
       setImportFile(null);
-      loadAthletes(false);
+      void loadAthletes(false);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: "Failed to import athletes",
-        severity: "error",
-      });
+      toast.error("Failed to import athletes");
     } finally {
       setImporting(false);
     }
   };
 
-  const handleBulkAction = async (actionType: BulkActionType, data?: any) => {
+  const handleBulkAction = async (
+    actionType: BulkActionType,
+    data?: Record<string, unknown>,
+  ) => {
     try {
       await AthleteService.bulkUpdateAthletes({
         type: actionType,
@@ -419,21 +402,13 @@ export default function AthleteDirectory({
         data,
       });
 
-      setSnackbar({
-        open: true,
-        message: "Bulk action completed successfully",
-        severity: "success",
-      });
+      toast.success("Bulk action completed successfully");
 
       setSelectedAthletes([]);
       setBulkDialogOpen(false);
-      loadAthletes(false);
+      void loadAthletes(false);
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: "Failed to perform bulk action",
-        severity: "error",
-      });
+      toast.error("Failed to perform bulk action");
     }
   };
 
@@ -447,338 +422,332 @@ export default function AthleteDirectory({
   };
 
   return (
-    <Box>
+    <div className="w-full">
+      <Toaster position="top-right" />
+
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: "bold", color: "#03045e", mb: 1 }}
-          >
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-[#000054] mb-1">
             Athlete Directory
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
+          </h2>
+          <p className="text-slate-500 text-sm">
             Manage and discover talented athletes across Liberia
-          </Typography>
-        </Box>
+          </p>
+        </div>
 
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <div className="flex flex-wrap items-center gap-2">
           {/* View Toggle */}
-          <Box
-            sx={{
-              display: "flex",
-              border: "1px solid #e0e0e0",
-              borderRadius: 1,
-            }}
-          >
-            <IconButton
+          <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-white">
+            <button
               onClick={() => setViewMode("grid")}
-              sx={{
-                color: viewMode === "grid" ? "#ADF802" : "text.secondary",
-                backgroundColor:
-                  viewMode === "grid"
-                    ? "rgba(173, 248, 2, 0.1)"
-                    : "transparent",
-              }}
+              className={`p-2 transition-colors ${
+                viewMode === "grid"
+                  ? "bg-[#000054]/10 text-[#000054]"
+                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+              }`}
+              title="Grid View"
             >
-              <GridViewIcon />
-            </IconButton>
-            <IconButton
+              <MdViewModule size={22} />
+            </button>
+            <button
               onClick={() => setViewMode("list")}
-              sx={{
-                color: viewMode === "list" ? "#ADF802" : "text.secondary",
-                backgroundColor:
-                  viewMode === "list"
-                    ? "rgba(173, 248, 2, 0.1)"
-                    : "transparent",
-              }}
+              className={`p-2 transition-colors ${
+                viewMode === "list"
+                  ? "bg-[#000054]/10 text-[#000054]"
+                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+              }`}
+              title="List View"
             >
-              <ListViewIcon />
-            </IconButton>
-          </Box>
+              <MdViewList size={22} />
+            </button>
+          </div>
 
-          {/* Refresh Button */}
-          <Tooltip title="Refresh">
-            <IconButton onClick={handleRefresh} disabled={refreshing}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-
-          {/* Export Button */}
-          {userRole.permissions.canExport && (
-            <Tooltip title="Export to CSV">
-              <IconButton onClick={handleExport}>
-                <ExportIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-
-          {/* Import Button */}
-          {userRole.permissions.canImport && (
-            <Tooltip title="Import from CSV">
-              <IconButton onClick={() => setImportDialogOpen(true)}>
-                <ImportIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-
-          {/* Add Button */}
-          {userRole.permissions.canCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddAthlete}
-              sx={{
-                backgroundColor: "#ADF802",
-                color: "#03045e",
-                "&:hover": { backgroundColor: "#9de002" },
-              }}
-            >
-              Add Athlete
-            </Button>
-          )}
-        </Box>
-      </Box>
-
-      {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{ color: "#03045e", fontWeight: "bold" }}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 text-slate-500 hover:text-[#03045e] hover:bg-slate-100 rounded-lg border border-slate-200 bg-white transition-all shadow-sm"
+            title="Refresh"
           >
-            Search & Filters
-          </Typography>
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-            <Button
-              size="small"
+            <MdRefresh size={22} className={refreshing ? "animate-spin" : ""} />
+          </button>
+
+          {userRole.permissions.canExport && (
+            <button
+              onClick={handleExport}
+              className="p-2 text-slate-500 hover:text-[#03045e] hover:bg-slate-100 rounded-lg border border-slate-200 bg-white transition-all shadow-sm"
+              title="Export to CSV"
+            >
+              <MdFileDownload size={22} />
+            </button>
+          )}
+
+          {userRole.permissions.canImport && (
+            <button
+              onClick={() => setImportDialogOpen(true)}
+              className="p-2 text-slate-500 hover:text-[#03045e] hover:bg-slate-100 rounded-lg border border-slate-200 bg-white transition-all shadow-sm"
+              title="Import from CSV"
+            >
+              <MdFileUpload size={22} />
+            </button>
+          )}
+
+          {userRole.permissions.canCreate && (
+            <button
+              onClick={handleAddAthlete}
+              className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-[#E32845] text-[#03045e] font-bold rounded-lg hover:bg-[#9de002] transition-colors shadow-sm"
+            >
+              <MdAdd size={20} />
+              Add Athlete
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filters Area */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold text-[#03045e]">Search & Filters</h2>
+          <div className="flex items-center gap-2">
+            <button
               onClick={handleClearFilters}
-              startIcon={<ClearIcon />}
+              className="text-sm font-medium text-slate-500 hover:text-slate-700 flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200 transition-colors"
             >
-              Clear All
-            </Button>
-            <IconButton
+              <MdClear size={16} /> Clear All
+            </button>
+            <button
               onClick={() => setShowFilters(!showFilters)}
-              sx={{ color: "#03045e" }}
+              className="text-sm font-medium text-white bg-[#03045e] hover:bg-[#000054] px-3 py-1.5 rounded-md transition-colors flex items-center gap-1"
             >
-              {showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-          </Box>
-        </Box>
+              <MdFilterList size={16} />
+              {showFilters ? "Hide Filters" : "Show Filters"}
+            </button>
+          </div>
+        </div>
 
         {/* Search Bar */}
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
+        <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
+          <div className="relative flex-grow w-full">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MdSearch className="text-slate-400" size={20} />
+            </div>
+            <input
+              type="text"
               placeholder="Search athletes by name, position, location..."
               value={filters.search}
               onChange={(e) => handleFilterChange("search", e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
-                ),
-              }}
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-primary/20 outline-none focus:border-primary"
             />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-              <Typography variant="body2" color="text.secondary">
-                {pagination.total} athletes found
-              </Typography>
-              {selectedAthletes.length > 0 && (
-                <>
-                  <Divider orientation="vertical" flexItem />
-                  <Chip
-                    label={`${selectedAthletes.length} selected`}
-                    color="primary"
-                    size="small"
-                    onDelete={() => setSelectedAthletes([])}
-                  />
-                  <Button
-                    size="small"
-                    onClick={() => setBulkDialogOpen(true)}
-                    disabled={!userRole.permissions.canEdit}
-                  >
-                    Bulk Actions
-                  </Button>
-                </>
-              )}
-            </Box>
-          </Grid>
-        </Grid>
+          </div>
+
+          <div className="flex items-center gap-3 w-full md:w-auto shrink-0 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
+            <span className="text-sm font-semibold text-slate-600">
+              {pagination.total} athletes found
+            </span>
+            {selectedAthletes.length > 0 && (
+              <>
+                <div className="w-px h-5 bg-slate-300"></div>
+                <span className="bg-[#E32845]/20 text-[#03045e] text-xs font-bold px-2 py-1 rounded">
+                  {selectedAthletes.length} selected
+                </span>
+                <button
+                  onClick={() => setBulkDialogOpen(true)}
+                  disabled={!userRole.permissions.canEdit}
+                  className="text-xs font-bold text-white bg-navy hover:bg-blue-800 px-3 py-1 rounded disabled:opacity-50 transition-colors"
+                >
+                  Bulk Actions
+                </button>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Advanced Filters */}
-        <Collapse in={showFilters}>
-          <Grid container spacing={2}>
-            <Grid item xs={6} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Sport</InputLabel>
-                <Select
-                  value={filters.sport}
-                  onChange={(e) => handleFilterChange("sport", e.target.value)}
-                  label="Sport"
-                >
-                  <MenuItem value="all">All Sports</MenuItem>
-                  {SPORTS.map((sport) => (
-                    <MenuItem key={sport} value={sport}>
-                      {sport.charAt(0).toUpperCase() + sport.slice(1)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+        {showFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 uppercase">
+                Sport
+              </label>
+              <select
+                value={filters.sport}
+                onChange={(e) => handleFilterChange("sport", e.target.value)}
+                className="w-full p-2 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <option value="all">All Sports</option>
+                {SPORTS.map((sport) => (
+                  <option key={sport} value={sport}>
+                    {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <Grid item xs={6} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Level</InputLabel>
-                <Select
-                  value={filters.level}
-                  onChange={(e) => handleFilterChange("level", e.target.value)}
-                  label="Level"
-                >
-                  <MenuItem value="all">All Levels</MenuItem>
-                  <MenuItem value="grassroots">Grassroots</MenuItem>
-                  <MenuItem value="semi-pro">Semi-Pro</MenuItem>
-                  <MenuItem value="professional">Professional</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 uppercase">
+                Level
+              </label>
+              <select
+                value={filters.level}
+                onChange={(e) => handleFilterChange("level", e.target.value)}
+                className="w-full p-2 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <option value="all">All Levels</option>
+                <option value="grassroots">Grassroots</option>
+                <option value="semi-pro">Semi-Pro</option>
+                <option value="professional">Professional</option>
+              </select>
+            </div>
 
-            <Grid item xs={6} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>County</InputLabel>
-                <Select
-                  value={filters.county}
-                  onChange={(e) => handleFilterChange("county", e.target.value)}
-                  label="County"
-                >
-                  <MenuItem value="all">All Counties</MenuItem>
-                  {LIBERIA_COUNTIES.map((county) => (
-                    <MenuItem key={county} value={county}>
-                      {county}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 uppercase">
+                County
+              </label>
+              <select
+                value={filters.county}
+                onChange={(e) => handleFilterChange("county", e.target.value)}
+                className="w-full p-2 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <option value="all">All Counties</option>
+                {LIBERIA_COUNTIES.map((county) => (
+                  <option key={county} value={county}>
+                    {county}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <Grid item xs={6} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.scoutingStatus}
-                  onChange={(e) =>
-                    handleFilterChange("scoutingStatus", e.target.value)
-                  }
-                  label="Status"
-                >
-                  <MenuItem value="all">All Status</MenuItem>
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="scouted">Scouted</MenuItem>
-                  <MenuItem value="signed">Signed</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 uppercase">
+                Status
+              </label>
+              <select
+                value={filters.scoutingStatus}
+                onChange={(e) =>
+                  handleFilterChange("scoutingStatus", e.target.value)
+                }
+                className="w-full p-2 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="scouted">Scouted</option>
+                <option value="signed">Signed</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
 
             {getFilteredPositions().length > 0 && (
-              <Grid item xs={6} md={2}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Position</InputLabel>
-                  <Select
-                    value={filters.position}
-                    onChange={(e) =>
-                      handleFilterChange("position", e.target.value)
-                    }
-                    label="Position"
-                  >
-                    <MenuItem value="all">All Positions</MenuItem>
-                    {getFilteredPositions().map((position) => (
-                      <MenuItem key={position} value={position}>
-                        {position}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">
+                  Position
+                </label>
+                <select
+                  value={filters.position}
+                  onChange={(e) =>
+                    handleFilterChange("position", e.target.value)
+                  }
+                  className="w-full p-2 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                >
+                  <option value="all">All Positions</option>
+                  {getFilteredPositions().map((position) => (
+                    <option key={position} value={position}>
+                      {position}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
-            <Grid item xs={12} md={2}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selectedAthletes.length > 0}
-                    indeterminate={
-                      selectedAthletes.length > 0 &&
-                      selectedAthletes.length < athletes.length
-                    }
-                    onChange={handleSelectAll}
-                  />
-                }
-                label="Select All"
-              />
-            </Grid>
-          </Grid>
-        </Collapse>
-      </Paper>
+            <div className="space-y-1 flex items-end">
+              <label className="flex items-center gap-2 cursor-pointer h-[38px] px-2 rounded-md hover:bg-slate-50 border border-transparent hover:border-slate-200 w-full">
+                <input
+                  type="checkbox"
+                  checked={
+                    selectedAthletes.length === athletes.length &&
+                    athletes.length > 0
+                  }
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 text-primary focus:ring-primary border-slate-300 rounded"
+                />
+                <span className="text-sm font-semibold text-slate-700">
+                  Select All
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* Athletes Grid/List */}
+      {/* Grid Content */}
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-          <CircularProgress size={60} sx={{ color: "#ADF802" }} />
-        </Box>
-      ) : athletes.length === 0 ? (
-        <Card sx={{ textAlign: "center", py: 8 }}>
-          <CardContent>
-            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-              No athletes found
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Try adjusting your search criteria or add new athletes to get
-              started.
-            </Typography>
-            {userRole.permissions.canCreate && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAddAthlete}
-                sx={{
-                  backgroundColor: "#ADF802",
-                  color: "#03045e",
-                  "&:hover": { backgroundColor: "#9de002" },
-                }}
+        <div
+          className={`grid gap-6 ${
+            viewMode === "grid"
+              ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+              : "grid-cols-1"
+          }`}
+        >
+          {Array.from({ length: viewMode === "grid" ? 8 : 4 }).map(
+            (_, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
               >
-                Add First Athlete
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+                <div className="flex items-start gap-4">
+                  <Skeleton variant="circular" className="h-16 w-16 shrink-0" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+                <div className="mt-5 space-y-3">
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      ) : athletes.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+          <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MdSearch size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-navy mb-2">
+            No athletes found
+          </h3>
+          <p className="text-slate-500 mb-6 max-w-md mx-auto">
+            Try adjusting your search criteria or add new athletes to get
+            started.
+          </p>
+          {userRole.permissions.canCreate && (
+            <button
+              onClick={handleAddAthlete}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#E32845] text-[#03045e] font-bold rounded-lg hover:bg-[#9de002] transition-colors shadow-sm"
+            >
+              <MdAdd size={20} />
+              Add First Athlete
+            </button>
+          )}
+        </div>
       ) : (
         <>
-          <Grid container spacing={3}>
+          <div
+            className={`grid gap-6 ${
+              viewMode === "grid"
+                ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 justify-items-center sm:justify-items-stretch"
+                : "grid-cols-1"
+            }`}
+          >
             {athletes.map((athlete) => (
-              <Grid
-                item
-                xs={12}
-                sm={viewMode === "grid" ? 6 : 12}
-                md={viewMode === "grid" ? 4 : 12}
-                lg={viewMode === "grid" ? 3 : 12}
+              <div
                 key={athlete.id}
+                className={
+                  viewMode === "list"
+                    ? "w-full max-w-4xl mx-auto flex justify-center"
+                    : "flex justify-center"
+                }
               >
                 <AthleteCard
                   athlete={athlete}
@@ -790,49 +759,66 @@ export default function AthleteDirectory({
                   selected={selectedAthletes.includes(athlete.id)}
                   showSelection={selectedAthletes.length > 0 || showFilters}
                 />
-              </Grid>
+              </div>
             ))}
-          </Grid>
+          </div>
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-              <Pagination
-                count={pagination.totalPages}
-                page={pagination.page}
-                onChange={handlePageChange}
-                color="primary"
-                size="large"
-                sx={{
-                  "& .MuiPaginationItem-root.Mui-selected": {
-                    backgroundColor: "#ADF802",
-                    color: "#03045e",
-                  },
-                }}
-              />
-            </Box>
+            <div className="flex justify-center mt-10">
+              <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                <button
+                  onClick={() =>
+                    handlePageChange(Math.max(1, pagination.page - 1))
+                  }
+                  disabled={pagination.page === 1}
+                  className="p-1 px-3 text-sm font-medium rounded hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                >
+                  Prev
+                </button>
+
+                {Array.from(
+                  { length: pagination.totalPages },
+                  (_, i) => i + 1,
+                ).map((pg) => (
+                  <button
+                    key={pg}
+                    onClick={() => handlePageChange(pg)}
+                    className={`w-8 h-8 flex items-center justify-center rounded text-sm font-bold transition-colors ${
+                      pagination.page === pg
+                        ? "bg-[#E32845] text-[#03045e]"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {pg}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() =>
+                    handlePageChange(
+                      Math.min(pagination.totalPages, pagination.page + 1),
+                    )
+                  }
+                  disabled={pagination.page === pagination.totalPages}
+                  className="p-1 px-3 text-sm font-medium rounded hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
         </>
       )}
 
       {/* Floating Action Button for Mobile */}
       {userRole.permissions.canCreate && (
-        <Fab
-          color="primary"
-          aria-label="add athlete"
+        <button
           onClick={handleAddAthlete}
-          sx={{
-            position: "fixed",
-            bottom: 16,
-            right: 16,
-            backgroundColor: "#ADF802",
-            color: "#03045e",
-            "&:hover": { backgroundColor: "#9de002" },
-            display: { xs: "flex", md: "none" },
-          }}
+          className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-[#E32845] text-[#03045e] rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
         >
-          <AddIcon />
-        </Fab>
+          <MdAdd size={28} />
+        </button>
       )}
 
       {/* Dialogs */}
@@ -865,91 +851,98 @@ export default function AthleteDirectory({
       />
 
       {/* Import Dialog */}
-      <Dialog
-        open={importDialogOpen}
-        onClose={() => setImportDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Import Athletes from CSV</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              style={{ marginBottom: 16 }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              Upload a CSV file with athlete data. The file should include
-              columns for name, age, position, sport, level, county, etc.
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImportDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleImport}
-            disabled={!importFile || importing}
-            variant="contained"
-            sx={{
-              backgroundColor: "#ADF802",
-              color: "#03045e",
-              "&:hover": { backgroundColor: "#9de002" },
-            }}
+      {importDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-in fade-in">
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            {importing ? <CircularProgress size={20} /> : "Import"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <div className="bg-[#03045e] text-white px-6 py-4 flex items-center justify-between">
+              <h2 className="font-bold text-lg">Import from CSV</h2>
+              <button
+                onClick={() => setImportDialogOpen(false)}
+                className="text-white/70 hover:text-white"
+              >
+                <MdClear size={24} />
+              </button>
+            </div>
+            <div className="p-6">
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="w-full border border-slate-300 rounded-lg p-2 text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-[#E32845] file:text-[#03045e] hover:file:bg-[#9de002] transition-colors mb-4"
+              />
+              <p className="text-sm text-slate-500 mb-2">
+                Upload a CSV file containing athlete data. Ensure columns match
+                the expected format (name, sport, position, level...).
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                onClick={() => setImportDialogOpen(false)}
+                className="px-4 py-2 font-medium text-slate-600 hover:bg-slate-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!importFile || importing}
+                className="px-4 py-2 font-bold bg-[#E32845] text-[#03045e] rounded-md hover:bg-[#9de002] disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {importing && (
+                  <div className="w-4 h-4 rounded-full border-2 border-[#03045e]/30 border-t-[#03045e] animate-spin"></div>
+                )}
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete{" "}
-            <strong>
-              {athleteToDelete 
-                ? athletes.find(a => a.id === athleteToDelete)?.name || "this athlete"
-                : "this athlete"
-              }
-            </strong>
-            ? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button
-            onClick={confirmDeleteAthlete}
-            color="error"
-            variant="contained"
+      {deleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-in fade-in">
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+            <div className="px-6 py-5">
+              <h2 className="font-bold text-xl text-slate-800 mb-2">
+                Confirm Delete
+              </h2>
+              <p className="text-slate-600 font-medium">
+                Are you sure you want to delete{" "}
+                <span className="font-bold text-red-600">
+                  {athleteToDelete
+                    ? athletes.find((a) => a.id === athleteToDelete)?.name ||
+                      "this athlete"
+                    : "this athlete"}
+                </span>
+                ?
+                <br />
+                <span className="text-sm text-slate-500 mt-1 block">
+                  This action cannot be undone.
+                </span>
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                className="px-4 py-2 font-bold text-slate-600 hover:bg-slate-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteAthlete}
+                className="px-4 py-2 font-bold bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

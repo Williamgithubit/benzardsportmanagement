@@ -43,11 +43,6 @@ const nextConfig: NextConfig = {
     formats: ['image/webp', 'image/avif'],
   },
   
-  // Performance optimizations
-  experimental: {
-    optimizePackageImports: ['@mui/material', '@mui/icons-material'],
-  },
-  
   // Security headers
   async headers() {
     return [

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Render.com build script for T-Tech Initiative
+# Render.com build script for Benzard Sports Management
 
 set -o errexit
 
 # Install dependencies
-npm ci
+pnpm install --frozen-lockfile
 
 # Build the application
-npm run build
+pnpm build

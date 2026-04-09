@@ -16,7 +16,7 @@ export interface SearchResult {
   subtitle: string;
   url: string;
   relevance: number;
-  data?: any; // Original data for additional context
+  data?: unknown; // Original data for additional context
 }
 
 export interface SearchOptions {

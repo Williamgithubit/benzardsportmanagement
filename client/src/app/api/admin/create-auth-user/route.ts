@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getApps } from 'firebase-admin/app';
 
 export const runtime = 'nodejs';
 
-let db: any = null;
+let db: Firestore | null = null;
 try {
   if (getApps().length > 0) {
     db = getFirestore();
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       if (!decodedToken.admin && decodedToken.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
       }
-    } catch (authError) {
+    } catch {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 

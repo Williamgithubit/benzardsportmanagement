@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { FiCalendar, FiClock, FiArrowLeft, FiEye } from "react-icons/fi";
 import { FaFacebook, FaTwitter, FaLinkedin } from "react-icons/fa";
 import Button from "@/components/ui/Button";
-import type { BlogPost } from "@/types/blog";
+import type { BlogPost, BlogComment as BlogCommentType } from "@/types/blog";
 import BlogReactions from "@/components/blog/BlogReactions";
 import BlogComment from "@/components/blog/BlogComment";
 import { getComments, getReactions } from "@/services/blogInteractions";
@@ -18,22 +18,10 @@ interface BlogPostProps {
 export default function BlogPostContent({ initialPost }: BlogPostProps) {
   const router = useRouter();
 
-  // Import BlogComment type
-  interface BlogComment {
-    id: string;
-    postId: string;
-    userId: string;
-    userName: string;
-    userEmail: string;
-    content: string;
-    createdAt: string;
-    updatedAt: string;
-  }
-
   // Extend the BlogPost type locally to include fields we manage client-side
   interface ExtendedBlogPost extends BlogPost {
     reactionCount: number;
-    comments?: BlogComment[];
+    comments?: BlogCommentType[];
   }
 
   const defaultPost: ExtendedBlogPost = {
@@ -43,8 +31,7 @@ export default function BlogPostContent({ initialPost }: BlogPostProps) {
 
   const [post, setPost] = useState<ExtendedBlogPost>(defaultPost);
 
-  // loadInteractions is pulled out so other handlers can call it as well
-  const loadInteractions = async () => {
+  const loadInteractions = React.useCallback(async () => {
     try {
       const [comments, reactions] = await Promise.all([
         getComments(post.id),
@@ -59,12 +46,12 @@ export default function BlogPostContent({ initialPost }: BlogPostProps) {
     } catch (error) {
       console.error("Error loading interactions:", error);
     }
-  };
+  }, [post.id]);
 
   // Load comments and reactions
   useEffect(() => {
     loadInteractions();
-  }, [post.id]);
+  }, [loadInteractions]);
 
   const formatDate = (timestamp: string | null | undefined) => {
     if (!timestamp) return 'No date available';

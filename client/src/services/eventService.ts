@@ -269,7 +269,7 @@ import type { Unsubscribe } from "firebase/firestore";
 
 export const subscribeToEvents = (
   callback: (events: Event[]) => void,
-  onError?: (err: any) => void
+  onError?: (err: unknown) => void
 ): Unsubscribe => {
   try {
     const eventsRef = collection(db, "events");

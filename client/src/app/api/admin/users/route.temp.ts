@@ -38,7 +38,7 @@ const mockUsers = [
   },
 ];
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('Mock users API called');
     

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import { deleteMediaMetadata, getMediaAssetById } from '@/services/bsmMediaService';
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUD_NAME,
-  api_key: process.env.NEXT_PUBLIC_CLOUD_API_KEY,
-  api_secret: process.env.NEXT_PUBLIC_CLOUD_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY || process.env.NEXT_PUBLIC_CLOUD_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET || process.env.NEXT_PUBLIC_CLOUD_API_SECRET,
 });
 
 export async function DELETE(request: NextRequest) {

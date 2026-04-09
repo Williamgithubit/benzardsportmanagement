@@ -12,7 +12,7 @@ export async function requestFcmToken(vapidKey: string) {
   }
 }
 
-export function onFcmMessage(callback: (payload: any) => void) {
+export function onFcmMessage(callback: (payload: { notification?: { title?: string; body?: string }; data?: Record<string, string> }) => void) {
   const messaging = getMessaging(app);
   onMessage(messaging, callback);
 }

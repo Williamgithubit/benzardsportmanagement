@@ -97,34 +97,6 @@ export async function POST(request: NextRequest) {
       </html>
     `;
 
-    const textContent = `
-Dear ${applicantName},
-
-Thank you for submitting your admission application to TTech Initiative for the ${program} program.
-
-Your application has been successfully received and is now under review. Please save the following admission ID for your records:
-
-Your Admission ID: ${applicantId}
-
-IMPORTANT: Please keep this Admission ID safe. You will need it to check your application status and for all future correspondence regarding your application.
-
-What happens next?
-- Our admissions team will review your application
-- You can check your application status using your Admission ID
-- We will notify you of any updates via email
-- The review process typically takes 5-10 business days
-
-You can check your application status anytime by visiting our website and using your Admission ID: ${applicantId}
-
-If you have any questions, please don't hesitate to contact our admissions office.
-
-Best regards,
-TTech Initiative Admissions Team
-
-This is an automated message. Please do not reply to this email.
-© 2024 TTech Initiative. All rights reserved.
-    `;
-
     // Send email (using same pattern as working contact form)
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -147,15 +119,18 @@ This is an automated message. Please do not reply to this email.
       { status: 200 }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error sending email:', error);
-    console.error('Error details:', {
-      message: error?.message,
-      code: error?.code,
-      command: error?.command,
-      response: error?.response,
-      responseCode: error?.responseCode
-    });
+    if (error instanceof Error) {
+      const nodemailerErr = error as { code?: string, command?: string, response?: string, responseCode?: number };
+      console.error('Error details:', {
+        message: error.message,
+        code: nodemailerErr.code,
+        command: nodemailerErr.command,
+        response: nodemailerErr.response,
+        responseCode: nodemailerErr.responseCode
+      });
+    }
     return NextResponse.json(
       { error: 'Failed to send email. Please try again later.' },
       { status: 500 }

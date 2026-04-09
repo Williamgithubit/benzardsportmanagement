@@ -41,13 +41,13 @@ if (isConfigured) {
     _storage = getStorage(_app);
   } catch (err) {
     // Don't crash the app during build — surface the error for debugging
-    // eslint-disable-next-line no-console
+     
     console.error('Failed to initialize Firebase client SDK', err);
     _app = _auth = _firestore = _storage = null;
   }
 } else {
   if (typeof window !== 'undefined') {
-    // eslint-disable-next-line no-console
+     
     console.warn('Firebase client not configured. Set NEXT_PUBLIC_FIREBASE_* env vars.');
   }
 }

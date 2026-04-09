@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { GeistSans, GeistMono } from "geist/font";
-// @ts-ignore: Allow side-effect CSS import without module/type declarations
 import "./globals.css";
 import RootLayoutClient from "./RootLayoutClient";
 

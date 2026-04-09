@@ -1,450 +1,444 @@
-import React, { useState, useEffect, useCallback } from "react";
+"use client";
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import {
-  Box,
-  Typography,
-  Paper,
-  IconButton,
-  Badge,
-  Menu,
-  MenuItem,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Chip,
-  Button,
-  Divider,
-  Avatar,
-  Tooltip,
-  Snackbar,
-  Alert,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
-import {
-  Notifications as NotificationsIcon,
-  NotificationsActive as NotificationsActiveIcon,
-  Circle as CircleIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
-  Info as InfoIcon,
-  Error as ErrorIcon,
-  Clear as ClearIcon,
-  MarkEmailRead as MarkEmailReadIcon,
-  Delete as DeleteIcon,
-  Settings as SettingsIcon,
-} from "@mui/icons-material";
+  MdCheckCircle,
+  MdCircle,
+  MdDelete,
+  MdDoneAll,
+  MdError,
+  MdInfo,
+  MdNotificationsActive,
+  MdNotificationsNone,
+  MdOutlineWarningAmber,
+  MdSettings,
+} from "react-icons/md";
 import { NotificationService } from "@/services/notificationService";
 import useUserRole from "@/hooks/useUserRole";
-import { Notification as NotificationType } from "@/types/notification";
+import type { Notification as FirestoreNotification } from "@/types/notification";
 
-export interface Notification {
+type NotificationTone = "info" | "success" | "warning" | "error";
+type NotificationPriority = "low" | "medium" | "high";
+
+interface DashboardNotification {
   id: string;
-  type: "info" | "success" | "warning" | "error";
+  sourceType: string;
   title: string;
   message: string;
   timestamp: Date;
   read: boolean;
   actionUrl?: string;
   actionLabel?: string;
-  priority: "low" | "medium" | "high";
-  category: "system" | "user" | "admission" | "program" | "event";
+  priority: NotificationPriority;
+  tone: NotificationTone;
 }
 
 interface NotificationSystemProps {
-  onNotificationClick?: (notification: Notification) => void;
+  onNotificationClick?: (notification: DashboardNotification) => void;
 }
+
+const toneStyles: Record<
+  NotificationTone,
+  {
+    icon: React.ComponentType<{ size?: string | number; className?: string }>;
+    badge: string;
+    iconWrap: string;
+  }
+> = {
+  info: {
+    icon: MdInfo,
+    badge: "border-sky-200 bg-sky-50 text-sky-600",
+    iconWrap: "bg-sky-50 text-sky-600",
+  },
+  success: {
+    icon: MdCheckCircle,
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-600",
+    iconWrap: "bg-emerald-50 text-emerald-600",
+  },
+  warning: {
+    icon: MdOutlineWarningAmber,
+    badge: "border-amber-200 bg-amber-50 text-amber-600",
+    iconWrap: "bg-amber-50 text-amber-600",
+  },
+  error: {
+    icon: MdError,
+    badge: "border-rose-200 bg-rose-50 text-rose-600",
+    iconWrap: "bg-rose-50 text-rose-600",
+  },
+};
+
+const notificationTabMap: Record<string, string> = {
+  athlete: "athletes",
+  blog: "blog",
+  contact: "contacts",
+  event: "events",
+  system: "dashboard",
+};
+
+const resolveNotificationTone = (type: string): NotificationTone => {
+  switch (type) {
+    case "blog":
+      return "success";
+    case "contact":
+      return "warning";
+    case "system":
+      return "info";
+    default:
+      return "info";
+  }
+};
+
+const resolveNotificationPriority = (
+  notification: FirestoreNotification & Record<string, unknown>
+): NotificationPriority => {
+  const rawPriority =
+    typeof notification.priority === "string"
+      ? notification.priority
+      : typeof notification.data?.priority === "string"
+        ? notification.data.priority
+        : "medium";
+
+  if (rawPriority === "high" || rawPriority === "medium" || rawPriority === "low") {
+    return rawPriority;
+  }
+
+  return "medium";
+};
+
+const normalizeNotification = (
+  notification: FirestoreNotification & Record<string, unknown>
+): DashboardNotification => ({
+  id: notification.id,
+  sourceType: notification.type || "system",
+  title:
+    notification.title ||
+    notification.body ||
+    `${notification.type || "System"} update`,
+  message: notification.body || "New activity is available.",
+  timestamp:
+    notification.createdAt && typeof notification.createdAt === "object" && "toDate" in notification.createdAt && typeof (notification.createdAt as { toDate: () => Date }).toDate === "function"
+      ? (notification.createdAt as { toDate: () => Date }).toDate()
+      : notification.createdAt
+        ? new Date(notification.createdAt)
+        : new Date(),
+  read: Boolean(notification.read),
+  actionUrl:
+    typeof notification.data?.actionUrl === "string"
+      ? notification.data.actionUrl
+      : undefined,
+  actionLabel:
+    typeof notification.data?.actionLabel === "string"
+      ? notification.data.actionLabel
+      : undefined,
+  priority: resolveNotificationPriority(notification),
+  tone: resolveNotificationTone(notification.type || "system"),
+});
+
+const formatRelativeTime = (timestamp: Date) => {
+  const diffInMinutes = Math.floor((Date.now() - timestamp.getTime()) / 60000);
+
+  if (diffInMinutes < 1) return "Just now";
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays}d ago`;
+};
 
 const NotificationSystem: React.FC<NotificationSystemProps> = ({
   onNotificationClick,
 }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success" as "success" | "error" | "info" | "warning",
-  });
-
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const router = useRouter();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
   const userRole = useUserRole();
 
   useEffect(() => {
-    // subscribe to notifications from Firestore and update list
-    const unsub = NotificationService.subscribeToNotifications(
+    const unsubscribe = NotificationService.subscribeToNotifications(
       userRole.role || "admin",
       (items) => {
-        // normalize incoming notifications to local Notification interface
-        const normalized = items.map((i: any) => ({
-          id: i.id,
-          type: (i.type as any) || "info",
-          title: i.title || i.body || i.type,
-          message: i.body || "",
-          timestamp:
-            i.createdAt && i.createdAt.toDate
-              ? i.createdAt.toDate()
-              : i.createdAt || new Date(),
-          read: !!i.read,
-          priority: (i.priority as any) || "low",
-          category: (i.recipientRole as any) || "user",
-          actionUrl: i.data?.actionUrl,
-          actionLabel: i.data?.actionLabel,
-        })) as Notification[];
-        setNotifications(normalized);
+        setNotifications(
+          items.map((item) => normalizeNotification(item as FirestoreNotification & Record<string, unknown>))
+        );
+      },
+      (error) => {
+        console.error("Notification stream unavailable:", error);
+        setNotifications([]);
       }
     );
 
-    return () => unsub();
+    return () => unsubscribe();
+  }, [userRole.role]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const open = Boolean(anchorEl);
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.read).length,
+    [notifications]
+  );
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read in Firestore
+  const handleNotificationClick = async (notification: DashboardNotification) => {
     try {
       await NotificationService.markAsRead(notification.id, true);
-      
-      // Update local state
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, read: true } : item
+        )
       );
 
-      if (onNotificationClick) {
-        onNotificationClick(notification);
+      onNotificationClick?.(notification);
+      setOpen(false);
+
+      if (notification.actionUrl) {
+        router.push(notification.actionUrl);
+        return;
       }
 
-      // Navigate to Contact Management for blog notifications
-      if (notification.category === "user" || notification.title?.includes("Blog")) {
-        handleClose();
-        router.push("/dashboard/admin#contacts");
-        // Trigger tab change after navigation
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("changeTab", { detail: "contacts" }));
-        }, 100);
-      } else {
-        handleClose();
+      const targetTab = notificationTabMap[notification.sourceType];
+      if (targetTab) {
+        router.push(
+          targetTab === "dashboard"
+            ? "/dashboard/admin"
+            : `/dashboard/admin#${targetTab}`
+        );
+
+        window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("changeTab", { detail: targetTab }));
+        }, 75);
       }
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to update notification",
-        severity: "error",
-      });
+      console.error("Failed to handle notification click:", error);
+      toast.error("Unable to update that notification.");
     }
   };
 
   const markAllAsRead = async () => {
     try {
       await NotificationService.markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setSnackbar({
-        open: true,
-        message: "All notifications marked as read",
-        severity: "success",
-      });
+      setNotifications((current) =>
+        current.map((notification) => ({ ...notification, read: true }))
+      );
+      toast.success("All notifications marked as read");
     } catch (error) {
-      console.error("Failed to mark all as read:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to update notifications",
-        severity: "error",
-      });
+      console.error("Failed to mark notifications as read:", error);
+      toast.error("Unable to update notifications right now.");
     }
   };
 
-  const deleteNotification = async (id: string, event: React.MouseEvent) => {
+  const deleteNotification = async (
+    notificationId: string,
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
     event.stopPropagation();
+
     try {
-      await NotificationService.deleteNotification(id);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-      setSnackbar({
-        open: true,
-        message: "Notification deleted",
-        severity: "info",
-      });
+      await NotificationService.deleteNotification(notificationId);
+      setNotifications((current) =>
+        current.filter((notification) => notification.id !== notificationId)
+      );
+      toast.success("Notification removed");
     } catch (error) {
       console.error("Failed to delete notification:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to delete notification",
-        severity: "error",
-      });
+      toast.error("Unable to delete notification.");
     }
   };
 
-  const clearAllNotifications = () => {
-    setNotifications([]);
-    setSnackbar({
-      open: true,
-      message: "All notifications cleared",
-      severity: "info",
-    });
-    handleClose();
-  };
-
-  const getNotificationIcon = (type: Notification["type"]) => {
-    switch (type) {
-      case "success":
-        return <CheckCircleIcon color="success" />;
-      case "warning":
-        return <WarningIcon color="warning" />;
-      case "error":
-        return <ErrorIcon color="error" />;
-      case "info":
-      default:
-        return <InfoIcon color="info" />;
+  const clearAllNotifications = async () => {
+    try {
+      await Promise.all(
+        notifications.map((notification) =>
+          NotificationService.deleteNotification(notification.id)
+        )
+      );
+      setNotifications([]);
+      setOpen(false);
+      toast.success("All notifications cleared");
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+      toast.error("Unable to clear notifications.");
     }
-  };
-
-  const getNotificationColor = (type: Notification["type"]) => {
-    switch (type) {
-      case "success":
-        return "#4CAF50";
-      case "warning":
-        return "#FF9800";
-      case "error":
-        return "#F44336";
-      case "info":
-      default:
-        return "#2196F3";
-    }
-  };
-
-  const getPriorityColor = (priority: Notification["priority"]) => {
-    switch (priority) {
-      case "high":
-        return "error";
-      case "medium":
-        return "warning";
-      case "low":
-      default:
-        return "default";
-    }
-  };
-
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
   };
 
   return (
-    <>
-      <Tooltip title="Notifications">
-        <IconButton
-          onClick={handleClick}
-          size="large"
-          sx={{
-            color: "white",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-            },
-          }}
-        >
-          <Badge badgeContent={unreadCount} color="error">
-            {unreadCount > 0 ? (
-              <NotificationsActiveIcon />
-            ) : (
-              <NotificationsIcon />
-            )}
-          </Badge>
-        </IconButton>
-      </Tooltip>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        PaperProps={{
-          sx: {
-            width: { xs: "90vw", sm: 400 },
-            maxHeight: 500,
-            mt: 1,
-          },
-        }}
-        transformOrigin={{ horizontal: "right", vertical: "top" }}
-        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-secondary/20 hover:text-secondary"
+        aria-label="Open notifications"
       >
-        <Box sx={{ p: 2, borderBottom: "1px solid rgba(0, 0, 0, 0.12)" }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-              Notifications
-            </Typography>
-            <Box>
-              {unreadCount > 0 && (
-                <Button
-                  size="small"
-                  onClick={markAllAsRead}
-                  startIcon={<MarkEmailReadIcon />}
-                  sx={{ mr: 1 }}
-                >
-                  Mark All Read
-                </Button>
-              )}
-              <IconButton size="small" onClick={clearAllNotifications}>
-                <ClearIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </Box>
-
-        {notifications.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: "center" }}>
-            <NotificationsIcon
-              sx={{ fontSize: 48, color: "text.secondary", mb: 1 }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              No notifications
-            </Typography>
-          </Box>
+        {unreadCount > 0 ? (
+          <MdNotificationsActive size={22} />
         ) : (
-          <List sx={{ p: 0, maxHeight: 350, overflow: "auto" }}>
-            {notifications
-              .map((notification, index) => [
-                <ListItem key={notification.id} disablePadding>
-                  <ListItemButton
-                    onClick={() => handleNotificationClick(notification)}
-                    sx={{
-                      backgroundColor: notification.read
-                        ? "transparent"
-                        : "rgba(0, 0, 84, 0.05)",
-                      "&:hover": {
-                        backgroundColor: notification.read
-                          ? "rgba(0, 0, 0, 0.04)"
-                          : "rgba(0, 0, 84, 0.1)",
-                      },
-                      py: 1.5,
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      {getNotificationIcon(notification.type)}
-                    </ListItemIcon>
-                    <Box sx={{ flex: 1, py: 1 }}>
-                      <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                        <Typography
-                          variant="subtitle2"
-                          component="span"
-                          sx={{
-                            fontWeight: notification.read ? "normal" : "bold",
-                            flex: 1,
-                          }}
-                        >
-                          {notification.title}
-                        </Typography>
-                        {!notification.read && (
-                          <CircleIcon sx={{ fontSize: 8, color: "#E32845" }} />
-                        )}
-                      </Box>
-                      <Typography
-                        variant="body2"
-                        component="div"
-                        color="text.secondary"
-                        sx={{ mb: 0.5 }}
-                      >
-                        {notification.message}
-                      </Typography>
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={1}
-                        flexWrap="wrap"
-                      >
-                        <Typography
-                          variant="caption"
-                          component="span"
-                          color="text.secondary"
-                        >
-                          {formatTimestamp(notification.timestamp)}
-                        </Typography>
-                        <Chip
-                          label={notification.priority}
-                          size="small"
-                          color={getPriorityColor(notification.priority)}
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: "0.65rem" }}
-                        />
-                        {notification.actionLabel && (
-                          <Chip
-                            label={notification.actionLabel}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 20, fontSize: "0.65rem" }}
-                          />
-                        )}
-                      </Box>
-                    </Box>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => deleteNotification(notification.id, e)}
-                      sx={{ ml: 1 }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </ListItemButton>
-                </ListItem>,
-                ...(index < notifications.length - 1
-                  ? [<Divider key={`divider-${notification.id}`} />]
-                  : []),
-              ])
-              .flat()}
-          </List>
+          <MdNotificationsNone size={22} />
         )}
 
-        {notifications.length > 0 && [
-          <Divider key="settings-divider" />,
-          <Box key="settings-box" sx={{ p: 1 }}>
-            <Button
-              fullWidth
-              variant="text"
-              startIcon={<SettingsIcon />}
-              sx={{ justifyContent: "flex-start" }}
-            >
-              Notification Settings
-            </Button>
-          </Box>,
-        ]}
-      </Menu>
+        {unreadCount > 0 ? (
+          <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
+      </button>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </>
+      {open ? (
+        <div className="glass-panel absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(23rem,calc(100vw-2rem))] overflow-hidden rounded-[28px] border border-slate-200/80">
+          <div className="flex items-start justify-between gap-3 border-b border-slate-200/70 px-5 py-4">
+            <div>
+              <p className="text-lg font-semibold text-secondary">Notifications</p>
+              <p className="mt-1 text-sm text-slate-500">
+                {unreadCount > 0
+                  ? `${unreadCount} unread update${unreadCount === 1 ? "" : "s"}`
+                  : "Everything is caught up"}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void markAllAsRead()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-200 hover:text-emerald-600"
+                  title="Mark all as read"
+                >
+                  <MdDoneAll size={18} />
+                </button>
+              ) : null}
+
+              {notifications.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void clearAllNotifications()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
+                  title="Clear all notifications"
+                >
+                  <MdDelete size={18} />
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-3xl border border-slate-200 bg-white text-slate-400">
+                <MdNotificationsNone size={28} />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-700">
+                  No notifications yet
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Activity alerts will show up here as they arrive.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="max-h-[24rem] space-y-1 overflow-y-auto p-3">
+              {notifications.map((notification) => {
+                const tone = toneStyles[notification.tone];
+                const ToneIcon = tone.icon;
+
+                return (
+                  <button
+                    key={notification.id}
+                    type="button"
+                    onClick={() => void handleNotificationClick(notification)}
+                    className={`flex w-full items-start gap-3 rounded-[24px] px-3 py-3 text-left transition ${
+                      notification.read
+                        ? "bg-white/70 hover:bg-slate-50"
+                        : "bg-secondary/5 hover:bg-secondary/8"
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${tone.iconWrap}`}
+                    >
+                      <ToneIcon size={18} />
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p
+                              className={`truncate text-sm ${
+                                notification.read
+                                  ? "font-medium text-slate-800"
+                                  : "font-semibold text-slate-900"
+                              }`}
+                            >
+                              {notification.title}
+                            </p>
+                            {!notification.read ? (
+                              <MdCircle size={8} className="flex-shrink-0 text-primary" />
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            {notification.message}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(event) =>
+                            void deleteNotification(notification.id, event)
+                          }
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-rose-600"
+                          aria-label="Delete notification"
+                        >
+                          <MdDelete size={16} />
+                        </button>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500">
+                          {formatRelativeTime(notification.timestamp)}
+                        </span>
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${tone.badge}`}
+                        >
+                          {notification.priority}
+                        </span>
+                        {notification.actionLabel ? (
+                          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                            {notification.actionLabel}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="border-t border-slate-200/70 px-4 py-3">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-secondary"
+            >
+              <MdSettings size={18} />
+              Notification settings
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 };
 

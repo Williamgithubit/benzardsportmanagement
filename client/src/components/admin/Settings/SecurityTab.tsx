@@ -1,29 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  TextField,
-  Switch,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemSecondaryAction,
-  Typography,
-  Button,
-  Alert,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
-import {
-  Lock as LockIcon,
-  Notifications as NotificationsIcon,
-  DeviceHub as DeviceIcon,
-  Shield as ShieldIcon,
-  Warning as WarningIcon,
-} from "@mui/icons-material";
+  MdLock,
+  MdNotifications,
+  MdDeviceHub,
+  MdShield,
+  MdWarning,
+} from "react-icons/md";
 import { useAppSelector } from "@/store/store";
 import { SettingsService } from "@/services/settingsService";
 
@@ -45,9 +27,6 @@ interface SecurityTabProps {
 }
 
 const SecurityTab: React.FC<SecurityTabProps> = ({ onSuccess, onError }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  useMediaQuery(theme.breakpoints.down("md"));
   // Security settings state
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
     twoFactorEnabled: false,
@@ -156,13 +135,13 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ onSuccess, onError }) => {
     
     const newSettings = { ...securitySettings, [setting]: value };
 
-      // Auto-save for switches, manual save for text inputs
-      if (event.target.type === "checkbox") {
-        saveSettings(newSettings);
-      } else {
-        setSecuritySettings(newSettings);
-      }
-    };
+    // Auto-save for switches, manual save for text inputs
+    if (event.target.type === "checkbox") {
+      saveSettings(newSettings);
+    } else {
+      setSecuritySettings(newSettings);
+    }
+  };
 
   const handleTextFieldSave = (field: keyof SecuritySettings) => {
     // Only save if the field value is valid
@@ -186,374 +165,268 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ onSuccess, onError }) => {
     return score;
   };
 
-  const getSecurityLevel = (score: number): { level: string; color: 'success' | 'primary' | 'warning' | 'error' } => {
-    if (score >= 80) return { level: "Excellent", color: "success" as const };
-    if (score >= 60) return { level: "Good", color: "primary" as const };
-    if (score >= 40) return { level: "Fair", color: "warning" as const };
-    return { level: "Poor", color: "error" as const };
+  const getSecurityLevel = (score: number) => {
+    if (score >= 80) return { level: "Excellent", colorClass: "text-emerald-500", bgClass: "bg-emerald-50" };
+    if (score >= 60) return { level: "Good", colorClass: "text-blue-500", bgClass: "bg-blue-50" };
+    if (score >= 40) return { level: "Fair", colorClass: "text-amber-500", bgClass: "bg-amber-50" };
+    return { level: "Poor", colorClass: "text-red-500", bgClass: "bg-red-50" };
   };
 
   const securityScore = getSecurityScore();
   const securityLevel = getSecurityLevel(securityScore);
 
   return (
-    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+    <div className="flex flex-wrap gap-6">
       {/* Security Overview */}
-      <Box sx={{ flex: "1 1 100%" }}>
-        <Card>
-          <CardHeader
-            title="Security Overview"
-            titleTypographyProps={{
-              sx: {
-                fontSize: { xs: "1.1rem", sm: "1.25rem" },
-              },
-            }}
-          />
-          <CardContent>
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 3,
-                alignItems: "center",
-              }}
-            >
-              <Box
-                sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)" } }}
-              >
-                <Box display="flex" alignItems="center" gap={2}>
-                  <ShieldIcon
-                    color={securityLevel.color}
-                    sx={{ fontSize: { xs: "2rem", sm: "2.5rem" } }}
-                  />
-                  <Box>
-                    <Typography variant="h6">
-                      Security Level: {securityLevel.level}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
+      <div className="w-full">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+             <h3 className="text-lg font-bold text-[#000054]">Security Overview</h3>
+          </div>
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              <div className="flex-1 w-full">
+                <div className="flex items-center gap-4">
+                  <div className={`p-4 rounded-xl ${securityLevel.bgClass} ${securityLevel.colorClass}`}>
+                     <MdShield size={48} />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-slate-800">
+                      Security Level: <span className={securityLevel.colorClass}>{securityLevel.level}</span>
+                    </h4>
+                    <p className="text-slate-500 font-medium">
                       Security Score: {securityScore}/100
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-              <Box
-                sx={{ flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)" } }}
-              >
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                  <Box
-                    sx={{ flex: "1 1 calc(33.33% - 8px)", textAlign: "center" }}
-                  >
-                    <Typography variant="h6">
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-1 w-full grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-2xl font-extrabold text-[#000054] mb-1">
                       {securitySettings.activeSessions}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
+                    </p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Active Sessions
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ flex: "1 1 calc(33.33% - 8px)", textAlign: "center" }}
-                  >
-                    <Typography variant="h6">
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-2xl font-extrabold text-[#000054] mb-1">
                       {securitySettings.trustedDevices}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
+                    </p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Trusted Devices
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ flex: "1 1 calc(33.33% - 8px)", textAlign: "center" }}
-                  >
-                    <Typography variant="h6">
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-lg font-extrabold text-[#000054] mb-1 h-8 flex items-center justify-center">
                       {securitySettings.lastPasswordChange}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
+                    </p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Last Password Change
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
+                    </p>
+                  </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Authentication Settings */}
-      <Box sx={{ flex: { xs: "1 1 100%", md: "1 1 calc(50% - 12px)" } }}>
-        <Card>
-          <CardHeader
-            title="Security Settings"
-            titleTypographyProps={{
-              sx: {
-                fontSize: { xs: "1.1rem", sm: "1.25rem" },
-              },
-            }}
-          />
-          <CardContent>
-            <List>
-              <ListItem>
-                <ListItemIcon>
-                  <LockIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Two-Factor Authentication"
-                  secondary="Add an extra layer of security to your account"
-                />
-                <ListItemSecondaryAction>
-                  <Switch
-                    checked={securitySettings.twoFactorEnabled}
-                    onChange={handleSecurityChange("twoFactorEnabled")}
-                    disabled={loading}
-                  />
-                </ListItemSecondaryAction>
-              </ListItem>
+      <div className="w-full md:w-[calc(50%-12px)]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+             <h3 className="text-lg font-bold text-[#000054]">Security Settings</h3>
+          </div>
+          <div className="p-6 flex flex-col gap-6">
+            
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                     <MdLock size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800">Two-Factor Authentication</p>
+                    <p className="text-sm text-slate-500">Add an extra layer of security to your account</p>
+                  </div>
+               </div>
+               <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={securitySettings.twoFactorEnabled} onChange={handleSecurityChange("twoFactorEnabled")} disabled={loading} />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#000054]"></div>
+               </label>
+            </div>
 
-              <ListItem>
-                <ListItemIcon>
-                  <NotificationsIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Login Notifications"
-                  secondary="Get notified of new sign-ins to your account"
-                />
-                <ListItemSecondaryAction>
-                  <Switch
-                    checked={securitySettings.loginNotifications}
-                    onChange={handleSecurityChange("loginNotifications")}
-                    disabled={loading}
-                  />
-                </ListItemSecondaryAction>
-              </ListItem>
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                     <MdNotifications size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800">Login Notifications</p>
+                    <p className="text-sm text-slate-500">Get notified of new sign-ins to your account</p>
+                  </div>
+               </div>
+               <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={securitySettings.loginNotifications} onChange={handleSecurityChange("loginNotifications")} disabled={loading} />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#000054]"></div>
+               </label>
+            </div>
 
-              <ListItem>
-                <ListItemIcon>
-                  <DeviceIcon />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Device Tracking"
-                  secondary="Track and monitor devices that access your account"
-                />
-                <ListItemSecondaryAction>
-                  <Switch
-                    checked={securitySettings.deviceTracking}
-                    onChange={handleSecurityChange("deviceTracking")}
-                    disabled={loading}
-                  />
-                </ListItemSecondaryAction>
-              </ListItem>
-            </List>
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                     <MdDeviceHub size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800">Device Tracking</p>
+                    <p className="text-sm text-slate-500">Track and monitor devices that access your account</p>
+                  </div>
+               </div>
+               <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={securitySettings.deviceTracking} onChange={handleSecurityChange("deviceTracking")} disabled={loading} />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#000054]"></div>
+               </label>
+            </div>
 
             {!securitySettings.twoFactorEnabled && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                <Typography variant="body2">
-                  <strong>Recommended:</strong> Enable Two-Factor Authentication
-                  for better security.
-                </Typography>
-              </Alert>
+              <div className="mt-2 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg flex gap-3">
+                 <MdWarning className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                 <p className="text-sm text-amber-800">
+                    <strong>Recommended:</strong> Enable Two-Factor Authentication for better security.
+                 </p>
+              </div>
             )}
-          </CardContent>
-        </Card>
-      </Box>
+          </div>
+        </div>
+      </div>
 
       {/* Session Management */}
-      <Box sx={{ flex: { xs: "1 1 100%", md: "1 1 calc(50% - 12px)" } }}>
-        <Card>
-          <CardHeader title="Session Management" />
-          <CardContent>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Box>
-                <TextField
-                  fullWidth
-                  label="Session Timeout (minutes)"
+      <div className="w-full md:w-[calc(50%-12px)]">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+             <h3 className="text-lg font-bold text-[#000054]">Session Management</h3>
+          </div>
+          <div className="p-6 flex flex-col gap-6">
+            
+            <div className="space-y-1">
+               <label className="text-sm font-bold text-slate-800">Session Timeout (minutes)</label>
+               <input 
                   type="number"
+                  min={5}
+                  max={240}
                   value={securitySettings.sessionTimeout}
                   onChange={handleSecurityChange("sessionTimeout")}
                   onBlur={() => handleTextFieldSave("sessionTimeout")}
-                  size={isMobile ? "small" : "medium"}
-                  InputProps={{ inputProps: { min: 5, max: 240 } }}
-                  helperText="How long until inactive sessions are logged out"
-                />
-              </Box>
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] transition-colors"
+               />
+               <p className="text-xs text-slate-500 font-medium">How long until inactive sessions are logged out</p>
+            </div>
 
-              <Box>
-                <TextField
-                  fullWidth
-                  label="Password Expiry (days)"
+            <div className="space-y-1">
+               <label className="text-sm font-bold text-slate-800">Password Expiry (days)</label>
+               <input 
                   type="number"
+                  min={30}
+                  max={365}
                   value={securitySettings.passwordExpiry}
                   onChange={handleSecurityChange("passwordExpiry")}
                   onBlur={() => handleTextFieldSave("passwordExpiry")}
-                  size={isMobile ? "small" : "medium"}
-                  InputProps={{ inputProps: { min: 30, max: 365 } }}
-                  helperText="How often passwords must be changed"
-                />
-              </Box>
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] transition-colors"
+               />
+               <p className="text-xs text-slate-500 font-medium">How often passwords must be changed</p>
+            </div>
 
-              <Box>
-                <TextField
-                  fullWidth
-                  label="IP Whitelist"
-                  multiline
-                  rows={isMobile ? 2 : 3}
+            <div className="space-y-1">
+               <label className="text-sm font-bold text-slate-800">IP Whitelist</label>
+               <textarea 
+                  rows={3}
                   value={securitySettings.ipWhitelist}
                   onChange={handleSecurityChange("ipWhitelist")}
                   onBlur={() => handleTextFieldSave("ipWhitelist")}
-                  size={isMobile ? "small" : "medium"}
                   placeholder="192.168.1.1&#10;10.0.0.1&#10;203.0.113.1"
-                  helperText="Enter IP addresses, one per line. Leave empty to allow all IPs."
-                />
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000054]/50 focus:border-[#000054] transition-colors resize-none font-mono text-sm"
+               />
+               <p className="text-xs text-slate-500 font-medium">Enter IP addresses, one per line. Leave empty to allow all IPs.</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
 
       {/* Security Recommendations */}
-      <Box sx={{ flex: "1 1 100%" }}>
-        <Card>
-          <CardHeader
-            title="Security Recommendations"
-            titleTypographyProps={{
-              sx: {
-                fontSize: { xs: "1.1rem", sm: "1.25rem" },
-              },
-            }}
-          />
-          <CardContent>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-              {!securitySettings.twoFactorEnabled && (
-                <Box
-                  sx={{
-                    flex: {
-                      xs: "1 1 100%",
-                      sm: "1 1 calc(50% - 8px)",
-                      md: "1 1 calc(33.33% - 12px)",
-                    },
-                  }}
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <WarningIcon color="warning" />
-                    <Typography variant="body2">
-                      Enable Two-Factor Authentication
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
+      <div className="w-full">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+             <h3 className="text-lg font-bold text-[#000054]">Security Recommendations</h3>
+          </div>
+          <div className="p-6">
+            <div className="flex flex-wrap gap-4">
+               {!securitySettings.twoFactorEnabled && (
+                  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(33.33%-11px)] bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+                     <MdWarning className="text-amber-500 shrink-0" size={24} />
+                     <p className="text-sm font-medium text-amber-800">Enable Two-Factor Authentication</p>
+                  </div>
+               )}
 
-              {securitySettings.sessionTimeout > 120 && (
-                <Box
-                  sx={{
-                    flex: {
-                      xs: "1 1 100%",
-                      sm: "1 1 calc(50% - 8px)",
-                      md: "1 1 calc(33.33% - 12px)",
-                    },
-                  }}
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <WarningIcon color="warning" />
-                    <Typography variant="body2">
-                      Consider shorter session timeout
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
+               {securitySettings.sessionTimeout > 120 && (
+                  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(33.33%-11px)] bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+                     <MdWarning className="text-amber-500 shrink-0" size={24} />
+                     <p className="text-sm font-medium text-amber-800">Consider shorter session timeout</p>
+                  </div>
+               )}
 
-              {securitySettings.passwordExpiry > 90 && (
-                <Box
-                  sx={{
-                    flex: {
-                      xs: "1 1 100%",
-                      sm: "1 1 calc(50% - 8px)",
-                      md: "1 1 calc(33.33% - 12px)",
-                    },
-                  }}
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <WarningIcon color="warning" />
-                    <Typography variant="body2">
-                      Consider shorter password expiry
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
+               {securitySettings.passwordExpiry > 90 && (
+                  <div className="w-full sm:w-[calc(50%-8px)] md:w-[calc(33.33%-11px)] bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+                     <MdWarning className="text-amber-500 shrink-0" size={24} />
+                     <p className="text-sm font-medium text-amber-800">Consider shorter password expiry</p>
+                  </div>
+               )}
 
-              {securitySettings.twoFactorEnabled &&
+               {securitySettings.twoFactorEnabled &&
                 securitySettings.sessionTimeout <= 60 &&
                 securitySettings.passwordExpiry <= 90 && (
-                  <Box sx={{ flex: "1 1 100%" }}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <ShieldIcon color="success" />
-                      <Typography variant="body2" color="success.main">
-                        Your security settings look great! Keep up the good
-                        work.
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
+                  <div className="w-full bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-center gap-3">
+                     <MdShield className="text-emerald-500 shrink-0" size={24} />
+                     <p className="font-bold text-emerald-800">Your security settings look great! Keep up the good work.</p>
+                  </div>
+               )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Quick Actions */}
-      <Box sx={{ flex: "1 1 100%" }}>
-        <Card>
-          <CardHeader
-            title="Quick Actions"
-            titleTypographyProps={{
-              sx: {
-                fontSize: { xs: "1.1rem", sm: "1.25rem" },
-              },
-            }}
-          />
-          <CardContent>
-            <Box
-              sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 1, sm: 2 } }}
-            >
-              <Box sx={{ width: { xs: "100%", sm: "auto" } }}>
-                <Button
-                  variant="outlined"
+      <div className="w-full">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+             <h3 className="text-lg font-bold text-[#000054]">Quick Actions</h3>
+          </div>
+          <div className="p-6">
+            <div className="flex flex-wrap gap-3">
+               <button 
                   onClick={() => onSuccess("Session management coming soon!")}
-                  fullWidth={isMobile}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{
-                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                  }}
-                >
-                  {isMobile ? "Active Sessions" : "View Active Sessions"}
-                </Button>
-              </Box>
-              <Box sx={{ width: { xs: "100%", sm: "auto" } }}>
-                <Button
-                  variant="outlined"
+                  className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors w-full sm:w-auto"
+               >
+                  {window.innerWidth < 640 ? "Active Sessions" : "View Active Sessions"}
+               </button>
+               <button 
                   onClick={() => onSuccess("Device management coming soon!")}
-                  fullWidth={isMobile}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{
-                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                  }}
-                >
-                  {isMobile ? "Trusted Devices" : "Manage Trusted Devices"}
-                </Button>
-              </Box>
-              <Box sx={{ width: { xs: "100%", sm: "auto" } }}>
-                <Button
-                  variant="outlined"
+                  className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors w-full sm:w-auto"
+               >
+                  {window.innerWidth < 640 ? "Trusted Devices" : "Manage Trusted Devices"}
+               </button>
+               <button 
                   onClick={() => onSuccess("Activity log coming soon!")}
-                  fullWidth={isMobile}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{
-                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
-                  }}
-                >
-                  {isMobile ? "Security Log" : "View Security Log"}
-                </Button>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
-    </Box>
+                  className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors w-full sm:w-auto"
+               >
+                  {window.innerWidth < 640 ? "Security Log" : "View Security Log"}
+               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   );
 };
 

@@ -30,26 +30,35 @@ export const NotificationService = {
 
   subscribeToNotifications(
     userRole: string,
-    callback: (notifs: Notification[]) => void
+    callback: (notifs: Notification[]) => void,
+    onError?: (error: unknown) => void
   ) {
     // Role-based: admin sees all; managers/media see their types
-    let q = query(collection(db, COLLECTION), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const items: Notification[] = [];
-      snap.forEach((d) =>
-        items.push({ id: d.id, ...(d.data() as any) } as Notification)
-      );
-      // apply client-side role filter if needed
-      if (userRole && userRole !== "admin") {
-        const allowedTypes =
-          userRole === "manager"
-            ? ["athlete", "event", "contact"]
-            : ["blog", "media", "event"];
-        callback(items.filter((i) => allowedTypes.includes(i.type)));
-      } else {
-        callback(items);
+    const q = query(collection(db, COLLECTION), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        const items: Notification[] = [];
+        snap.forEach((d) =>
+          items.push({ id: d.id, ...d.data() } as Notification)
+        );
+        // apply client-side role filter if needed
+        if (userRole && userRole !== "admin") {
+          const allowedTypes =
+            userRole === "manager"
+              ? ["athlete", "event", "contact"]
+              : ["blog", "media", "event"];
+          callback(items.filter((i) => allowedTypes.includes(i.type)));
+        } else {
+          callback(items);
+        }
+      },
+      (error) => {
+        console.error("Failed to subscribe to notifications:", error);
+        callback([]);
+        onError?.(error);
       }
-    });
+    );
     return unsubscribe;
   },
 
@@ -62,7 +71,7 @@ export const NotificationService = {
     const snap = await getDocs(
       query(collection(db, COLLECTION), where("read", "==", false))
     );
-    const promises: Promise<any>[] = [];
+    const promises: Promise<void>[] = [];
     snap.forEach((d) =>
       promises.push(updateDoc(doc(db, COLLECTION, d.id), { read: true }))
     );
@@ -73,7 +82,7 @@ export const NotificationService = {
     await deleteDoc(doc(db, COLLECTION, id));
   },
 
-  async getNotificationsPaginated(pageSize = 20, startAfterDoc?: any) {
+  async getNotificationsPaginated(pageSize = 20, startAfterDoc?: unknown) {
     let q;
     if (startAfterDoc) {
       q = query(
@@ -92,7 +101,7 @@ export const NotificationService = {
     const snap = await getDocs(q);
     const items: Notification[] = [];
     snap.forEach((d) =>
-      items.push({ id: d.id, ...(d.data() as any) } as Notification)
+      items.push({ id: d.id, ...d.data() } as Notification)
     );
     return { items, lastDoc: snap.docs[snap.docs.length - 1] };
   },
@@ -114,13 +123,15 @@ export const NotificationService = {
     ];
     rows.push(headers.join(","));
     snap.forEach((d) => {
-      const n = d.data() as any;
+      const n = d.data();
       const notif = { id: d.id, ...n } as Notification;
       if (filterFn && !filterFn(notif)) return;
       const createdAt =
         notif.createdAt &&
-        (notif.createdAt.toDate
-          ? notif.createdAt.toDate().toISOString()
+        (typeof notif.createdAt === "object" && "toDate" in notif.createdAt && typeof (notif.createdAt as { toDate: () => Date }).toDate === "function"
+          ? (notif.createdAt as { toDate: () => Date }).toDate().toISOString()
+          : notif.createdAt instanceof Date
+          ? notif.createdAt.toISOString()
           : notif.createdAt);
       rows.push(
         [

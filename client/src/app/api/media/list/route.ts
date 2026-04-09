@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import "@/lib/firebase-admin"; // ensure admin SDK initialized
 import { getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Query, DocumentData, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { MediaFilters } from "@/types/media";
 
 export const runtime = "nodejs";
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     };
 
     const db = getFirestore();
-    let collectionRef: any = db.collection("bsm_media");
+    let collectionRef: Query<DocumentData> = db.collection("bsm_media");
 
     if (filters.category && filters.category !== "") {
       collectionRef = collectionRef.where("category", "==", filters.category);
@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
     collectionRef = collectionRef.orderBy("createdAt", "desc");
 
     const snapshot = await collectionRef.get();
-    const allAssets: any[] = [];
-    snapshot.forEach((doc: any) => {
+    const allAssets: Record<string, unknown>[] = [];
+    snapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
       const data = doc.data();
       allAssets.push({
         id: doc.id,
@@ -88,11 +88,11 @@ export async function GET(request: NextRequest) {
       const term = filters.search.toLowerCase();
       filtered = filtered.filter(
         (a) =>
-          (a.filename || "").toLowerCase().includes(term) ||
-          (a.originalFilename || "").toLowerCase().includes(term) ||
-          (a.caption || "").toLowerCase().includes(term) ||
-          (a.altText || "").toLowerCase().includes(term) ||
-          (a.description || "").toLowerCase().includes(term) ||
+          (String(a.filename || "")).toLowerCase().includes(term) ||
+          (String(a.originalFilename || "")).toLowerCase().includes(term) ||
+          (String(a.caption || "")).toLowerCase().includes(term) ||
+          (String(a.altText || "")).toLowerCase().includes(term) ||
+          (String(a.description || "")).toLowerCase().includes(term) ||
           (Array.isArray(a.tags) &&
             a.tags.some((t: string) => t.toLowerCase().includes(term)))
       );
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter(
         (a) =>
           Array.isArray(a.tags) &&
-          filters.tags!.some((tag) => a.tags.includes(tag))
+          filters.tags!.some((tag) => (a.tags as string[]).includes(tag))
       );
     }
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { FiUserPlus, FiTrash2, FiEdit2, FiUser, FiMail, FiLock, FiUserCheck } from 'react-icons/fi';
 import { ROLES, createUser, getAllUsers, deleteUser } from '@/services/userManagementService';
 import { selectCurrentUser } from '@/store/Auth/authSlice';
@@ -18,7 +18,6 @@ interface User {
 
 const UsersPage = () => {
   const router = useRouter();
-  const dispatch = useDispatch();
   const currentUser = useSelector(selectCurrentUser);
   
   const [users, setUsers] = useState<User[]>([]);
