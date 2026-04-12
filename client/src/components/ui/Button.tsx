@@ -6,7 +6,6 @@ import { UrlObject } from 'url';
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'link' | 'custom' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 type ButtonType = 'button' | 'submit' | 'reset' | undefined;
-type Url = string | UrlObject;
 
 export interface ButtonBaseProps {
   variant?: ButtonVariant;

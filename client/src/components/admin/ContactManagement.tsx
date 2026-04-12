@@ -152,7 +152,7 @@ export default function ContactManagement({
                 it.athleteName = athlete.name;
                 it.subject = `Enquiry for athlete ${athlete.name}`;
               }
-            } catch (err) {}
+            } catch {}
           }
           return it;
         });
@@ -217,7 +217,7 @@ export default function ContactManagement({
         });
         setLoading(false);
       },
-      (error) => {
+      () => {
         setLoading(false);
       },
     );
@@ -290,7 +290,7 @@ export default function ContactManagement({
           });
           toast.success("Contact archived successfully");
         }
-      } catch (error) {
+      } catch {
         toast.error("Failed to archive");
       }
     })();
@@ -323,7 +323,7 @@ export default function ContactManagement({
         await deleteDoc(doc(db, collectionName, contactId));
         setContacts((prev) => prev.filter((c) => c.id !== contactId));
         toast.success(successMessage);
-      } catch (error) {
+      } catch {
         toast.error("Failed to delete");
       }
     })();
@@ -340,7 +340,7 @@ export default function ContactManagement({
             updatedAt: new Date().toISOString(),
           });
           toast.success("Reply sent successfully");
-        } catch (err) {
+        } catch {
           try {
             await updateDoc(doc(db, "enquiries", selectedContact.id), {
               status: "responded",
@@ -348,7 +348,7 @@ export default function ContactManagement({
               updatedAt: new Date().toISOString(),
             });
             toast.success("Reply sent to enquiry");
-          } catch (e) {
+          } catch {
             toast.error("Failed to send reply");
           }
         }

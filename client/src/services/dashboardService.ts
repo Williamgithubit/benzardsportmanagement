@@ -6,10 +6,7 @@ import {
   orderBy,
   limit,
   Timestamp,
-  getDoc,
-  doc,
   getCountFromServer,
-  collectionGroup,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -55,15 +52,15 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     const [
       usersCount,
       programsCount,
-      eventsCount,
+      _eventsCount,
       tasksCount,
       certificatesCount,
       admissionsCount,
       blogPostsCount,
       athletesCount,
       scoutedAthletesCount,
-      trainingProgramsCount,
-      recentRegistrationsCount,
+      _trainingProgramsCount,
+      _recentRegistrationsCount,
       contactSubmissionsCount
     ] = await Promise.all([
       getCountFromServer(collection(db, "users")).catch(() => ({ data: () => ({ count: 0 }) })),

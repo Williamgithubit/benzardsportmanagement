@@ -26,7 +26,7 @@ const UsersPage = () => {
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
-    role: ROLES.TEACHER,
+    role: ROLES.ATHLETE,
     password: '',
     confirmPassword: ''
   });
@@ -78,7 +78,7 @@ const UsersPage = () => {
       setNewUser({
         name: '',
         email: '',
-        role: ROLES.TEACHER,
+        role: ROLES.ATHLETE,
         password: '',
         confirmPassword: ''
       });
@@ -110,9 +110,11 @@ const UsersPage = () => {
   const getRoleBadge = (role: string) => {
     const roleClasses: Record<string, string> = {
       [ROLES.ADMIN]: 'bg-purple-100 text-purple-800',
-      [ROLES.TEACHER]: 'bg-blue-100 text-blue-800',
-      [ROLES.PARENT]: 'bg-green-100 text-green-800',
-      [ROLES.STUDENT]: 'bg-yellow-100 text-yellow-800'
+      [ROLES.MANAGER]: 'bg-sky-100 text-sky-800',
+      [ROLES.COACH]: 'bg-blue-100 text-blue-800',
+      [ROLES.ATHLETE]: 'bg-emerald-100 text-emerald-800',
+      [ROLES.SPONSOR]: 'bg-amber-100 text-amber-800',
+      [ROLES.MEDIA]: 'bg-rose-100 text-rose-800'
     };
     
     return (
@@ -209,9 +211,11 @@ const UsersPage = () => {
                     className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#000054] focus:ring-[#000054]"
                     required
                   >
-                    <option value={ROLES.TEACHER}>Teacher</option>
-                    <option value={ROLES.PARENT}>Parent</option>
-                    <option value={ROLES.STUDENT}>Student</option>
+                    <option value={ROLES.MANAGER}>Manager</option>
+                    <option value={ROLES.COACH}>Coach</option>
+                    <option value={ROLES.ATHLETE}>Athlete</option>
+                    <option value={ROLES.SPONSOR}>Sponsor</option>
+                    <option value={ROLES.MEDIA}>Media</option>
                     {currentUser?.role === ROLES.ADMIN && (
                       <option value={ROLES.ADMIN}>Administrator</option>
                     )}

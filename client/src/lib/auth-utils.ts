@@ -1,8 +1,7 @@
 import { getServerSession } from 'next-auth/next';
-import { NextRequest } from 'next/server';
 import { authOptions } from './auth';
 
-export const requireAuth = async (req: NextRequest) => {
+export const requireAuth = async () => {
   const session = await getServerSession(authOptions);
   
   if (!session?.user) {
@@ -12,8 +11,8 @@ export const requireAuth = async (req: NextRequest) => {
   return session;
 };
 
-export const requireAdmin = async (req: NextRequest) => {
-  const session = await requireAuth(req);
+export const requireAdmin = async () => {
+  const session = await requireAuth();
   
   if (session.user.role !== 'admin') {
     throw new Error('Forbidden');

@@ -1,184 +1,112 @@
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, deleteUser as deleteAuthUser } from 'firebase/auth';
-import { db } from './firebase';
-import auth from './firebase';
+import { adminApiFetch } from "@/services/adminApi";
 
-// Role-based access control constants
 export const ROLES = {
-  ADMIN: 'admin',
-  TEACHER: 'teacher',
-  PARENT: 'parent',
-  STUDENT: 'student'
+  ADMIN: "admin",
+  MANAGER: "manager",
+  COACH: "coach",
+  ATHLETE: "athlete",
+  SPONSOR: "sponsor",
+  MEDIA: "media",
 };
 
-// Check if user has admin role
-const isAdmin = async (userId) => {
-  try {
-    if (!userId) return false;
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    return userDoc.exists() && userDoc.data().role === ROLES.ADMIN;
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return false;
+const USERS_ENDPOINT = "/api/admin/users";
+
+const normalizeUser = (user) => ({
+  id: user.id,
+  email: user.email || "",
+  name: user.name || user.email || "User",
+  role: user.role || ROLES.ATHLETE,
+  status:
+    user.status === "inactive" || user.status === "suspended"
+      ? user.status
+      : "active",
+  lastLogin: user.lastLogin || null,
+  createdAt: user.createdAt || new Date().toISOString(),
+  emailVerified: Boolean(user.emailVerified),
+  photoURL: user.photoURL || null,
+  phoneNumber: user.phoneNumber || null,
+});
+
+const toPayload = (userData = {}) => {
+  const payload = {};
+
+  if (typeof userData.email === "string") {
+    payload.email = userData.email.trim();
   }
-};
 
-const generatePassword = () => {
-  return Math.random().toString(36).slice(-8);
-};
-
-export const createUser = async (userData, currentUserId) => {
-  try {
-    const { email, name, role, password } = userData;
-    
-    // Check if current user is admin
-    const isUserAdmin = await isAdmin(currentUserId);
-    if (!isUserAdmin) {
-      throw new Error('Unauthorized: Only admin users can create new users');
-    }
-    
-    // Validate role
-    if (!Object.values(ROLES).includes(role)) {
-      throw new Error(`Invalid role. Must be one of: ${Object.values(ROLES).join(', ')}`);
-    }
-    
-    // Check if password is provided and meets requirements
-    if (!password || password.length < 8) {
-      throw new Error('Password must be at least 8 characters long');
-    }
-    
-    // Create user with email and password in Firebase Authentication
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    // Create user document in Firestore
-    const userDoc = {
-      uid: user.uid,
-      email,
-      name,
-      role,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'active',
-      emailVerified: false,
-    };
-
-    await addDoc(collection(db, 'users'), userDoc);
-    
-    console.log('Successfully created user:', { uid: user.uid, email, role });
-    // Return user data without the password for security
-    const { password: _, ...userDataWithoutPassword } = userData;
-    return { 
-      id: user.uid, 
-      ...userDataWithoutPassword,
-      // Don't return the password in the response
-      password: '********' // Placeholder to indicate password was set
-    };
-  } catch (error) {
-    console.error('Error creating user:', error);
-    throw new Error(error.message);
+  if (typeof userData.name === "string") {
+    payload.name = userData.name.trim();
   }
-};
 
-// Helper function to convert Firestore Timestamp to plain object
-const convertTimestamps = (obj) => {
-  if (!obj) return obj;
-  
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    // Convert Firestore Timestamp to ISO string
-    if (value && typeof value === 'object' && 'toDate' in value) {
-      acc[key] = value.toDate().toISOString();
-    } 
-    // Recursively process nested objects
-    else if (value && typeof value === 'object' && !Array.isArray(value)) {
-      acc[key] = convertTimestamps(value);
-    } 
-    // Keep arrays and other values as is
-    else {
-      acc[key] = value;
-    }
-    return acc;
-  }, {});
+  if (typeof userData.password === "string" && userData.password.trim()) {
+    payload.password = userData.password.trim();
+  }
+
+  if (typeof userData.role === "string" && userData.role.trim()) {
+    payload.role = userData.role.trim();
+  }
+
+  if (typeof userData.status === "string") {
+    payload.status = userData.status;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(userData, "phoneNumber")) {
+    payload.phoneNumber =
+      typeof userData.phoneNumber === "string" && userData.phoneNumber.trim()
+        ? userData.phoneNumber.trim()
+        : null;
+  }
+
+  return payload;
 };
 
 export const getAllUsers = async () => {
-  try {
-    const usersCol = collection(db, 'users');
-    const userSnapshot = await getDocs(usersCol);
-    const users = userSnapshot.docs.map((doc) => {
-      const userData = doc.data();
-      // Convert all Timestamp fields to serializable format
-      const serializedData = convertTimestamps(userData);
-      return {
-        id: doc.id,
-        ...serializedData
-      };
-    });
-    console.log('Fetched users:', users);
-    return users;
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw new Error(error.message);
-  }
+  const users = await adminApiFetch(USERS_ENDPOINT);
+  return users.map(normalizeUser);
 };
 
-export const updateUserRole = async (userId, role) => {
-  try {
-    const userRef = doc(db, 'users', userId);
-    const updatedAt = new Date().toISOString();
-    await updateDoc(userRef, { 
-      role, 
-      updatedAt,
-      // Ensure the updatedAt is also stored as a Firestore timestamp
-      updatedAtTimestamp: new Date(updatedAt)
-    });
-    console.log(`Updated role for user ${userId} to ${role}`);
-    return { 
-      userId, 
-      role,
-      updatedAt
-    };
-  } catch (error) {
-    console.error('Error updating user role:', error);
-    throw new Error(error.message);
-  }
+export const createUser = async (userData) => {
+  const createdUser = await adminApiFetch(USERS_ENDPOINT, {
+    method: "POST",
+    body: JSON.stringify({
+      ...toPayload(userData),
+      status: userData?.status || "active",
+    }),
+  });
+
+  return normalizeUser(createdUser);
 };
 
-/**
- * Delete a user from both Authentication and Firestore
- * @param {string} userId - The ID of the user to delete
- * @param {string} authUid - The Firebase Auth UID of the user (optional, falls back to userId)
- * @returns {Promise<Object>} - The result of the deletion
- */
-export const deleteUser = async (userId, authUid = null) => {
-  try {
-    const userRef = doc(db, 'users', userId);
-    
-    // Delete user document from Firestore
-    await deleteDoc(userRef);
-    
-    // If authUid is provided, delete the auth user
-    if (authUid) {
-      try {
-        // Note: This requires the admin SDK on the server side
-        // For client-side deletion, you would typically call a cloud function
-        console.log(`User with UID ${authUid} needs to be deleted from Authentication using a Cloud Function`);
-        // In a real app, you would call a cloud function here
-        // await deleteAuthUser(authUid);
-      } catch (authError) {
-        console.warn('Could not delete auth user:', authError);
-        // Continue even if auth deletion fails, as we've already deleted the Firestore doc
-      }
-    }
-    
-    console.log(`Successfully deleted user ${userId}`);
-    return { 
-      success: true, 
-      userId,
-      message: 'User deleted successfully' 
-    };
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    throw new Error(`Failed to delete user: ${error.message}`);
-  }
+export const updateUser = async (userId, userData) => {
+  const updatedUser = await adminApiFetch(
+    `${USERS_ENDPOINT}/${encodeURIComponent(userId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(toPayload(userData)),
+    },
+  );
+
+  return normalizeUser(updatedUser);
 };
+
+export const updateUserRole = async (userId, role, userData = {}) =>
+  updateUser(userId, { ...userData, role });
+
+export const deleteUser = async (userId, role) => {
+  void role;
+
+  return adminApiFetch(`${USERS_ENDPOINT}/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+};
+
+const userManagementService = {
+  getAllUsers,
+  createUser,
+  updateUser,
+  updateUserRole,
+  deleteUser,
+};
+
+export { userManagementService };
+export default userManagementService;

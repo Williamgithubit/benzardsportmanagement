@@ -109,6 +109,7 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
     return () => {
       window.clearInterval(intervalId);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const handleFileUpload = async (files: FileList | null) => {

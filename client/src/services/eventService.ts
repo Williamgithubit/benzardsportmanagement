@@ -9,7 +9,6 @@ import {
   orderBy,
   where,
   Timestamp,
-  QueryDocumentSnapshot,
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";

@@ -75,7 +75,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
 
       setEditingProfile(false);
       onSuccess("Profile updated successfully!");
-    } catch (err) {
+    } catch {
       onError("Failed to update profile");
     } finally {
       setLoading(false);

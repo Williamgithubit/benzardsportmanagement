@@ -1,5 +1,15 @@
 // Define the user roles
-export type UserRole = 'admin' | 'teacher' | 'parent' | 'student' | 'user';
+export type UserRole =
+  | 'admin'
+  | 'manager'
+  | 'coach'
+  | 'athlete'
+  | 'sponsor'
+  | 'media'
+  | 'teacher'
+  | 'parent'
+  | 'student'
+  | 'user';
 
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 

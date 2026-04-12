@@ -119,6 +119,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

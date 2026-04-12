@@ -28,6 +28,37 @@ const toAthleteName = (athlete: Record<string, unknown>) => {
   return fullName || "Unknown athlete";
 };
 
+const SPORTS_PROGRAM_KEYWORDS = [
+  "football",
+  "soccer",
+  "athlete",
+  "training",
+  "scouting",
+  "tournament",
+  "camp",
+  "academy",
+  "match",
+  "club",
+  "fitness",
+];
+
+const hasSportsProgramContext = (program: Record<string, unknown>) => {
+  const combinedValue = [
+    program.type,
+    program.category,
+    program.title,
+    program.name,
+    program.description,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  return SPORTS_PROGRAM_KEYWORDS.some((keyword) =>
+    combinedValue.includes(keyword),
+  );
+};
+
 const toCollectionDocs = async (
   name: string,
 ): Promise<Array<Record<string, unknown>>> => {
@@ -152,6 +183,8 @@ export async function GET(request: NextRequest) {
       contactSubmissions: preferredContactCollection.length,
     };
 
+    const sportsPrograms = programs.filter(hasSportsProgramContext);
+
     const recentActivity = [
       ...users.map((user) => ({
         id: `user_${user.id}`,
@@ -161,10 +194,10 @@ export async function GET(request: NextRequest) {
           getDateFromValue(user.createdAt)?.toISOString() ??
           new Date().toISOString(),
       })),
-      ...programs.map((program) => ({
+      ...sportsPrograms.map((program) => ({
         id: `program_${program.id}`,
         type: "program_created",
-        description: `New program "${(program.title as string) || (program.name as string) || "Untitled"}" created`,
+        description: `Training program "${(program.title as string) || (program.name as string) || "Untitled"}" added`,
         timestamp:
           getDateFromValue(program.createdAt)?.toISOString() ??
           new Date().toISOString(),
@@ -200,6 +233,14 @@ export async function GET(request: NextRequest) {
         description: `New contact from ${(contact.name as string) || (contact.email as string) || "Anonymous"}${contact.subject ? `: ${contact.subject as string}` : ""}`,
         timestamp:
           getDateFromValue(contact.createdAt)?.toISOString() ??
+          new Date().toISOString(),
+      })),
+      ...blogPosts.map((post) => ({
+        id: `blog_${post.id}`,
+        type: "blog_published",
+        description: `New story published: "${(post.title as string) || "Untitled"}"`,
+        timestamp:
+          getDateFromValue(post.publishedAt ?? post.createdAt)?.toISOString() ??
           new Date().toISOString(),
       })),
     ]

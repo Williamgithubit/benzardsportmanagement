@@ -75,7 +75,7 @@ export const firebaseAuth = _auth;
 export const firebaseFirestore = _firestore;
 export const firebaseStorage = _storage;
 
-export default {
+const firebaseExports = {
   getFirebaseClient,
   firebaseApp,
   firebaseAuth,
@@ -83,3 +83,5 @@ export default {
   firebaseStorage,
   firebaseClientConfigured,
 };
+
+export default firebaseExports;

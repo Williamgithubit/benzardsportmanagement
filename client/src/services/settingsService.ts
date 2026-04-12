@@ -1,19 +1,11 @@
 import { 
-  collection, 
   doc, 
-  addDoc, 
   updateDoc, 
-  deleteDoc, 
-  getDocs, 
   getDoc, 
-  query, 
-  where, 
-  orderBy, 
   setDoc
 } from 'firebase/firestore';
 import { 
   updatePassword, 
-  updateEmail, 
   reauthenticateWithCredential, 
   EmailAuthProvider 
 } from 'firebase/auth';

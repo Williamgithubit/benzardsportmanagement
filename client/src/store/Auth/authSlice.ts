@@ -21,7 +21,18 @@ type StoredUserData = Partial<User> &
     phone?: string;
   };
 
-const USER_ROLES: UserRole[] = ['admin', 'teacher', 'parent', 'student', 'user'];
+const USER_ROLES: UserRole[] = [
+  'admin',
+  'manager',
+  'coach',
+  'athlete',
+  'sponsor',
+  'media',
+  'teacher',
+  'parent',
+  'student',
+  'user',
+];
 const USER_STATUSES = ['active', 'inactive', 'suspended'] as const;
 
 const isUserRole = (value: unknown): value is UserRole =>

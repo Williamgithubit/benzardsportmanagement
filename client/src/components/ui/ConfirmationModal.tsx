@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import Button from './Button';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -58,12 +57,14 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const typeStyles = getTypeStyles();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();

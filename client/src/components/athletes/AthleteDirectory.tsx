@@ -266,7 +266,7 @@ export default function AthleteDirectory({
       await AthleteService.deleteAthlete(athleteToDelete);
       toast.success("Athlete deleted successfully");
       void loadAthletes(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete athlete");
     } finally {
       setDeleteConfirmOpen(false);
@@ -339,8 +339,8 @@ export default function AthleteDirectory({
       setFormDialogOpen(false);
       if (onCloseDialog) onCloseDialog();
       void loadAthletes(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      console.error("Form submit error", error);
       toast.error(`Failed to ${formMode} athlete`);
     }
   };
@@ -359,7 +359,7 @@ export default function AthleteDirectory({
       window.URL.revokeObjectURL(url);
 
       toast.success("Athletes exported successfully");
-    } catch (error) {
+    } catch {
       toast.error("Failed to export athletes");
     }
   };
@@ -383,8 +383,7 @@ export default function AthleteDirectory({
 
       setImportDialogOpen(false);
       setImportFile(null);
-      void loadAthletes(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to import athletes");
     } finally {
       setImporting(false);
@@ -407,7 +406,7 @@ export default function AthleteDirectory({
       setSelectedAthletes([]);
       setBulkDialogOpen(false);
       void loadAthletes(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to perform bulk action");
     }
   };

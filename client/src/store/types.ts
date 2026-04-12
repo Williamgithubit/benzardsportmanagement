@@ -1,5 +1,3 @@
-import { User } from "@/types/auth";
-
 // Define login credentials type
 export interface LoginCredentials {
   email: string;

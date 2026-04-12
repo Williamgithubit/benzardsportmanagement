@@ -27,7 +27,8 @@ export interface RecentActivity {
     | "task_completed"
     | "athlete_added"
     | "training_completed"
-    | "contact_received";
+    | "contact_received"
+    | "blog_published";
   description: string;
   timestamp: string;
   user?: string;

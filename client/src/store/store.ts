@@ -14,13 +14,13 @@ import { userManagementApi } from './Admin/userManagementApi';
 // Create a no-op storage for server-side rendering
 const createNoopStorage = () => {
   return {
-    getItem(_key: string): Promise<string | null> {
+    getItem(): Promise<string | null> {
       return Promise.resolve(null);
     },
     setItem(_key: string, value: string): Promise<string> {
       return Promise.resolve(value);
     },
-    removeItem(_key: string): Promise<void> {
+    removeItem(): Promise<void> {
       return Promise.resolve();
     },
   };

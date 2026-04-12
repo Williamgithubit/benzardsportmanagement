@@ -7,9 +7,7 @@ import {
   deleteDoc,
   query, 
   orderBy, 
-  serverTimestamp,
-  Timestamp,
-  connectFirestoreEmulator
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { FirebaseAdmissionApplication } from './firebaseAdmissionService';

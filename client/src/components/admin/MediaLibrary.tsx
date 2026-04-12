@@ -5,10 +5,8 @@ import {
   MdEdit,
   MdDownload,
   MdSearch,
-  MdFilterList,
   MdViewModule,
   MdViewList,
-  MdFolder,
   MdImage,
   MdVideoFile,
   MdAudioFile,
@@ -16,7 +14,6 @@ import {
   MdDescription,
   MdMoreVert,
   MdPhotoLibrary,
-  MdInfo,
   MdContentCopy,
   MdClose,
 } from "react-icons/md";
@@ -108,6 +105,7 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     loadFolders();
     loadTags();
     loadStorageStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const loadMediaFiles = async () => {

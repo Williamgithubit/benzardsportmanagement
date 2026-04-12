@@ -1,11 +1,6 @@
 import { 
   collection, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  limit as firestoreLimit,
-  Timestamp 
+  getDocs
 } from 'firebase/firestore';
 import { db } from './firebase';
 

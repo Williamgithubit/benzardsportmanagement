@@ -13,7 +13,6 @@ import {
 import {
   Event,
   CreateEventData,
-  UpdateEventData,
   createEvent,
   updateEvent,
   deleteEvent,
@@ -96,6 +95,7 @@ const EventManagement: React.FC<EventManagementProps> = ({
 
   useEffect(() => {
     filterEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, searchTerm, statusFilter, categoryFilter]);
 
   const loadEvents = async (

@@ -78,6 +78,7 @@ const api = {
     ];
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   registerForEvent: async (userId, eventId) => {
     await new Promise(resolve => setTimeout(resolve, 500));
     return {
@@ -87,7 +88,7 @@ const api = {
   },
 
   // Contact
-  sendContactMessage: async (messageData) => {
+  sendContactMessage: async () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     return {
       success: true,
@@ -110,4 +111,5 @@ const api = {
   }
 };
 
+export default api;
 export default api;

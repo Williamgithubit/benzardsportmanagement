@@ -9,7 +9,6 @@ import {
   orderBy, 
   where, 
   serverTimestamp,
-  Timestamp,
   limit as firestoreLimit,
   startAfter,
   getDoc
@@ -20,7 +19,6 @@ import {
   MediaFilters, 
   MediaPagination, 
   MediaAnalytics,
-  UserMediaRole,
   MediaPermissions
 } from '@/types/media';
 

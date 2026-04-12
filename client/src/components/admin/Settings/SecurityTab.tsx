@@ -113,7 +113,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({ onSuccess, onError }) => {
 
       setSecuritySettings(newSettings);
       onSuccess("Security settings updated successfully!");
-    } catch (err) {
+    } catch {
       onError("Failed to update security settings");
     } finally {
       setLoading(false);

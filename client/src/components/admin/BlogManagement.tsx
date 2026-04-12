@@ -158,7 +158,8 @@ const BlogManagement: React.FC<BlogManagementProps> = ({
       }
 
       // Remove _featuredImageFile from the data sent to createBlogPost
-      const { _featuredImageFile, ...postData } = updatedFormData;
+      const postData = { ...updatedFormData };
+      delete postData._featuredImageFile;
 
       await createBlogPost(
         postData,
@@ -204,7 +205,8 @@ const BlogManagement: React.FC<BlogManagementProps> = ({
       }
 
       // Remove _featuredImageFile from the data sent to updateBlogPost
-      const { _featuredImageFile, ...postData } = updatedFormData;
+      const postData = { ...updatedFormData };
+      delete postData._featuredImageFile;
 
       const updateData: UpdateBlogPostData = {
         id: editingPost.id,

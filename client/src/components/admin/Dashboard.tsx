@@ -7,12 +7,10 @@ import {
   MdAdd,
   MdSchedule,
   MdRefresh,
-  MdStorage,
   MdOutlineFitnessCenter,
   MdEmojiEvents,
   MdCreate,
   MdContactMail,
-  MdArrowOutward,
   MdTrendingUp,
   MdWorkspacePremium,
   MdFlashOn,
@@ -23,7 +21,6 @@ import {
   DashboardStats,
   RecentActivity 
 } from '@/services/adminDataService';
-import { seedSampleData } from '@/utils/seedDashboardData';
 import QuickActions from './QuickActions';
 import SportsAnalytics from './SportsAnalytics';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -35,7 +32,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [seeding, setSeeding] = useState(false);
   const currentUser = useAppSelector((state) => state.auth.user);
 
   const loadDashboardData = async (
@@ -67,20 +63,6 @@ const Dashboard = () => {
     await loadDashboardData(false, true);
   };
 
-  const handleSeedData = async () => {
-    try {
-      setSeeding(true);
-      await seedSampleData();
-      // Refresh data after seeding
-      await loadDashboardData(false, true);
-    } catch (err) {
-      console.error('Error seeding data:', err);
-      setError('Failed to seed sample data');
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   useEffect(() => {
     void loadDashboardData();
 
@@ -109,6 +91,8 @@ const Dashboard = () => {
         return <MdCheckCircle className="text-slate-500" size={24} />;
       case 'contact_received':
         return <MdContactMail className="text-blue-500" size={24} />;
+      case 'blog_published':
+        return <MdCreate className="text-secondary" size={24} />;
       default:
         return <MdAdd className="text-slate-500" size={24} />;
     }
@@ -127,6 +111,8 @@ const Dashboard = () => {
         return 'text-slate-600 border-slate-600 bg-slate-50';
       case 'contact_received':
         return 'text-blue-600 border-blue-600 bg-blue-50';
+      case 'blog_published':
+        return 'text-secondary border-secondary bg-secondary/5';
       default:
         return 'text-slate-600 border-slate-600 bg-slate-50';
     }
@@ -298,16 +284,12 @@ const Dashboard = () => {
             <div className="mt-5 flex flex-wrap gap-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
                 <MdFlashOn size={16} />
-                Real-time Firestore insights
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600">
-                <MdArrowOutward size={16} />
-                Tailwind dashboard shell active
+                Real-time insights
               </div>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:w-auto">
+          <div className="grid gap-3 xl:w-auto">
             <button
               onClick={handleRefresh}
               disabled={loading || refreshing}
@@ -319,15 +301,6 @@ const Dashboard = () => {
               />
               <span>Refresh Data</span>
             </button>
-
-          <button
-            onClick={handleSeedData}
-            disabled={loading || refreshing || seeding}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-secondary px-4 text-sm font-semibold text-white shadow-[0_24px_48px_-28px_rgba(0,0,84,0.75)] transition hover:bg-secondary-hover disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <MdStorage size={18} />
-            <span>{seeding ? 'Seeding...' : 'Seed Sample Data'}</span>
-          </button>
         </div>
       </div>
       </section>

@@ -49,6 +49,8 @@ const sendAdmissionIdEmail = async (emailData: AdmissionEmailData): Promise<bool
 // Export both named and default for compatibility
 export { sendAdmissionIdEmail };
 
-export default {
+const emailService = {
   sendAdmissionIdEmail,
 };
+
+export default emailService;

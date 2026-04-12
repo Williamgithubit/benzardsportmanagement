@@ -42,6 +42,7 @@ const BlogReactions: React.FC<BlogReactionsProps> = ({
     if (user) {
       void loadUserReaction();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, postId]);
 
   const loadUserReaction = async () => {

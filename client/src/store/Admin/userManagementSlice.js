@@ -91,7 +91,7 @@ const userManagementSlice = createSlice({
         state.error = null;
         state.success = false;
       })
-      .addCase(addNewUser.fulfilled, (state, action) => {
+      .addCase(addNewUser.fulfilled, (state) => {
         state.loading = false;
         state.success = true;
         // Avoid duplicating users; rely on fetchAllUsers in UserManagement

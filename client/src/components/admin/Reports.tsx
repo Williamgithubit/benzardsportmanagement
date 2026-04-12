@@ -22,23 +22,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  getAnalyticsData,
-  getUserEngagementMetrics,
-  getProgramPerformanceMetrics,
+  getReportsData,
   AnalyticsData,
   ProgramPerformance,
   UserEngagementMetrics,
 } from "@/services/reportsService";
 import { Skeleton } from "@/components/ui/Skeleton";
-
-const COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#8884D8",
-  "#82CA9D",
-];
 
 const formatDate = (date: Date | string | undefined): string => {
   if (!date) return "N/A";
@@ -76,11 +65,8 @@ const Reports: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [analytics, engagement, performance] = await Promise.all([
-        getAnalyticsData() as Promise<AnalyticsData>,
-        getUserEngagementMetrics() as Promise<UserEngagementMetrics>,
-        getProgramPerformanceMetrics() as Promise<ProgramPerformance[]>,
-      ]);
+      const { analytics, engagementMetrics, programPerformance: performance } =
+        await getReportsData();
 
       // Transform performance data to match state type
       const transformedPerformance = performance.map(
@@ -97,7 +83,7 @@ const Reports: React.FC = () => {
       );
 
       setAnalyticsData(analytics);
-      setEngagementMetrics(engagement);
+      setEngagementMetrics(engagementMetrics);
       setProgramPerformance(transformedPerformance);
     } catch (err) {
       setError(
@@ -174,7 +160,8 @@ const Reports: React.FC = () => {
           className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border-2 border-[#000054] text-[#000054] hover:bg-[#000054] hover:text-white transition-colors font-bold w-full sm:w-auto disabled:opacity-50"
         >
           <MdRefresh size={20} className={loading ? "animate-spin" : ""} />
-          <span>{window.innerWidth < 640 ? "Refresh" : "Refresh Data"}</span>
+          <span className="sm:hidden">Refresh</span>
+          <span className="hidden sm:inline">Refresh Data</span>
         </button>
       </div>
 

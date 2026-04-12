@@ -8,7 +8,6 @@ interface UseSplashScreenOptions {
 }
 
 export function useSplashScreen({ 
-  minDisplayTime = 2000, 
   enabled = true 
 }: UseSplashScreenOptions = {}) {
   const [isLoading, setIsLoading] = useState(enabled);

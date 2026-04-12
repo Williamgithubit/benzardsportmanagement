@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
       createdAt: string;
       emailVerified: boolean;
       photoURL: string | null;
+      phoneNumber: string | null;
     }
     
     // Format users for the frontend
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest) {
         createdAt: user.metadata.creationTime,
         emailVerified: user.emailVerified,
         photoURL: user.photoURL || (firestoreData.photoURL ? String(firestoreData.photoURL) : null),
+        phoneNumber: user.phoneNumber || (firestoreData.phoneNumber ? String(firestoreData.phoneNumber) : null),
       };
     });
 
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const userData = await request.json();
-    const { email, password, name, role, status } = userData;
+    const { email, password, name, role, status, phoneNumber } = userData;
 
     // Validate required fields
     if (!email || !password || !name || !role) {
@@ -151,6 +153,8 @@ export async function POST(request: NextRequest) {
       password,
       displayName: name,
       emailVerified: true,
+      disabled: status === 'inactive' || status === 'suspended',
+      phoneNumber: typeof phoneNumber === 'string' && phoneNumber.trim() ? phoneNumber.trim() : undefined,
     });
 
     // Set custom claims for role
@@ -166,7 +170,9 @@ export async function POST(request: NextRequest) {
       displayName: name,
       role,
       status: status || 'active',
+      phoneNumber: typeof phoneNumber === 'string' && phoneNumber.trim() ? phoneNumber.trim() : null,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       lastLogin: null,
     });
 
@@ -176,6 +182,7 @@ export async function POST(request: NextRequest) {
       name: userRecord.displayName,
       role,
       status: status || 'active',
+      phoneNumber: userRecord.phoneNumber || null,
       message: 'User created successfully'
     });
   } catch (error: unknown) {
