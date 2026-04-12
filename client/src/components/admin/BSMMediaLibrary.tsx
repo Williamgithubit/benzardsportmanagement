@@ -298,7 +298,7 @@ const BSMMediaLibrary: React.FC<BSMMediaLibraryProps> = ({
   );
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative mt-10">
       <Toaster position="top-right" />
 
       {/* Header */}

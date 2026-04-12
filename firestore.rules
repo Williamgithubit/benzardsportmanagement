@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+
+    // Helper function to check if user has specific role
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+
+    // Helper function to check if user has any of the specified roles
+    function hasAnyRole(roles) {
+      return isAuthenticated() && request.auth.token.role in roles;
+    }
+
+    // Users collection - for analytics and user management
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        hasAnyRole(['admin', 'manager', 'statistician']) ||
+        request.auth.uid == userId
+      );
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Athletes collection - PUBLIC READ, admin write
+    match /athletes/{athleteId} {
+      // Allow public read access so athletes page works for everyone
+      allow read: if true;
+      // Only admins, managers, and coaches can create/update/delete
+      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']);
+    }
+
+    // Blog Posts collection - PUBLIC READ for published posts, admin write
+    match /blogPosts/{postId} {
+      // Allow public read access for published posts
+      allow read: if true;
+      // Only admins and media can create/update/delete
+      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'media', 'manager']);
+    }
+
+    // Programs collection - for program management and analytics
+    match /programs/{programId} {
+      // Public can read active programs
+      allow read: if true;
+      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']);
+
+      // Enrollments subcollection
+      match /enrollments/{enrollmentId} {
+        allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']);
+        allow create: if isAuthenticated();
+        allow update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+      }
+
+      // Completions subcollection
+      match /completions/{completionId} {
+        allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']);
+        allow create: if isAuthenticated();
+        allow update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+      }
+    }
+
+    // Events collection - PUBLIC READ, admin write
+    match /events/{eventId} {
+      // Public can read events
+      allow read: if true;
+      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+    }
+
+    // Tasks collection - for task analytics and completion rates
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach', 'statistician']);
+      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']);
+    }
+
+    // Sessions collection - for engagement metrics
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician']);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Contacts collection - for contact form submissions
+    match /contacts/{contactId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+      allow create: if true; // Anyone can submit a contact form
+      allow update, delete: if isAdmin();
+    }
+
+    // Enquiries collection - for enquiry submissions
+    match /enquiries/{enquiryId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+      allow create: if true; // Anyone can submit an enquiry
+      allow update, delete: if isAdmin();
+    }
+
+    // Notifications collection - for notifications
+    match /notifications/{notifId} {
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']);
+
+      allow read: if isAuthenticated() && (
+        // admins can read all
+        isAdmin() ||
+        // managers & media can read types relevant to them
+        (
+          hasRole('manager') && resource.data.recipientRole in ['manager', 'admin', 'all']
+        ) ||
+        (
+          hasRole('media') && resource.data.recipientRole in ['media', 'admin', 'all']
+        )
+      );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // Certificates collection - for athlete certificates
+    match /certificates/{certificateId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']);
+    }
+
+    // Media library collection - for BSM media assets
+    match /bsmMedia/{mediaId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media', 'coach']);
+      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'media']);
+    }
+  }
+}

@@ -16,12 +16,14 @@ import {
   MdClose,
   MdChevronLeft,
   MdChevronRight,
+  MdQueryStats,
+  MdEmail,
 } from "react-icons/md";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 
 // Role types for sports management
-type UserRole = "admin" | "manager" | "coach" | "athlete" | "sponsor" | "media";
+type UserRole = "admin" | "manager" | "coach" | "athlete" | "sponsor" | "media" | "statistician";
 
 interface User {
   id: string;
@@ -57,6 +59,7 @@ const roleLabels: Record<UserRole, string> = {
   athlete: "Athlete",
   sponsor: "Sponsor",
   media: "Media",
+  statistician: "Statistician",
 };
 
 const roleIcons: Record<UserRole, React.ReactElement> = {
@@ -66,6 +69,7 @@ const roleIcons: Record<UserRole, React.ReactElement> = {
   athlete: <MdOutlineFitnessCenter size={18} />,
   sponsor: <MdBusiness size={18} />,
   media: <MdCamera size={18} />,
+  statistician: <MdQueryStats size={18} />,
 };
 
 const UserManagement: React.FC<UserManagementProps> = ({
@@ -274,7 +278,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-navy">
@@ -282,7 +286,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
         </h1>
         <button
           onClick={() => handleOpenDialog(null)}
-          className="flex items-center justify-center gap-2 bg-accent hover:bg-[#9de702] text-navy font-semibold py-2 px-4 rounded-md transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary-hover text-white font-semibold py-2 px-4 rounded-md transition-colors shadow-sm"
         >
           <MdAdd size={20} />
           <span>Add User</span>
@@ -546,23 +550,29 @@ const UserForm: React.FC<UserFormProps> = ({
 
   return (
     <>
-      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-        <h2 className="text-xl font-bold text-navy">
-          {user ? "Edit User" : "Add New User"}
-        </h2>
+      <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-primary to-secondary">
+        <div>
+          <h2 className="text-2xl font-bold text-white">
+            {user ? "Edit User" : "Add New User"}
+          </h2>
+          <p className="text-white/80 text-sm mt-1">
+            {user ? "Update user information and permissions" : "Create a new user account with role and permissions"}
+          </p>
+        </div>
         <button
           onClick={onClose}
           disabled={isSubmitting}
-          className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-200"
+          className="text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
         >
           <MdClose size={24} />
         </button>
       </div>
 
-      <div className="p-6 overflow-y-auto">
-        <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700 block">
+      <div className="p-6 overflow-y-auto bg-slate-50">
+        <form id="user-form" onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <MdPerson className="text-primary" size={18} />
               Full Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -571,15 +581,18 @@ const UserForm: React.FC<UserFormProps> = ({
               value={formData.name}
               onChange={handleChange}
               placeholder="e.g. John Doe"
-              className={`w-full rounded-md border ${errors.name ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:border-transparent`}
+              className={`w-full rounded-lg border ${errors.name ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all`}
             />
             {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <span>⚠</span> {errors.name}
+              </p>
             )}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700 block">
+          <div className="space-y-2 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <MdEmail className="text-primary" size={18} />
               Email Address <span className="text-red-500">*</span>
             </label>
             <input
@@ -588,11 +601,13 @@ const UserForm: React.FC<UserFormProps> = ({
               value={formData.email}
               onChange={handleChange}
               disabled={!!user}
-              placeholder="johndoe@example.com"
-              className={`w-full rounded-md border ${errors.email ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed`}
+              placeholder="admin@bsm.com"
+              className={`w-full rounded-lg border ${errors.email ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed transition-all`}
             />
             {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <span>⚠</span> {errors.email}
+              </p>
             )}
           </div>
 
@@ -632,6 +647,7 @@ const UserForm: React.FC<UserFormProps> = ({
                 <option value="athlete">Athlete</option>
                 <option value="sponsor">Sponsor</option>
                 <option value="media">Media</option>
+                <option value="statistician">Statistician</option>
               </select>
             </div>
 
@@ -654,12 +670,12 @@ const UserForm: React.FC<UserFormProps> = ({
         </form>
       </div>
 
-      <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+      <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-white">
         <button
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="px-4 py-2 border border-slate-300 rounded font-medium text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-50"
+          className="px-6 py-2.5 border-2 border-slate-300 rounded-lg font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all disabled:opacity-50"
         >
           Cancel
         </button>
@@ -667,10 +683,10 @@ const UserForm: React.FC<UserFormProps> = ({
           type="submit"
           form="user-form"
           disabled={isSubmitting}
-          className="px-4 py-2 bg-accent hover:bg-[#9de702] text-navy font-bold rounded flex items-center justify-center min-w-[100px] transition-colors disabled:opacity-50 shadow-sm"
+          className="px-6 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary-hover text-white font-bold rounded-lg flex items-center justify-center min-w-[140px] transition-all disabled:opacity-50 shadow-md hover:shadow-lg"
         >
           {isSubmitting ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-navy"></div>
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
           ) : user ? (
             "Update User"
           ) : (

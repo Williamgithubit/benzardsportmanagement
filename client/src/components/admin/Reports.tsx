@@ -148,7 +148,7 @@ const Reports: React.FC = () => {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-[#000054]">
@@ -383,10 +383,10 @@ const Reports: React.FC = () => {
               </div>
             </div>
 
-            {/* User Engagement */}
+            {/* Member Activity */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
               <h3 className="text-lg font-bold text-[#000054] mb-6">
-                User Engagement
+                Member Activity
               </h3>
 
               {engagementMetrics && (
@@ -394,7 +394,7 @@ const Reports: React.FC = () => {
                   <div>
                     <div className="flex justify-between items-end mb-2">
                       <p className="text-sm font-bold text-slate-600">
-                        Weekly Engagement
+                        Weekly Activity
                       </p>
                       <span className="text-lg font-extrabold text-[#000054]">
                         {engagementMetrics.weeklyEngagement}%
@@ -412,14 +412,14 @@ const Reports: React.FC = () => {
                       <span className="text-blue-600">
                         {engagementMetrics.activeLastWeek}
                       </span>{" "}
-                      active users
+                      active members
                     </p>
                   </div>
 
                   <div>
                     <div className="flex justify-between items-end mb-2">
                       <p className="text-sm font-bold text-slate-600">
-                        Monthly Engagement
+                        Monthly Activity
                       </p>
                       <span className="text-lg font-extrabold text-[#000054]">
                         {engagementMetrics.monthlyEngagement}%
@@ -437,7 +437,7 @@ const Reports: React.FC = () => {
                       <span className="text-emerald-600">
                         {engagementMetrics.activeLastMonth}
                       </span>{" "}
-                      active users
+                      active members
                     </p>
                   </div>
                 </div>
@@ -449,7 +449,7 @@ const Reports: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
               <h3 className="text-lg font-bold text-[#000054] mb-4">
-                Training Session Trends (Last 30 Days)
+                Training Session Status (Last 30 Days)
               </h3>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -500,7 +500,7 @@ const Reports: React.FC = () => {
                       dataKey="completed"
                       stroke="#10B981"
                       strokeWidth={3}
-                      name="Completed"
+                      name="Completed Sessions"
                       dot={{ r: 4, strokeWidth: 2 }}
                     />
                     <Line
@@ -508,7 +508,7 @@ const Reports: React.FC = () => {
                       dataKey="pending"
                       stroke="#F59E0B"
                       strokeWidth={3}
-                      name="Pending"
+                      name="Scheduled"
                       dot={{ r: 4, strokeWidth: 2 }}
                     />
                     <Line
@@ -516,7 +516,7 @@ const Reports: React.FC = () => {
                       dataKey="overdue"
                       stroke="#EF4444"
                       strokeWidth={3}
-                      name="Overdue"
+                      name="Missed"
                       dot={{ r: 4, strokeWidth: 2 }}
                     />
                   </LineChart>
@@ -524,10 +524,10 @@ const Reports: React.FC = () => {
               </div>
             </div>
 
-            {/* Training Program Status */}
+            {/* Sports Program Status */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
               <h3 className="text-lg font-bold text-[#000054] mb-4">
-                Program Status
+                Sports Programs
               </h3>
               <div className="h-[300px] w-full flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
@@ -572,11 +572,11 @@ const Reports: React.FC = () => {
             </div>
           </div>
 
-          {/* Training Program Performance Table */}
+          {/* Sports Program Performance Table */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
               <h3 className="text-lg font-bold text-[#000054]">
-                Training Program Performance
+                Sports Program Performance
               </h3>
             </div>
             <div className="overflow-x-auto">
@@ -585,11 +585,11 @@ const Reports: React.FC = () => {
                   <tr className="bg-white border-b border-slate-200 text-sm font-bold text-slate-500 uppercase tracking-wider">
                     <th className="p-4">Program Name</th>
                     <th className="p-4">Status</th>
-                    <th className="p-4 hidden md:table-cell">Duration</th>
+                    <th className="p-4 hidden md:table-cell">Season</th>
                     <th className="p-4 text-right hidden sm:table-cell">
-                      Athletes
+                      Participants
                     </th>
-                    <th className="p-4 text-center">Progress</th>
+                    <th className="p-4 text-center">Completion</th>
                     <th className="p-4 text-right">Rating</th>
                   </tr>
                 </thead>
@@ -652,7 +652,7 @@ const Reports: React.FC = () => {
                         colSpan={6}
                         className="p-8 text-center text-slate-500"
                       >
-                        No program performance data available.
+                        No sports program data available. Programs will appear here once created.
                       </td>
                     </tr>
                   )}

@@ -330,7 +330,7 @@ export default function AthleteCard({
               {userRole.permissions.canEdit && (
                 <button
                   onClick={handleEditClick}
-                  className="flex-1 py-1.5 text-sm font-bold rounded-md bg-[#E32845] text-[#03045e] hover:bg-[#9de002] hover:-translate-y-[1px] shadow-[0_1px_4px_rgba(173,248,2,0.3)] hover:shadow-[0_3px_8px_rgba(173,248,2,0.4)] transition-all"
+                  className="flex-1 py-1.5 text-sm font-bold rounded-md bg-secondary text-white hover:bg-secondary-hover hover:-translate-y-[1px] shadow-[0_1px_4px_rgba(173,248,2,0.3)] hover:shadow-[0_3px_8px_rgba(173,248,2,0.4)] transition-all"
                 >
                   Edit
                 </button>

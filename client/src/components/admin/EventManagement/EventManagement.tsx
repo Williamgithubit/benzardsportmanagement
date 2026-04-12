@@ -326,7 +326,7 @@ const EventManagement: React.FC<EventManagementProps> = ({
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-10">
       <Toaster position="top-right" />
 
       {/* Header */}
@@ -354,7 +354,7 @@ const EventManagement: React.FC<EventManagementProps> = ({
           <button
             onClick={() => handleOpenDialog()}
             disabled={loading}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#E32845] text-white rounded-lg hover:bg-[#c41e3a] transition-colors font-medium disabled:opacity-50 shadow-sm w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition-colors font-medium disabled:opacity-50 shadow-sm w-full sm:w-auto"
           >
             <MdAdd size={20} />
             <span>Add Event</span>

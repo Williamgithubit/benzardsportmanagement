@@ -408,7 +408,7 @@ const BlogManagement: React.FC<BlogManagementProps> = ({
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-10">
       <Toaster position="top-right" />
 
       {/* Header */}
@@ -431,7 +431,7 @@ const BlogManagement: React.FC<BlogManagementProps> = ({
           </button>
           <button
             onClick={() => handleOpenDialog()}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#E32845] text-white rounded-lg hover:bg-[#c41e3a] transition-colors font-bold shadow-sm"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition-colors font-bold shadow-sm"
           >
             <MdAdd size={20} />
             <span>Create Post</span>

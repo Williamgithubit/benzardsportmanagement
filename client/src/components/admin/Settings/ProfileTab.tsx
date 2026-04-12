@@ -109,10 +109,30 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
             location: profile.officeLocation || "",
             website: "",
           });
+        } else {
+          // If no profile exists, use current user data as fallback
+          setProfileData({
+            name: currentUser.name || "",
+            email: currentUser.email || "",
+            phone: "",
+            bio: "",
+            location: "",
+            website: "",
+          });
         }
       } catch (error) {
         console.error("Failed to load profile", error);
-        onError("Failed to load profile. Please refresh the page or try again later.");
+        // Use current user data as fallback instead of showing error
+        if (mounted && currentUser) {
+          setProfileData({
+            name: currentUser.name || "",
+            email: currentUser.email || "",
+            phone: "",
+            bio: "",
+            location: "",
+            website: "",
+          });
+        }
       }
     };
 
@@ -120,7 +140,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onSuccess, onError }) => {
     return () => {
       mounted = false;
     };
-  }, [currentUser, onError]);
+  }, [currentUser]);
 
   const handleAvatarSelect = (file?: File) => {
     if (!file) return;

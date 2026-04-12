@@ -421,7 +421,7 @@ export default function AthleteDirectory({
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-10">
       <Toaster position="top-right" />
 
       {/* Header */}
@@ -494,7 +494,7 @@ export default function AthleteDirectory({
           {userRole.permissions.canCreate && (
             <button
               onClick={handleAddAthlete}
-              className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-[#E32845] text-[#03045e] font-bold rounded-lg hover:bg-[#9de002] transition-colors shadow-sm"
+              className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-secondary text-[#fff] font-bold rounded-lg hover:bg-secondary-hover transition-colors shadow-sm"
             >
               <MdAdd size={20} />
               Add Athlete
