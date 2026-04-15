@@ -18,6 +18,7 @@ import {
 import { NotificationService } from "@/services/notificationService";
 import useUserRole from "@/hooks/useUserRole";
 import type { Notification as FirestoreNotification } from "@/types/notification";
+import { toDate } from "@/utils/firestore";
 
 type NotificationTone = "info" | "success" | "warning" | "error";
 type NotificationPriority = "low" | "medium" | "high";
@@ -121,7 +122,7 @@ const normalizeNotification = (
     notification.createdAt && typeof notification.createdAt === "object" && "toDate" in notification.createdAt && typeof (notification.createdAt as { toDate: () => Date }).toDate === "function"
       ? (notification.createdAt as { toDate: () => Date }).toDate()
       : notification.createdAt
-        ? new Date(notification.createdAt)
+        ? toDate(notification.createdAt) || new Date()
         : new Date(),
   read: Boolean(notification.read),
   actionUrl:

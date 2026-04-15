@@ -14,6 +14,18 @@ export interface AthleteStats {
   [key: string]: number | undefined; // Allow for custom stats
 }
 
+export interface AthleteComputedStats extends AthleteStats {
+  averageRating?: number;
+  attendanceRate?: number;
+  fouls?: number;
+}
+
+export interface AthleteProfileStatsSnapshot {
+  stats: AthleteComputedStats;
+  source: "performance" | "events" | "athlete";
+  updatedAt?: string | null;
+}
+
 export interface AthleteMedia {
   id: string;
   url: string;
@@ -231,7 +243,7 @@ export type AthleticsEvent = (typeof ATHLETICS_EVENTS)[number];
 
 // User roles for permission checking
 export interface UserRole {
-  role: "admin" | "manager" | "coach" | "athlete" | "viewer";
+  role: "admin" | "statistician" | "manager" | "coach" | "athlete" | "viewer";
   permissions: {
     canCreate: boolean;
     canEdit: boolean;

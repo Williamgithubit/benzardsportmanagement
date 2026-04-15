@@ -110,6 +110,7 @@ const UsersPage = () => {
   const getRoleBadge = (role: string) => {
     const roleClasses: Record<string, string> = {
       [ROLES.ADMIN]: 'bg-purple-100 text-purple-800',
+      [ROLES.STATISTICIAN]: 'bg-indigo-100 text-indigo-800',
       [ROLES.MANAGER]: 'bg-sky-100 text-sky-800',
       [ROLES.COACH]: 'bg-blue-100 text-blue-800',
       [ROLES.ATHLETE]: 'bg-emerald-100 text-emerald-800',
@@ -209,8 +210,9 @@ const UsersPage = () => {
                     value={newUser.role}
                     onChange={handleInputChange}
                     className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#000054] focus:ring-[#000054]"
-                    required
+                  required
                   >
+                    <option value={ROLES.STATISTICIAN}>Statistician</option>
                     <option value={ROLES.MANAGER}>Manager</option>
                     <option value={ROLES.COACH}>Coach</option>
                     <option value={ROLES.ATHLETE}>Athlete</option>

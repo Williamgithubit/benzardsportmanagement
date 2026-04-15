@@ -24,6 +24,7 @@ import {
 } from "@/services/cloudinaryService";
 import {
   Athlete,
+  AthleteProfileStatsSnapshot,
   AthleteFilters,
   AthleteMedia,
   BulkAction,
@@ -760,6 +761,42 @@ export class AthleteService {
     } catch (error) {
       console.error("Error getting athlete statistics:", error);
       throw new Error("Failed to get athlete statistics");
+    }
+  }
+
+  static async getAthleteProfileStats(
+    id: string,
+  ): Promise<AthleteProfileStatsSnapshot | null> {
+    try {
+      const response = await fetch(`/api/athletes/${id}/stats`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error || "Failed to load athlete stats");
+      }
+
+      const payload = (await response.json()) as {
+        stats: AthleteProfileStatsSnapshot["stats"];
+        source: AthleteProfileStatsSnapshot["source"];
+        updatedAt?: string | null;
+      };
+
+      return {
+        stats: payload.stats,
+        source: payload.source,
+        updatedAt: payload.updatedAt || null,
+      };
+    } catch (error) {
+      console.error("Error getting athlete profile stats:", error);
+      throw new Error("Failed to get athlete profile stats");
     }
   }
 }

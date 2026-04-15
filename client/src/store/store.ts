@@ -10,6 +10,9 @@ import authReducer from './Auth/authSlice';
 import userManagementReducer from './Admin/userManagementSlice';
 import { apiSlice } from './apiSlice';
 import { userManagementApi } from './Admin/userManagementApi';
+import attendanceReducer from './attendanceSlice';
+import performanceReducer from './performanceSlice';
+import notificationsReducer from './notificationsSlice';
 
 // Create a no-op storage for server-side rendering
 const createNoopStorage = () => {
@@ -32,6 +35,9 @@ const storage = typeof window !== 'undefined' ? createWebStorage('local') : crea
 const rootReducer = combineReducers({
   auth: authReducer,
   userManagement: userManagementReducer,
+  attendance: attendanceReducer,
+  performance: performanceReducer,
+  notifications: notificationsReducer,
   [apiSlice.reducerPath]: apiSlice.reducer,
   [userManagementApi.reducerPath]: userManagementApi.reducer,
 });

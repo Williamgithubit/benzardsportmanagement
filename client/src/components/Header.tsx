@@ -48,12 +48,8 @@ const getDashboardPath = (role?: string | null) => {
   switch (role) {
     case "admin":
       return "/dashboard/admin";
-    case "teacher":
-      return "/dashboard/teacher";
-    case "parent":
-      return "/dashboard/parent";
-    case "student":
-      return "/dashboard/student";
+    case "statistician":
+      return "/dashboard/statistician";
     default:
       return "/";
   }
@@ -72,10 +68,15 @@ const Header = () => {
     setIsProfileOpen(false);
   }, [pathname]);
 
-  const dashboardPath = useMemo(() => getDashboardPath(role), [role]);
+  const resolvedRole = role || user?.role || null;
+  const dashboardPath = useMemo(
+    () => getDashboardPath(resolvedRole),
+    [resolvedRole],
+  );
+  const canOpenDashboard = dashboardPath !== "/";
   const userName =
     user?.displayName || user?.name || user?.email?.split("@")[0] || "Guest";
-  const roleLabel = formatRoleLabel(role);
+  const roleLabel = formatRoleLabel(resolvedRole);
 
   const handleLogout = async () => {
     try {
@@ -152,13 +153,15 @@ const Header = () => {
             <div className="hidden items-center gap-3 lg:flex">
               {user ? (
                 <>
-                  <Link
-                    href={dashboardPath}
-                    className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-secondary/20 hover:text-secondary"
-                  >
-                    <MdDashboardCustomize size={19} />
-                    <span>{role === "admin" ? "Dashboard" : "My Space"}</span>
-                  </Link>
+                  {canOpenDashboard ? (
+                    <Link
+                      href={dashboardPath}
+                      className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-secondary/20 hover:text-secondary"
+                    >
+                      <MdDashboardCustomize size={19} />
+                      <span>Dashboard</span>
+                    </Link>
+                  ) : null}
 
                   <div className="relative">
                     <button
@@ -183,13 +186,15 @@ const Header = () => {
                           Public site
                           <MdArrowOutward size={18} />
                         </Link>
-                        <Link
-                          href={dashboardPath}
-                          className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-secondary"
-                        >
-                          {role === "admin" ? "Open dashboard" : "Open account"}
-                          <MdArrowOutward size={18} />
-                        </Link>
+                        {canOpenDashboard ? (
+                          <Link
+                            href={dashboardPath}
+                            className="mt-1 flex items-center justify-between rounded-2xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-secondary"
+                          >
+                            Open dashboard
+                            <MdArrowOutward size={18} />
+                          </Link>
+                        ) : null}
                         <button
                           type="button"
                           onClick={handleLogout}
@@ -274,12 +279,14 @@ const Header = () => {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {user ? (
                   <>
-                    <Link
-                      href={dashboardPath}
-                      className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-secondary/20 hover:text-secondary"
-                    >
-                      Open Dashboard
-                    </Link>
+                    {canOpenDashboard ? (
+                      <Link
+                        href={dashboardPath}
+                        className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-secondary/20 hover:text-secondary"
+                      >
+                        Open Dashboard
+                      </Link>
+                    ) : null}
                     <button
                       type="button"
                       onClick={handleLogout}

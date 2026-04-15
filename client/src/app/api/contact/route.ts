@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #000054 0%, #1a1a6e 100%); color: white; padding: 20px; text-align: center;">
             <h1 style="margin: 0; font-size: 24px;">New Contact Form Submission</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">T-Tech Initiative Website</p>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Benzard Sports Management Website</p>
           </div>
           
           <div style="padding: 30px; background: #f9f9f9;">
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
           </div>
           
           <div style="background: #000054; color: white; padding: 15px; text-align: center; font-size: 14px;">
-            <p style="margin: 0;">This message was sent from the T-Tech Initiative contact form</p>
+            <p style="margin: 0;">This message was sent from the Benzard Sports Management contact form</p>
             <p style="margin: 5px 0 0 0; opacity: 0.8;">Timestamp: ${new Date().toLocaleString()}</p>
           </div>
         </div>
@@ -93,12 +93,12 @@ export async function POST(request: NextRequest) {
     const autoReplyOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: 'Thank you for contacting T-Tech Initiative',
+      subject: 'Thank you for contacting Benzard Sports Management',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #000054 0%, #1a1a6e 100%); color: white; padding: 20px; text-align: center;">
             <h1 style="margin: 0; font-size: 24px;">Thank You for Contacting Us!</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">T-Tech Initiative</p>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Benzard Sports Management</p>
           </div>
           
           <div style="padding: 30px; background: #f9f9f9;">
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
               <p style="color: #333; line-height: 1.6; margin-top: 0;">Dear ${name},</p>
               
               <p style="color: #333; line-height: 1.6;">
-                Thank you for reaching out to T-Tech Initiative! We have received your message and appreciate your interest in our work.
+                Thank you for reaching out to Benzard Sports Management. We have received your message and appreciate your interest in our work.
               </p>
               
               <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #E32845;">
@@ -115,16 +115,16 @@ export async function POST(request: NextRequest) {
               </div>
               
               <p style="color: #333; line-height: 1.6;">
-                Our team will review your message and get back to you within 24-48 hours. If your inquiry is urgent, please don't hesitate to call us at +231-778-711-864.
+                Our team will review your message and get back to you within 24-48 hours. If your inquiry is urgent, please don't hesitate to call us at +231 777 123 456.
               </p>
               
               <p style="color: #333; line-height: 1.6;">
-                In the meantime, feel free to explore our website https://ttechinitiative.onrender.com to learn more about our programs and initiatives.
+                In the meantime, feel free to explore our website to learn more about our athlete development, matchday operations, and community programs.
               </p>
               
               <p style="color: #333; line-height: 1.6; margin-bottom: 0;">
                 Best regards,<br>
-                <strong style="color: #000054;">The T-Tech Initiative Team</strong>
+                <strong style="color: #000054;">The Benzard Sports Management Team</strong>
               </p>
             </div>
           </div>
@@ -132,9 +132,9 @@ export async function POST(request: NextRequest) {
           <div style="background: #000054; color: white; padding: 20px; text-align: center;">
             <p style="margin: 0 0 10px 0; font-weight: bold;">Stay Connected</p>
             <p style="margin: 0; font-size: 14px; opacity: 0.9;">
-              Email: info@ttechinitiatives.org<br>
-              Phone: +231-778-711-864 / 555-760-0690<br>
-              Address: TTI Central Office, Monrovia, Liberia
+              Email: info@benzardsportsmanagement.com<br>
+              Phone: +231 777 123 456<br>
+              Address: Paynesville City, Montserrado County, Liberia
             </p>
           </div>
         </div>

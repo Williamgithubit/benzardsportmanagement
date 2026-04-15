@@ -3,6 +3,7 @@ import { clearUser } from './authSlice';
 import { AppDispatch } from '../store';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '@/services/firebase';
+import { removeRegisteredFcmToken } from '@/services/fcm';
 
 /**
  * Enhanced logout action that clears both Redux state and persisted data
@@ -10,6 +11,8 @@ import { auth } from '@/services/firebase';
 export const performLogout = () => async (dispatch: AppDispatch) => {
   try {
     console.log('Logging out user...');
+
+    await removeRegisteredFcmToken();
     
     // First sign out from Firebase
     await firebaseSignOut(auth);

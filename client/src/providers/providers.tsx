@@ -5,12 +5,14 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { Toaster } from 'react-hot-toast';
 import { store, persistor } from '@/store/store';
 import AuthInitializer from '@/components/auth/AuthInitializer';
+import FcmInitializer from '@/components/auth/FcmInitializer';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <AuthInitializer>
+          <FcmInitializer />
           {children}
           <Toaster
             position="top-right"

@@ -18,11 +18,13 @@ type StoredUserData = Partial<User> &
   Record<string, unknown> & {
     displayName?: string;
     avatar?: string;
+    avatarPublicId?: string;
     phone?: string;
   };
 
 const USER_ROLES: UserRole[] = [
   'admin',
+  'statistician',
   'manager',
   'coach',
   'athlete',
@@ -105,6 +107,10 @@ const buildUserProfile = (
     (typeof userData.phone === 'string' && userData.phone) ||
     firebaseUser.phoneNumber ||
     undefined;
+  const photoPublicId =
+    (typeof userData.photoPublicId === 'string' && userData.photoPublicId) ||
+    (typeof userData.avatarPublicId === 'string' && userData.avatarPublicId) ||
+    undefined;
 
   return {
     uid: firebaseUser.uid,
@@ -112,11 +118,13 @@ const buildUserProfile = (
     name,
     displayName,
     photoURL,
+    photoPublicId,
     role,
     status: isUserStatus(userData.status) ? userData.status : 'active',
     phoneNumber,
     address:
       typeof userData.address === 'string' ? userData.address : undefined,
+    bio: typeof userData.bio === 'string' ? userData.bio : undefined,
     emailVerified: firebaseUser.emailVerified,
     metadata: {
       creationTime: firebaseUser.metadata.creationTime || undefined,
@@ -145,8 +153,10 @@ const buildFirestoreUserUpdate = (user: User) => ({
   role: user.role,
   status: user.status,
   photoURL: user.photoURL || null,
+  photoPublicId: user.photoPublicId || null,
   phoneNumber: user.phoneNumber || null,
   address: user.address || null,
+  bio: user.bio || null,
   emailVerified: user.emailVerified,
   metadata: user.metadata,
   providerData: user.providerData,

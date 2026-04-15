@@ -3,6 +3,7 @@
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { usePathname } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
+import type { UserRole } from '@/types/auth';
 
 export default function DashboardLayout({
   children,
@@ -11,17 +12,19 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/dashboard/admin');
+  const isStatisticianRoute = pathname.startsWith('/dashboard/statistician');
   const isTeacherRoute = pathname.startsWith('/dashboard/teacher');
   const isParentRoute = pathname.startsWith('/dashboard/parent');
   const isStudentRoute = pathname.startsWith('/dashboard/student');
 
   // Determine the required role based on the route
-  let requiredRole: 'admin' | 'user' | 'teacher' | 'parent' | 'student' = 'admin';
+  let requiredRole: UserRole = 'admin';
+  if (isStatisticianRoute) requiredRole = 'statistician';
   if (isTeacherRoute) requiredRole = 'teacher';
   if (isParentRoute) requiredRole = 'parent';
   if (isStudentRoute) requiredRole = 'student';
 
-  if (isAdminRoute) {
+  if (isAdminRoute || isStatisticianRoute) {
     return (
       <ProtectedRoute requiredRole={requiredRole}>
         {children}

@@ -3,10 +3,11 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser, selectAuthState } from '@/store/Auth/authSlice';
+import type { UserRole } from '@/types/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'user' | 'teacher' | 'parent' | 'student';
+  requiredRole?: UserRole;
   redirectTo?: string;
 }
 

@@ -8,6 +8,66 @@ const ADMIN_ROLE = "admin";
 const isAdminRole = (value: unknown) =>
   typeof value === "string" && value.toLowerCase() === ADMIN_ROLE;
 
+export async function requireAuthenticatedRequest(
+  request: NextRequest
+): Promise<{ uid: string; role: string | null } | NextResponse> {
+  if (!adminAuth || !getApps().length) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Firebase Admin SDK not initialized",
+      },
+      { status: 500 }
+    );
+  }
+
+  const authHeader = request.headers.get("authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Unauthorized",
+      },
+      { status: 401 }
+    );
+  }
+
+  const token = authHeader.slice("Bearer ".length);
+
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    let role: string | null =
+      decodedToken.admin === true
+        ? ADMIN_ROLE
+        : typeof decodedToken.role === "string"
+          ? decodedToken.role
+          : null;
+
+    if (!role) {
+      const db = getFirestore();
+      const userDoc = await db.collection("users").doc(decodedToken.uid).get();
+      const userData = userDoc.data();
+      role = typeof userData?.role === "string" ? userData.role : null;
+    }
+
+    return {
+      uid: decodedToken.uid,
+      role,
+    };
+  } catch (error) {
+    console.error("Failed to verify authenticated request:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Invalid token",
+      },
+      { status: 401 }
+    );
+  }
+}
+
 export async function requireAdminRequest(
   request: NextRequest
 ): Promise<{ uid: string } | NextResponse> {

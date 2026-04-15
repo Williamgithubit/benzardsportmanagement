@@ -21,6 +21,7 @@ import {
 } from "react-icons/md";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import toast from "react-hot-toast";
 
 // Role types for sports management
 type UserRole = "admin" | "manager" | "coach" | "athlete" | "sponsor" | "media" | "statistician";
@@ -80,8 +81,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -115,7 +114,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
       const data: User[] = await response.json();
       setUsers(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users");
+      toast.error(err instanceof Error ? err.message : "Failed to load users");
     } finally {
       setIsLoading(false);
     }
@@ -133,16 +132,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     }
   }, [openDialog, onCloseDialog]);
 
-  // Toast auto-hide
-  useEffect(() => {
-    if (success || error) {
-      const timer = setTimeout(() => {
-        setSuccess(null);
-        setError(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success, error]);
+
 
   const handleOpenDialog = (user: User | null = null) => {
     setEditingUser(user);
@@ -152,8 +142,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const handleCloseDialog = () => {
     setEditingUser(null);
     setDialogOpen(false);
-    setError(null);
-    setSuccess(null);
   };
 
   const handleSaveUser = async (data: CreateUserData) => {
@@ -187,13 +175,13 @@ const UserManagement: React.FC<UserManagementProps> = ({
         );
       }
 
-      setSuccess(
+      toast.success(
         `${data.email} ${editingUser ? "updated" : "created"} successfully`,
       );
       await fetchUsers();
       handleCloseDialog();
     } catch (err) {
-      setError(
+      toast.error(
         err instanceof Error
           ? err.message
           : `Failed to ${editingUser ? "update" : "create"} user`,
@@ -225,11 +213,10 @@ const UserManagement: React.FC<UserManagementProps> = ({
           .catch(() => ({ error: "Unknown error" }));
         throw new Error(errorData.error || "Failed to delete user");
       }
-
-      setSuccess("User deleted successfully");
+      toast.success("User deleted successfully");
       await fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete user");
+      toast.error(err instanceof Error ? err.message : "Failed to delete user");
     } finally {
       setIsLoading(false);
     }
@@ -240,9 +227,9 @@ const UserManagement: React.FC<UserManagementProps> = ({
     setIsLoading(true);
     try {
       await sendPasswordResetEmail(auth, user.email);
-      setSuccess(`Password reset email sent to ${user.email}`);
+      toast.success(`Password reset email sent to ${user.email}`);
     } catch (err) {
-      setError(
+      toast.error(
         err instanceof Error
           ? err.message
           : "Failed to send password reset email",
@@ -293,23 +280,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
         </button>
       </div>
 
-      {/* Toasts */}
-      {success && (
-        <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-200 text-green-700 flex items-center justify-between">
-          <span>{success}</span>
-          <button onClick={() => setSuccess(null)}>
-            <MdClose />
-          </button>
-        </div>
-      )}
-      {error && (
-        <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-700 flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)}>
-            <MdClose />
-          </button>
-        </div>
-      )}
 
       {/* Main Content Area */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
@@ -530,7 +500,9 @@ const UserForm: React.FC<UserFormProps> = ({
     if (!formData.name.trim()) e.name = "Name required";
     if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email))
       e.email = "Valid email required";
-    if (!user && !formData.password) e.password = "Password required";
+    if (!user && (!formData.password || formData.password.length < 6)) {
+      e.password = "Password must be at least 6 characters";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -550,29 +522,35 @@ const UserForm: React.FC<UserFormProps> = ({
 
   return (
     <>
-      <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-primary to-secondary">
-        <div>
-          <h2 className="text-2xl font-bold text-white">
-            {user ? "Edit User" : "Add New User"}
-          </h2>
-          <p className="text-white/80 text-sm mt-1">
-            {user ? "Update user information and permissions" : "Create a new user account with role and permissions"}
-          </p>
+      <div className="px-6 py-5 border-b border-white/10 flex justify-between items-center bg-gradient-to-br from-navy via-navy to-primary">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+            <MdPerson className="text-white" size={24} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              {user ? "Edit User" : "Add New User"}
+            </h2>
+            <p className="text-slate-300 text-sm mt-0.5">
+              {user ? "Update user information and permissions" : "Create a new user account with role and permissions"}
+            </p>
+          </div>
         </div>
         <button
+          type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+          className="text-white/60 hover:text-white transition-all bg-white/5 hover:bg-white/20 p-2 rounded-full backdrop-blur-sm"
         >
-          <MdClose size={24} />
+          <MdClose size={20} />
         </button>
       </div>
 
-      <div className="p-6 overflow-y-auto bg-slate-50">
-        <form id="user-form" onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <MdPerson className="text-primary" size={18} />
+      <div className="p-6 overflow-y-auto bg-slate-50/50">
+        <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 transition-all hover:shadow-md hover:border-slate-300">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-2">
+              <MdPerson className="text-primary" size={16} />
               Full Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -581,18 +559,18 @@ const UserForm: React.FC<UserFormProps> = ({
               value={formData.name}
               onChange={handleChange}
               placeholder="e.g. John Doe"
-              className={`w-full rounded-lg border ${errors.name ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all`}
+              className={`w-full rounded-lg border ${errors.name ? "border-red-400 focus:ring-red-400 bg-red-50" : "border-slate-200 focus:ring-primary focus:border-primary bg-slate-50 focus:bg-white"} py-2.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all`}
             />
             {errors.name && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1 font-medium">
                 <span>⚠</span> {errors.name}
               </p>
             )}
           </div>
 
-          <div className="space-y-2 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <MdEmail className="text-primary" size={18} />
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 transition-all hover:shadow-md hover:border-slate-300">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-2">
+              <MdEmail className="text-primary" size={16} />
               Email Address <span className="text-red-500">*</span>
             </label>
             <input
@@ -602,18 +580,19 @@ const UserForm: React.FC<UserFormProps> = ({
               onChange={handleChange}
               disabled={!!user}
               placeholder="admin@bsm.com"
-              className={`w-full rounded-lg border ${errors.email ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed transition-all`}
+              className={`w-full rounded-lg border ${errors.email ? "border-red-400 focus:ring-red-400 bg-red-50" : "border-slate-200 focus:ring-primary focus:border-primary bg-slate-50 focus:bg-white"} py-2.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed transition-all`}
             />
             {errors.email && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1 font-medium">
                 <span>⚠</span> {errors.email}
               </p>
             )}
           </div>
 
           {!user && (
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 block">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 transition-all hover:shadow-md hover:border-slate-300">
+              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-2">
+                <MdLockReset className="text-primary" size={16} />
                 Password <span className="text-red-500">*</span>
               </label>
               <input
@@ -621,25 +600,28 @@ const UserForm: React.FC<UserFormProps> = ({
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Secure password"
-                className={`w-full rounded-md border ${errors.password ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-primary"} py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:border-transparent`}
+                placeholder="Must be at least 6 characters"
+                className={`w-full rounded-lg border ${errors.password ? "border-red-400 focus:ring-red-400 bg-red-50" : "border-slate-200 focus:ring-primary focus:border-primary bg-slate-50 focus:bg-white"} py-2.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all`}
               />
               {errors.password && (
-                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1 font-medium">
+                  <span>⚠</span> {errors.password}
+                </p>
               )}
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 block">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 transition-all hover:shadow-md hover:border-slate-300">
+              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-2">
+                <MdAdminPanelSettings className="text-primary" size={16} />
                 Role
               </label>
               <select
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="w-full rounded-md border border-slate-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 focus:bg-white py-2.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:ring-opacity-50 appearance-none transition-all cursor-pointer"
               >
                 <option value="admin">Admin</option>
                 <option value="manager">Manager</option>
@@ -651,15 +633,16 @@ const UserForm: React.FC<UserFormProps> = ({
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 block">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 transition-all hover:shadow-md hover:border-slate-300">
+              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-2">
+                <MdQueryStats className="text-primary" size={16} />
                 Status
               </label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full rounded-md border border-slate-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 focus:bg-white py-2.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:ring-opacity-50 appearance-none transition-all cursor-pointer"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -670,12 +653,12 @@ const UserForm: React.FC<UserFormProps> = ({
         </form>
       </div>
 
-      <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-white">
+      <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-white/50 backdrop-blur-md rounded-b-xl">
         <button
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="px-6 py-2.5 border-2 border-slate-300 rounded-lg font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all disabled:opacity-50"
+          className="px-5 py-2.5 rounded-lg font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50 focus:ring-2 focus:ring-slate-200 focus:outline-none"
         >
           Cancel
         </button>
@@ -683,10 +666,13 @@ const UserForm: React.FC<UserFormProps> = ({
           type="submit"
           form="user-form"
           disabled={isSubmitting}
-          className="px-6 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary-hover text-white font-bold rounded-lg flex items-center justify-center min-w-[140px] transition-all disabled:opacity-50 shadow-md hover:shadow-lg"
+          className="px-6 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary-hover text-white font-bold rounded-lg flex items-center justify-center min-w-[140px] transition-all disabled:opacity-70 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5"
         >
           {isSubmitting ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+             <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+              <span>Saving...</span>
+            </div>
           ) : user ? (
             "Update User"
           ) : (

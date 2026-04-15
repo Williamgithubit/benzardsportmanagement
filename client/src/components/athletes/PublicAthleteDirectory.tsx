@@ -1,18 +1,22 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { FiSearch, FiMapPin, FiFilter } from "react-icons/fi";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { FiFilter, FiMapPin, FiSearch } from "react-icons/fi";
+import { MdArrowOutward, MdTrackChanges } from "react-icons/md";
 import AthleteService from "@/services/athleteService";
-import {
-  Athlete,
-  AthleteFilters,
-  SPORTS,
-  LIBERIA_COUNTIES,
-} from "@/types/athlete";
+import PublicPageCanvas from "@/components/shared/PublicPageCanvas";
+import PublicPageHero from "@/components/shared/PublicPageHero";
 import AthleteCardPublic from "./AthleteCardPublic";
+import {
+  type Athlete,
+  type AthleteFilters,
+  LIBERIA_COUNTIES,
+  SPORTS,
+} from "@/types/athlete";
 
 export default function PublicAthleteDirectory() {
   const [search, setSearch] = useState("");
-  // Default to show all sports/levels publicly so newly added athletes are visible
   const [sport, setSport] = useState("all");
   const [level, setLevel] = useState("all");
   const [county, setCounty] = useState("all");
@@ -23,10 +27,11 @@ export default function PublicAthleteDirectory() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+
       try {
         const filters: AthleteFilters = {
-          search: search,
-          sport: sport || "football",
+          search,
+          sport: sport || "all",
           level: level || "all",
           county: county || "all",
           scoutingStatus: "all",
@@ -34,146 +39,222 @@ export default function PublicAthleteDirectory() {
           ageRange: {},
         };
 
-        const res = await AthleteService.getAthletes(filters, {
+        const result = await AthleteService.getAthletes(filters, {
           page: 1,
           pageSize: 100,
         });
-        setAthletes(res.athletes);
+
+        setAthletes(result.athletes);
         setError(null);
-      } catch (err) {
-        console.error(err);
-        setError(err instanceof Error ? err.message : String(err));
+      } catch (incomingError) {
+        console.error(incomingError);
+        setError(
+          incomingError instanceof Error
+            ? incomingError.message
+            : "Unable to load athletes.",
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    load();
-  }, [search, sport, level, county]);
+    void load();
+  }, [county, level, search, sport]);
+
+  const countiesRepresented = useMemo(
+    () => new Set(athletes.map((athlete) => athlete.county).filter(Boolean)).size,
+    [athletes],
+  );
+  const sportsRepresented = useMemo(
+    () => new Set(athletes.map((athlete) => athlete.sport).filter(Boolean)).size,
+    [athletes],
+  );
+  const spotlightAthlete = athletes[0];
 
   return (
-    <div className="min-h-screen pt-16 bg-gray-50">
-      <div className="bg-linear-to-r from-[#000054] to-[#1e1e8f] text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Athlete Directory
-          </h1>
-          <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-8">
-            Discover talented athletes across Liberia
-          </p>
-
-          <div className="max-w-2xl mx-auto relative">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search athletes..."
-                className="w-full px-6 py-4 pr-12 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <FiSearch className="absolute right-6 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
-            </div>
+    <PublicPageCanvas>
+      <PublicPageHero
+        badge="Scouting Network"
+        badgeIcon={<MdTrackChanges size={16} />}
+        title="Explore athletes with a clearer view of talent, readiness, and development."
+        description="Browse the current athlete directory, filter by sport and county, and open player profiles with real performance stats pulled from the Benzard data flow."
+        stats={[
+          {
+            value: `${athletes.length}`,
+            label: "Visible Athletes",
+            accentClassName: "text-primary",
+          },
+          {
+            value: `${countiesRepresented || 0}`,
+            label: "Counties Represented",
+            accentClassName: "text-secondary",
+          },
+          {
+            value: `${sportsRepresented || 0}`,
+            label: "Sports Active",
+            accentClassName: "text-emerald-600",
+          },
+        ]}
+        aside={
+          <div className="glass-panel rounded-[32px] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Spotlight
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold text-secondary">
+              {spotlightAthlete?.name || "Fresh scouting profiles"}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              {spotlightAthlete?.bio ||
+                "Use the filters below to move from broad discovery into player-by-player review."}
+            </p>
+            {spotlightAthlete ? (
+              <div className="mt-5 rounded-[26px] border border-slate-200/80 bg-white/80 p-4">
+                <p className="text-sm font-semibold text-secondary">
+                  {spotlightAthlete.position || "Athlete profile"}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {spotlightAthlete.county || spotlightAthlete.location || "Liberia"} ·{" "}
+                  {spotlightAthlete.sport}
+                </p>
+                <Link
+                  href={`/athletes/${spotlightAthlete.id}`}
+                  className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-secondary transition hover:text-primary"
+                >
+                  Open profile
+                  <MdArrowOutward size={18} />
+                </Link>
+              </div>
+            ) : null}
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#00124f] text-white">
-              N
-            </span>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                All Athletes
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="glass-panel rounded-[36px] p-6 sm:p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Filter Directory
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-secondary">
+                Find the right athlete faster.
               </h2>
-              <p className="text-sm text-gray-500">
-                Filter and search athletes by sport, level, and location
+              <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+                Search by player name, then narrow the field by sport, level,
+                and county to open a stronger shortlist.
               </p>
             </div>
           </div>
 
-          <div className="flex gap-3 items-center">
-            <div className="bg-white rounded-full p-2 flex items-center gap-2 shadow-sm">
-              <FiFilter className="text-gray-500" />
+          <div className="mt-8 grid gap-4 xl:grid-cols-[1.2fr_repeat(3,minmax(0,0.8fr))]">
+            <label className="rounded-[24px] border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-700 shadow-sm">
+              <span className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <FiSearch />
+                Search
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search athlete name, position, or bio"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+              />
+            </label>
+
+            <label className="rounded-[24px] border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-700 shadow-sm">
+              <span className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <FiFilter />
+                Sport
+              </span>
               <select
-                className="bg-transparent outline-none"
                 value={sport}
-                onChange={(e) => setSport(e.target.value)}
+                onChange={(event) => setSport(event.target.value)}
+                className="w-full bg-transparent text-sm outline-none"
               >
-                {["all", ...SPORTS].map((s) => (
-                  <option key={s} value={s}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                {["all", ...SPORTS].map((entry) => (
+                  <option key={entry} value={entry}>
+                    {entry === "all"
+                      ? "All sports"
+                      : entry.charAt(0).toUpperCase() + entry.slice(1)}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
-            <div className="bg-white rounded-full p-2 flex items-center gap-2 shadow-sm">
+            <label className="rounded-[24px] border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-700 shadow-sm">
+              <span className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <FiFilter />
+                Level
+              </span>
               <select
-                className="bg-transparent outline-none"
                 value={level}
-                onChange={(e) => setLevel(e.target.value)}
+                onChange={(event) => setLevel(event.target.value)}
+                className="w-full bg-transparent text-sm outline-none"
               >
-                <option value="all">All Levels</option>
+                <option value="all">All levels</option>
                 <option value="grassroots">Grassroots</option>
                 <option value="semi-pro">Semi-Pro</option>
                 <option value="professional">Professional</option>
               </select>
-            </div>
+            </label>
 
-            <div className="bg-white rounded-full p-2 flex items-center gap-2 shadow-sm">
-              <FiMapPin className="text-gray-500" />
+            <label className="rounded-[24px] border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-700 shadow-sm">
+              <span className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <FiMapPin />
+                County
+              </span>
               <select
-                className="bg-transparent outline-none"
                 value={county}
-                onChange={(e) => setCounty(e.target.value)}
+                onChange={(event) => setCounty(event.target.value)}
+                className="w-full bg-transparent text-sm outline-none"
               >
-                <option value="all">All Locations</option>
-                {LIBERIA_COUNTIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                <option value="all">All counties</option>
+                {LIBERIA_COUNTIES.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {entry}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#000054]"></div>
-          </div>
-        ) : error ? (
-          <div className="text-center py-20">
-            <div className="text-red-400 text-6xl mb-4">⚠️</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              Unable to load athletes
-            </h3>
-            <p className="text-gray-500 mb-4">{error}</p>
-            <p className="text-gray-500">
-              If this is a permissions issue, please sign in as an admin or
-              adjust Firestore rules.
-            </p>
-          </div>
-        ) : athletes.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-gray-400 text-6xl mb-4">⚽</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              No athletes found
-            </h3>
-            <p className="text-gray-500">
-              Try adjusting your search or filters.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {athletes.map((a) => (
-              <AthleteCardPublic key={a.id} athlete={a} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+        <div className="mt-8">
+          {loading ? (
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="glass-panel h-[430px] rounded-[32px] skeleton-shimmer"
+                />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="glass-panel rounded-[32px] border border-rose-200 bg-rose-50 p-8 text-center">
+              <h3 className="text-xl font-semibold text-rose-700">
+                Unable to load athletes
+              </h3>
+              <p className="mt-3 text-sm text-rose-600">{error}</p>
+            </div>
+          ) : athletes.length === 0 ? (
+            <div className="glass-panel rounded-[32px] p-10 text-center">
+              <h3 className="text-2xl font-semibold text-secondary">
+                No athletes matched this filter set.
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-slate-500">
+                Reset one or two filters to widen the scouting view and surface
+                more profiles.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {athletes.map((athlete) => (
+                <AthleteCardPublic key={athlete.id} athlete={athlete} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </PublicPageCanvas>
   );
 }

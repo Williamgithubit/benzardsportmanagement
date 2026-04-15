@@ -11,12 +11,22 @@ import Reports from "@/components/admin/Reports";
 import ContactManagement from "@/components/admin/ContactManagement";
 import BlogManagement from "@/components/admin/BlogManagement";
 import BSMMediaLibrary from "@/components/admin/BSMMediaLibrary";
+import AttendanceOverview from "@/components/admin/AttendanceOverview";
+import AdminNotificationsPanel from "@/components/admin/AdminNotificationsPanel";
+import AdminProfilePanel from "@/components/admin/AdminProfilePanel";
 
 import AdminDashboardShell from "@/components/dashboard/AdminDashboardShell";
 import { AdminTabId, isAdminTab } from "@/components/dashboard/admin-navigation";
 
 export default function AdminDashboard() {
-  const [tab, setTab] = useState<AdminTabId>("dashboard");
+  const [tab, setTab] = useState<AdminTabId>(() => {
+    if (typeof window === "undefined") {
+      return "dashboard";
+    }
+
+    const initialHash = window.location.hash.replace("#", "");
+    return isAdminTab(initialHash) ? initialHash : "dashboard";
+  });
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [athleteDialogOpen, setAthleteDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
@@ -125,7 +135,10 @@ export default function AdminDashboard() {
           onCloseDialog={() => setContactDialogOpen(false)}
         />
       )}
+      {tab === "attendance" && <AttendanceOverview />}
       {tab === "reports" && <Reports />}
+      {tab === "notifications" && <AdminNotificationsPanel />}
+      {tab === "profile" && <AdminProfilePanel />}
       {tab === "settings" && <Settings />}
     </AdminDashboardShell>
   );

@@ -33,9 +33,12 @@ export function useUserRole(): UserRole {
       return;
     }
 
-    // Get user role from custom claims or user data
+    // Prefer the normalized auth role from Redux before probing custom claims.
     const userClaims = ((user as unknown as Record<string, unknown>).customClaims || {}) as Record<string, unknown>;
-    let role = userClaims.role;
+    let role =
+      typeof (user as { role?: unknown }).role === "string"
+        ? (user as { role?: string }).role
+        : userClaims.role;
 
     // Fallback: Check if user email or display name indicates admin
     if (!role) {
@@ -73,6 +76,17 @@ export function useUserRole(): UserRole {
           canView: true,
           canExport: true,
           canImport: true,
+        };
+        break;
+
+      case "statistician":
+        permissions = {
+          canCreate: true,
+          canEdit: true,
+          canDelete: false,
+          canView: true,
+          canExport: true,
+          canImport: false,
         };
         break;
 

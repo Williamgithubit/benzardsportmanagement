@@ -2,6 +2,7 @@ import { adminApiFetch } from "@/services/adminApi";
 
 export const ROLES = {
   ADMIN: "admin",
+  STATISTICIAN: "statistician",
   MANAGER: "manager",
   COACH: "coach",
   ATHLETE: "athlete",

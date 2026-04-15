@@ -5,7 +5,7 @@ import { MdAdd, MdMenu, MdWbSunny } from "react-icons/md";
 import { useAppSelector } from "@/store/store";
 import { selectAuthState } from "@/store/Auth/authSlice";
 import GlobalSearch from "@/components/admin/GlobalSearch";
-import NotificationSystem from "@/components/admin/NotificationSystem";
+import NotificationBell from "@/components/dashboard/NotificationBell";
 
 interface AdminDashboardHeaderProps {
   activeTabLabel: string;
@@ -32,6 +32,17 @@ export default function AdminDashboardHeader({
 
   const userName =
     user?.displayName || user?.name || user?.email?.split("@")[0] || "Admin";
+  const fallbackRoutes = {
+    blog: "/dashboard/admin#blog",
+    athlete: "/dashboard/admin#athletes",
+    event: "/dashboard/admin#events",
+    contact: "/dashboard/admin#contacts",
+    system: "/dashboard/admin#notifications",
+    system_alert: "/dashboard/admin#notifications",
+    attendance_alert: "/dashboard/admin#attendance",
+    performance_alert: "/dashboard/admin#reports",
+    match_alert: "/dashboard/admin#events",
+  };
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 px-4 pt-4 sm:px-6 lg:left-72 lg:px-8">
@@ -69,7 +80,7 @@ export default function AdminDashboardHeader({
             <GlobalSearch />
           </div>
 
-          <NotificationSystem />
+          <NotificationBell fallbackRoutes={fallbackRoutes} />
 
           <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-right shadow-sm sm:block">
             <p className="text-sm font-semibold text-slate-900">{userName}</p>

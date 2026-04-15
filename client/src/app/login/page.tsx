@@ -58,14 +58,10 @@ const Login = () => {
     switch(role) {
       case 'admin':
         return '/dashboard/admin';
-      case 'teacher':
-        return '/dashboard/teacher';
-      case 'student':
-        return '/dashboard/student';
-      case 'parent':
-        return '/dashboard/parent';
+      case 'statistician':
+        return '/dashboard/statistician';
       default:
-        return '/';
+        return '/dashboard';
     }
   };
 

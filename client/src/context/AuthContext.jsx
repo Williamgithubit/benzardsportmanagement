@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
       id: 1,
       name: 'John Doe',
       email,
-      role: 'student'
+      role: 'athlete'
     };
     
     setUser(userData);
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
     const newUser = {
       ...userData,
       id: Math.random(),
-      role: 'student'
+      role: 'athlete'
     };
     
     setUser(newUser);

@@ -7,10 +7,7 @@ export async function middleware(request: NextRequest) {
   // Define protected routes (excluding API routes which handle their own auth)
   // Dashboard routes are handled by client-side authentication
   const protectedRoutes = [
-    '/protected/admin',
-    '/protected/teacher', 
-    '/protected/student',
-    '/protected/parent'
+    '/protected/admin'
   ];
 
   // Check if the current path is protected
@@ -33,9 +30,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/protected/admin/:path*',
-    '/protected/teacher/:path*',
-    '/protected/student/:path*',
-    '/protected/parent/:path*',
     '/profile',
     '/settings',
     // API routes excluded - they handle their own Firebase authentication

@@ -1,6 +1,7 @@
 // Define the user roles
 export type UserRole =
   | 'admin'
+  | 'statistician'
   | 'manager'
   | 'coach'
   | 'athlete'
@@ -32,10 +33,12 @@ export interface User {
   name: string;
   displayName?: string;
   photoURL?: string;
+  photoPublicId?: string;
   role: UserRole;
   status: UserStatus;
   phoneNumber?: string;
   address?: string;
+  bio?: string;
   emailVerified: boolean;
   metadata: {
     creationTime?: string;

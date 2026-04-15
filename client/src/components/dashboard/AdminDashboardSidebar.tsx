@@ -237,10 +237,19 @@ export default function AdminDashboardSidebar({
 
           <div className="relative mt-2 rounded-2xl border border-white/12 bg-white/8 p-2.5">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/20 text-[10px] font-semibold text-red-400 shrink-0">
-                {(user?.displayName || user?.name || user?.email || "A")
-                  .slice(0, 1)
-                  .toUpperCase()}
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-red-500/20 text-[10px] font-semibold text-red-400 shrink-0">
+                {user?.photoURL ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || user.name || "Admin"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  (user?.displayName || user?.name || user?.email || "A")
+                    .slice(0, 1)
+                    .toUpperCase()
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold">

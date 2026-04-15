@@ -3,9 +3,12 @@ import {
   MdAnalytics,
   MdArticle,
   MdCalendarMonth,
+  MdChecklist,
   MdContacts,
   MdDashboardCustomize,
   MdImage,
+  MdNotifications,
+  MdOutlineBadge,
   MdPeopleAlt,
   MdSettings,
   MdSportsSoccer,
@@ -19,7 +22,10 @@ export type AdminTabId =
   | "media"
   | "users"
   | "contacts"
+  | "attendance"
   | "reports"
+  | "notifications"
+  | "profile"
   | "settings";
 
 export interface AdminNavigationChild {
@@ -89,10 +95,28 @@ export const adminNavigation: AdminNavigationItem[] = [
     icon: MdContacts,
   },
   {
+    id: "attendance",
+    label: "Attendance",
+    description: "Review session attendance, history, and consistency.",
+    icon: MdChecklist,
+  },
+  {
     id: "reports",
     label: "Reports",
     description: "Review platform performance and analytics trends.",
     icon: MdAnalytics,
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    description: "Send live updates and monitor delivery across the platform.",
+    icon: MdNotifications,
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    description: "Manage your dashboard identity and Cloudinary profile image.",
+    icon: MdOutlineBadge,
   },
   {
     id: "settings",

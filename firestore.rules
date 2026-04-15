@@ -7,19 +7,41 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function hasStoredRole(role) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    function hasStoredAnyRole(roles) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    }
+
     // Helper function to check if user is admin
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        hasStoredRole('admin')
+      );
     }
 
     // Helper function to check if user has specific role
     function hasRole(role) {
-      return isAuthenticated() && request.auth.token.role == role;
+      return isAuthenticated() && (
+        request.auth.token.role == role ||
+        hasStoredRole(role)
+      );
     }
 
     // Helper function to check if user has any of the specified roles
     function hasAnyRole(roles) {
-      return isAuthenticated() && request.auth.token.role in roles;
+      return isAuthenticated() && (
+        request.auth.token.role in roles ||
+        hasStoredAnyRole(roles)
+      );
     }
 
     // Users collection - for analytics and user management
@@ -28,7 +50,16 @@ service cloud.firestore {
         hasAnyRole(['admin', 'manager', 'statistician']) ||
         request.auth.uid == userId
       );
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.emailVerified == resource.data.emailVerified
+      );
     }
 
     // Athletes collection - PUBLIC READ, admin write
@@ -104,21 +135,42 @@ service cloud.firestore {
 
     // Notifications collection - for notifications
     match /notifications/{notifId} {
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']);
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media', 'statistician']);
 
       allow read: if isAuthenticated() && (
         // admins can read all
         isAdmin() ||
+        resource.data.userId == request.auth.uid ||
         // managers & media can read types relevant to them
         (
           hasRole('manager') && resource.data.recipientRole in ['manager', 'admin', 'all']
         ) ||
         (
           hasRole('media') && resource.data.recipientRole in ['media', 'admin', 'all']
+        ) ||
+        (
+          hasRole('statistician') && resource.data.recipientRole in ['statistician', 'admin', 'all']
         )
       );
 
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.recipientRole == resource.data.recipientRole &&
+        request.resource.data.type == resource.data.type &&
+        request.resource.data.title == resource.data.title &&
+        request.resource.data.message == resource.data.message &&
+        request.resource.data.body == resource.data.body &&
+        request.resource.data.data == resource.data.data &&
+        request.resource.data.createdAt == resource.data.createdAt
+      );
+
+      allow delete: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.userId == request.auth.uid
+      );
     }
 
     // Certificates collection - for athlete certificates
@@ -131,6 +183,48 @@ service cloud.firestore {
     match /bsmMedia/{mediaId} {
       allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media', 'coach']);
       allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'media']);
+    }
+
+    // Training Sessions collection - for attendance tracking
+    match /trainingSessions/{sessionId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow create, update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+    }
+
+    // Attendance collection - for attendance records
+    match /attendance/{recordId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow create, update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+    }
+
+    // Players collection - for player roster management
+    match /players/{playerId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow create, update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+    }
+
+    // Matches collection - for match records
+    match /matches/{matchId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow create, update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+    }
+
+    // Match Events collection - for match event tracking (goals, assists, etc.)
+    match /matchEvents/{eventId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow create, update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+    }
+
+    // Performance collection - for player performance records
+    match /performance/{recordId} {
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow create, update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'statistician', 'coach']);
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
     }
   }
 }
