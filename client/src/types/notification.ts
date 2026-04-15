@@ -23,6 +23,7 @@ export interface NotificationPayloadData extends Record<string, unknown> {
 export interface Notification {
   id: string;
   userId?: string | null;
+  teamId?: string | null;
   role?: NotificationAudienceRole;
   recipientRole?: NotificationAudienceRole;
   type: NotificationType;

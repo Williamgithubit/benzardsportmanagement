@@ -36,6 +36,8 @@ export interface User {
   photoPublicId?: string;
   role: UserRole;
   status: UserStatus;
+  teamId?: string | null;
+  teamIds?: string[];
   phoneNumber?: string;
   address?: string;
   bio?: string;

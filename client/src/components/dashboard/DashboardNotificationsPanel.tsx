@@ -27,7 +27,7 @@ import type { Notification } from "@/types/notification";
 import { toDate } from "@/utils/firestore";
 
 interface DashboardNotificationsPanelProps {
-  variant: "admin" | "statistician";
+  variant: "admin" | "statistician" | "coach" | "media";
   canCompose?: boolean;
 }
 
@@ -45,6 +45,14 @@ const variantStyles = {
   statistician: {
     badge: "bg-primary/10 text-primary",
     button: "bg-primary hover:bg-primary-hover",
+  },
+  coach: {
+    badge: "bg-emerald-100 text-emerald-700",
+    button: "bg-emerald-600 hover:bg-emerald-700",
+  },
+  media: {
+    badge: "bg-sky-100 text-sky-700",
+    button: "bg-sky-600 hover:bg-sky-700",
   },
 } as const;
 
@@ -150,6 +158,7 @@ export default function DashboardNotificationsPanel({
         markAllNotificationsRead({
           role: user.role || null,
           userId: user.uid,
+          teamId: user.teamId || null,
         }),
       ).unwrap();
       updateLocalReadState();
@@ -185,6 +194,7 @@ export default function DashboardNotificationsPanel({
         clearAllNotifications({
           role: user.role || null,
           userId: user.uid,
+          teamId: user.teamId || null,
         }),
       ).unwrap();
       dispatch(setNotifications([]));

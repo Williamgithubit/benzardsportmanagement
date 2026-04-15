@@ -20,6 +20,7 @@ export type PerformanceTag = "In Form" | "Needs Improvement" | "Key Player";
 
 export interface PlayerRecord {
   id: string;
+  teamId?: string | null;
   sourceCollection: PlayerSourceCollection;
   fullName: string;
   firstName?: string;
@@ -46,6 +47,7 @@ export interface PlayerRecord {
 
 export interface MatchRecord {
   id: string;
+  teamId?: string | null;
   title: string;
   opponent: string;
   venue: string;
@@ -68,6 +70,7 @@ export interface MatchRecord {
 
 export interface MatchEventRecord {
   id: string;
+  teamId?: string | null;
   matchId: string;
   type: MatchEventType;
   minute: number;
@@ -84,6 +87,7 @@ export interface MatchEventRecord {
 
 export interface TrainingSessionRecord {
   id: string;
+  teamId?: string | null;
   title: string;
   sessionDate: string;
   startTime: string;
@@ -98,6 +102,7 @@ export interface TrainingSessionRecord {
 
 export interface AttendanceRecord {
   id: string;
+  teamId?: string | null;
   sessionId: string;
   playerId: string;
   status: AttendanceStatus;

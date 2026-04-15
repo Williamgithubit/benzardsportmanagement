@@ -32,7 +32,7 @@ export const markNotificationRead = createAsyncThunk<
 
 export const markAllNotificationsRead = createAsyncThunk<
   void,
-  { role?: string | null; userId?: string | null } | undefined,
+  { role?: string | null; userId?: string | null; teamId?: string | null } | undefined,
   { rejectValue: string }
 >("notifications/markAllNotificationsRead", async (filters, { rejectWithValue }) => {
   try {
@@ -61,7 +61,7 @@ export const deleteNotification = createAsyncThunk<
 
 export const clearAllNotifications = createAsyncThunk<
   void,
-  { role?: string | null; userId?: string | null } | undefined,
+  { role?: string | null; userId?: string | null; teamId?: string | null } | undefined,
   { rejectValue: string }
 >("notifications/clearAllNotifications", async (filters, { rejectWithValue }) => {
   try {

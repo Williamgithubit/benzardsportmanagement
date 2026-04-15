@@ -13,6 +13,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/dashboard/admin');
   const isStatisticianRoute = pathname.startsWith('/dashboard/statistician');
+  const isCoachRoute = pathname.startsWith('/dashboard/coach');
+  const isMediaRoute = pathname.startsWith('/dashboard/media');
   const isTeacherRoute = pathname.startsWith('/dashboard/teacher');
   const isParentRoute = pathname.startsWith('/dashboard/parent');
   const isStudentRoute = pathname.startsWith('/dashboard/student');
@@ -20,11 +22,13 @@ export default function DashboardLayout({
   // Determine the required role based on the route
   let requiredRole: UserRole = 'admin';
   if (isStatisticianRoute) requiredRole = 'statistician';
+  if (isCoachRoute) requiredRole = 'coach';
+  if (isMediaRoute) requiredRole = 'media';
   if (isTeacherRoute) requiredRole = 'teacher';
   if (isParentRoute) requiredRole = 'parent';
   if (isStudentRoute) requiredRole = 'student';
 
-  if (isAdminRoute || isStatisticianRoute) {
+  if (isAdminRoute || isStatisticianRoute || isCoachRoute || isMediaRoute) {
     return (
       <ProtectedRoute requiredRole={requiredRole}>
         {children}

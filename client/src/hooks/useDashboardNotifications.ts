@@ -28,6 +28,7 @@ export function useDashboardNotifications(limitCount = 30) {
       {
         role: user.role || null,
         userId: user.uid,
+        teamId: user.teamId || null,
         limitCount,
       },
       (items) => {

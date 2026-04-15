@@ -20,6 +20,8 @@ type StoredUserData = Partial<User> &
     avatar?: string;
     avatarPublicId?: string;
     phone?: string;
+    teamId?: string;
+    teamIds?: string[];
   };
 
 const USER_ROLES: UserRole[] = [
@@ -121,6 +123,16 @@ const buildUserProfile = (
     photoPublicId,
     role,
     status: isUserStatus(userData.status) ? userData.status : 'active',
+    teamId:
+      typeof userData.teamId === 'string' && userData.teamId.trim()
+        ? userData.teamId.trim()
+        : undefined,
+    teamIds: Array.isArray(userData.teamIds)
+      ? userData.teamIds.filter(
+          (teamId): teamId is string =>
+            typeof teamId === 'string' && Boolean(teamId.trim()),
+        )
+      : undefined,
     phoneNumber,
     address:
       typeof userData.address === 'string' ? userData.address : undefined,
@@ -152,6 +164,8 @@ const buildFirestoreUserUpdate = (user: User) => ({
   displayName: user.displayName || user.name,
   role: user.role,
   status: user.status,
+  teamId: user.teamId || null,
+  teamIds: user.teamIds || (user.teamId ? [user.teamId] : []),
   photoURL: user.photoURL || null,
   photoPublicId: user.photoPublicId || null,
   phoneNumber: user.phoneNumber || null,

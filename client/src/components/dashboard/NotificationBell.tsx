@@ -181,6 +181,7 @@ export default function NotificationBell({
         markAllNotificationsRead({
           role: user.role || null,
           userId: user.uid,
+          teamId: user.teamId || null,
         }),
       ).unwrap();
       updateLocalReadState();
@@ -224,6 +225,7 @@ export default function NotificationBell({
         clearAllNotifications({
           role: user.role || null,
           userId: user.uid,
+          teamId: user.teamId || null,
         }),
       ).unwrap();
       dispatch(setNotifications([]));

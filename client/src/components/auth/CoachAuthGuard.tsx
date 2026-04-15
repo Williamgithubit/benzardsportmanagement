@@ -2,13 +2,13 @@
 
 import RoleAuthGuard from "@/components/auth/RoleAuthGuard";
 
-interface AdminAuthGuardProps {
+interface CoachAuthGuardProps {
   children: React.ReactNode;
 }
 
-export default function AdminAuthGuard({ children }: AdminAuthGuardProps) {
+export default function CoachAuthGuard({ children }: CoachAuthGuardProps) {
   return (
-    <RoleAuthGuard role="admin" roleLabel="admin">
+    <RoleAuthGuard role="coach" roleLabel="coach">
       {children}
     </RoleAuthGuard>
   );

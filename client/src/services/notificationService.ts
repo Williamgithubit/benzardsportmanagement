@@ -27,6 +27,7 @@ type SubscriptionArgs =
   | {
       role?: NotificationAudienceRole | null;
       userId?: string | null;
+      teamId?: string | null;
       limitCount?: number;
     };
 
@@ -54,6 +55,7 @@ const normalizeNotification = (
 ): Notification => ({
   id,
   userId: typeof data.userId === "string" ? data.userId : null,
+  teamId: typeof data.teamId === "string" ? data.teamId : null,
   role:
     normalizeAudienceRole(data.role) ||
     normalizeAudienceRole(data.recipientRole) ||
@@ -89,16 +91,20 @@ const normalizeNotification = (
 const buildTargetQueries = ({
   role,
   userId,
+  teamId,
   includeRoleFallback = true,
 }: {
   role?: NotificationAudienceRole | null;
   userId?: string | null;
+  teamId?: string | null;
   includeRoleFallback?: boolean;
 }) => {
   const targets = [];
   const normalizedRole = normalizeAudienceRole(role);
   const normalizedUserId =
     typeof userId === "string" && userId.trim() ? userId.trim() : null;
+  const normalizedTeamId =
+    typeof teamId === "string" && teamId.trim() ? teamId.trim() : null;
 
   if (normalizedUserId) {
     targets.push(
@@ -123,10 +129,17 @@ const buildTargetQueries = ({
     );
   }
 
+  if (!normalizedTeamId) {
+    return targets;
+  }
+
   return targets;
 };
 
-const resolveAudienceUsers = async (roles: NotificationAudienceRole[]) => {
+const resolveAudienceUsers = async (
+  roles: NotificationAudienceRole[],
+  teamId?: string | null,
+) => {
   const normalizedRoles = [
     ...new Set(
       roles
@@ -135,8 +148,14 @@ const resolveAudienceUsers = async (roles: NotificationAudienceRole[]) => {
     ),
   ];
   const usersSnapshot = await getDocs(collection(db, "users"));
+  const normalizedTeamId =
+    typeof teamId === "string" && teamId.trim() ? teamId.trim() : null;
 
-  const audience = new Map<
+  const scopedAudience = new Map<
+    string,
+    { uid: string; role: NotificationAudienceRole }
+  >();
+  const legacyAudience = new Map<
     string,
     { uid: string; role: NotificationAudienceRole }
   >();
@@ -151,19 +170,38 @@ const resolveAudienceUsers = async (roles: NotificationAudienceRole[]) => {
     }
 
     if (
+      normalizedTeamId &&
+      typeof data.teamId === "string" &&
+      data.teamId.trim() &&
+      data.teamId.trim() !== normalizedTeamId
+    ) {
+      return;
+    }
+
+    if (
       !normalizedRoles.includes("all") &&
       !normalizedRoles.includes(role)
     ) {
       return;
     }
 
-    audience.set(uid, {
+    const targetMap =
+      normalizedTeamId &&
+      !(typeof data.teamId === "string" && data.teamId.trim())
+        ? legacyAudience
+        : scopedAudience;
+
+    targetMap.set(uid, {
       uid,
       role,
     });
   });
 
-  return [...audience.values()];
+  if (normalizedTeamId && scopedAudience.size === 0) {
+    return [...legacyAudience.values()];
+  }
+
+  return [...scopedAudience.values()];
 };
 
 export const NotificationService = {
@@ -177,6 +215,10 @@ export const NotificationService = {
       ...payload,
       role: normalizedRole,
       recipientRole: normalizedRole,
+      teamId:
+        typeof payload.teamId === "string" && payload.teamId.trim()
+          ? payload.teamId.trim()
+          : null,
       message: payload.message || payload.body || "",
       body: payload.body || payload.message || "",
       read: false,
@@ -189,7 +231,7 @@ export const NotificationService = {
     roles: NotificationAudienceRole[],
     payload: Omit<Notification, "id" | "createdAt" | "role" | "recipientRole">,
   ) {
-    const audience = await resolveAudienceUsers(roles);
+    const audience = await resolveAudienceUsers(roles, payload.teamId);
 
     return Promise.all(
       audience.map((recipient) => {
@@ -243,6 +285,7 @@ export const NotificationService = {
         ? {
             role: normalizeAudienceRole(args),
             userId: null,
+            teamId: null,
             limitCount: 30,
           }
         : {
@@ -250,6 +293,10 @@ export const NotificationService = {
             userId:
               typeof args.userId === "string" && args.userId.trim()
                 ? args.userId.trim()
+                : null,
+            teamId:
+              typeof args.teamId === "string" && args.teamId.trim()
+                ? args.teamId.trim()
                 : null,
             limitCount: args.limitCount || 30,
           };
@@ -262,6 +309,15 @@ export const NotificationService = {
           if (accumulator.some((entry) => entry.id === notification.id)) {
             return accumulator;
           }
+
+          if (
+            resolved.teamId &&
+            notification.teamId &&
+            notification.teamId !== resolved.teamId
+          ) {
+            return accumulator;
+          }
+
           accumulator.push(notification);
           return accumulator;
         }, [])
@@ -274,6 +330,7 @@ export const NotificationService = {
     const unsubscribers = buildTargetQueries({
       role: resolved.role,
       userId: resolved.userId,
+      teamId: resolved.teamId,
       includeRoleFallback: true,
     }).map((entry, index) =>
       onSnapshot(
@@ -306,7 +363,7 @@ export const NotificationService = {
     await updateDoc(doc(db, COLLECTION, id), { read });
   },
 
-  async markAllAsRead(filters: { role?: string | null; userId?: string | null } = {}) {
+  async markAllAsRead(filters: { role?: string | null; userId?: string | null; teamId?: string | null } = {}) {
     const snapshots = await Promise.all(
       buildTargetQueries({
         ...filters,
@@ -318,7 +375,18 @@ export const NotificationService = {
 
     snapshots.forEach((snapshot) => {
       snapshot.docs.forEach((entry) => {
-        if (processed.has(entry.id) || entry.data().read === true) {
+        const notification = normalizeNotification(
+          entry.id,
+          entry.data() as Record<string, unknown>,
+        );
+
+        if (
+          processed.has(entry.id) ||
+          entry.data().read === true ||
+          (filters.teamId &&
+            notification.teamId &&
+            notification.teamId !== filters.teamId)
+        ) {
           return;
         }
 
@@ -336,7 +404,7 @@ export const NotificationService = {
     await deleteDoc(doc(db, COLLECTION, id));
   },
 
-  async clearAllNotifications(filters: { role?: string | null; userId?: string | null } = {}) {
+  async clearAllNotifications(filters: { role?: string | null; userId?: string | null; teamId?: string | null } = {}) {
     const snapshots = await Promise.all(
       buildTargetQueries({
         ...filters,
@@ -348,7 +416,20 @@ export const NotificationService = {
 
     snapshots.forEach((snapshot) => {
       snapshot.docs.forEach((entry) => {
+        const notification = normalizeNotification(
+          entry.id,
+          entry.data() as Record<string, unknown>,
+        );
+
         if (processed.has(entry.id)) {
+          return;
+        }
+
+        if (
+          filters.teamId &&
+          notification.teamId &&
+          notification.teamId !== filters.teamId
+        ) {
           return;
         }
 

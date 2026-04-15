@@ -13,6 +13,8 @@ import { userManagementApi } from './Admin/userManagementApi';
 import attendanceReducer from './attendanceSlice';
 import performanceReducer from './performanceSlice';
 import notificationsReducer from './notificationsSlice';
+import coachReducer from './coachSlice';
+import mediaReducer from './mediaSlice';
 
 // Create a no-op storage for server-side rendering
 const createNoopStorage = () => {
@@ -38,6 +40,8 @@ const rootReducer = combineReducers({
   attendance: attendanceReducer,
   performance: performanceReducer,
   notifications: notificationsReducer,
+  coach: coachReducer,
+  media: mediaReducer,
   [apiSlice.reducerPath]: apiSlice.reducer,
   [userManagementApi.reducerPath]: userManagementApi.reducer,
 });

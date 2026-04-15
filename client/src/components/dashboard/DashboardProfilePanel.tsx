@@ -15,7 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/store/store";
 import { ProfileService } from "@/services/profileService";
 
 interface DashboardProfilePanelProps {
-  variant: "admin" | "statistician";
+  variant: "admin" | "statistician" | "coach" | "media";
 }
 
 const variantStyles = {
@@ -29,6 +29,23 @@ const variantStyles = {
     button: "bg-primary hover:bg-primary-hover",
     ring: "ring-primary/20",
   },
+  coach: {
+    badge: "bg-emerald-100 text-emerald-700",
+    button: "bg-emerald-600 hover:bg-emerald-700",
+    ring: "ring-emerald-500/20",
+  },
+  media: {
+    badge: "bg-sky-100 text-sky-700",
+    button: "bg-sky-600 hover:bg-sky-700",
+    ring: "ring-sky-500/20",
+  },
+} as const;
+
+const variantLabel = {
+  admin: "Control identity",
+  statistician: "Performance identity",
+  coach: "Matchday identity",
+  media: "Content identity",
 } as const;
 
 const formatDate = (value?: string) => {
@@ -163,7 +180,7 @@ export default function DashboardProfilePanel({
           className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${style.badge}`}
         >
           <MdBadge size={14} />
-          {variant === "admin" ? "Control identity" : "Performance identity"}
+          {variantLabel[variant]}
         </span>
 
         <div className="mt-6 flex flex-col items-center text-center">

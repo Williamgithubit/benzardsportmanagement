@@ -60,6 +60,10 @@ const Login = () => {
         return '/dashboard/admin';
       case 'statistician':
         return '/dashboard/statistician';
+      case 'coach':
+        return '/dashboard/coach';
+      case 'media':
+        return '/dashboard/media';
       default:
         return '/dashboard';
     }

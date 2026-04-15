@@ -2,13 +2,13 @@
 
 import RoleAuthGuard from "@/components/auth/RoleAuthGuard";
 
-interface AdminAuthGuardProps {
+interface MediaAuthGuardProps {
   children: React.ReactNode;
 }
 
-export default function AdminAuthGuard({ children }: AdminAuthGuardProps) {
+export default function MediaAuthGuard({ children }: MediaAuthGuardProps) {
   return (
-    <RoleAuthGuard role="admin" roleLabel="admin">
+    <RoleAuthGuard role="media" roleLabel="media">
       {children}
     </RoleAuthGuard>
   );
