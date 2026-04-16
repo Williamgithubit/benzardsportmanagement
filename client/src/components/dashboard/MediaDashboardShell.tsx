@@ -37,9 +37,9 @@ export default function MediaDashboardShell({
     <div className="relative min-h-screen overflow-hidden text-slate-900">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="dashboard-grid-pattern absolute inset-0 opacity-60" />
-        <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-sky-400/16 blur-3xl" />
-        <div className="absolute right-0 top-32 h-80 w-80 rounded-full bg-cyan-300/14 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-blue-200/20 blur-3xl" />
+        <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-secondary/16 blur-3xl" />
+        <div className="absolute right-0 top-32 h-80 w-80 rounded-full bg-primary/14 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-secondary/20 blur-3xl" />
       </div>
 
       <MediaDashboardSidebar

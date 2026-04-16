@@ -12,16 +12,17 @@ export const performLogout = () => async (dispatch: AppDispatch) => {
   try {
     console.log('Logging out user...');
 
+    // Clear Redux state first to immediately stop loading state
+    dispatch(clearUser());
+    
+    // Remove FCM token
     await removeRegisteredFcmToken();
     
-    // First sign out from Firebase
+    // Sign out from Firebase
     await firebaseSignOut(auth);
     console.log('Firebase logout successful');
     
-    // Clear Redux state
-    dispatch(clearUser());
-    
-    // Then purge the persisted state
+    // Purge the persisted state
     await persistor.purge();
     
     console.log('Logout completed successfully - Firebase signed out and persisted data cleared');

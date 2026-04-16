@@ -56,13 +56,13 @@ service cloud.firestore {
 
     function resourceMatchesTeam() {
       return !dataHasTeamId(resource.data) ||
+        currentUserTeamId() == null ||
         (currentUserTeamId() != null && resource.data.teamId == currentUserTeamId());
     }
 
     function requestMatchesTeam() {
       return dataHasTeamId(request.resource.data) &&
-        currentUserTeamId() != null &&
-        request.resource.data.teamId == currentUserTeamId();
+        (currentUserTeamId() == null || request.resource.data.teamId == currentUserTeamId());
     }
 
     function requestMatchesExistingOrLegacy() {
@@ -81,6 +81,7 @@ service cloud.firestore {
 
     function legacyOrScopedCreate() {
       return !request.resource.data.keys().hasAny(['teamId']) ||
+        currentUserTeamId() == null ||
         requestMatchesTeam();
     }
 

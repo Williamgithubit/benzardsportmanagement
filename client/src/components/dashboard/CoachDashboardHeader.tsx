@@ -44,7 +44,7 @@ export default function CoachDashboardHeader({
           <button
             type="button"
             onClick={onMenuToggle}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:border-emerald-300 hover:text-emerald-600 lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:border-primary hover:text-primary lg:hidden"
             aria-label="Open dashboard navigation"
           >
             <MdMenu size={22} />
@@ -52,7 +52,7 @@ export default function CoachDashboardHeader({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-700">
                 <MdOutlineSportsSoccer size={14} />
                 Touchline Desk
               </span>

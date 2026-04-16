@@ -8,9 +8,12 @@ export const metadata: Metadata = {
   description:
     "Building champions from grassroots to glory in Liberia through football scouting, training, and management.",
   icons: {
-    icon: "/assets/Benzard_Logo.png",
-    apple: "/assets/Benzard_Logo.png",
-    shortcut: "/assets/Benzard_Logo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    apple: "/favicon.png",
+    shortcut: "/favicon.ico",
   },
   manifest: "/site.webmanifest",
   themeColor: "#03045e", // Updated to secondary brand color

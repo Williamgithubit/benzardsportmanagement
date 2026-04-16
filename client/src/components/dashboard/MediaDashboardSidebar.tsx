@@ -66,8 +66,8 @@ export default function MediaDashboardSidebar({
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[linear-gradient(135deg,#0f172a_82%,#0369a1_18%,#0f172a_100%)] px-5 py-4 text-white shadow-[0_32px_90px_-42px_rgba(3,105,161,0.95)]">
-          <div className="pointer-events-none absolute inset-x-4 top-0 h-40 rounded-full bg-sky-300/10 blur-3xl" />
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[linear-gradient(135deg,#000054_82%,#1a1a6e_18%,#000054_100%)] px-5 py-4 text-white shadow-[0_32px_90px_-42px_rgba(0,0,84,0.95)]">
+          <div className="pointer-events-none absolute inset-x-4 top-0 h-40 rounded-full bg-red-500/8 blur-3xl" />
 
           <div className="relative flex items-start justify-between">
             <button
@@ -133,7 +133,7 @@ export default function MediaDashboardSidebar({
                       <div
                         className={`rounded-xl p-2 ${
                           isActive
-                            ? "bg-sky-300/20 text-sky-300"
+                            ? "bg-red-500/20 text-red-400"
                             : "bg-white/8 text-white/60 group-hover:bg-white/12 group-hover:text-white"
                         }`}
                       >
@@ -154,7 +154,7 @@ export default function MediaDashboardSidebar({
 
           <div className="relative mt-3 rounded-2xl border border-white/12 bg-white/8 p-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-sky-300/20 text-[10px] font-semibold text-sky-300">
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-red-500/20 text-[10px] font-semibold text-red-400">
                 {user?.photoURL ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -182,7 +182,7 @@ export default function MediaDashboardSidebar({
               type="button"
               onClick={handleLogout}
               disabled={logoutPending}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <MdLogout size={16} />
               {logoutPending ? "Signing out..." : "Logout"}
