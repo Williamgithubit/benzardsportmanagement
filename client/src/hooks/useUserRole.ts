@@ -103,7 +103,18 @@ export function useUserRole(): UserRole {
 
       case "coach":
         permissions = {
-          canCreate: false,
+          canCreate: true,
+          canEdit: true,
+          canDelete: false,
+          canView: true,
+          canExport: true,
+          canImport: false,
+        };
+        break;
+
+      case "media":
+        permissions = {
+          canCreate: true,
           canEdit: true,
           canDelete: false,
           canView: true,

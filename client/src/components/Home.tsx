@@ -107,8 +107,8 @@ const Home = () => {
               Next Generation Football Ops
             </div>
 
-            <h1 className="mt-5 text-4xl font-semibold tracking-tight text-secondary sm:text-5xl lg:text-6xl">
-              A sharper home base for scouting, training, and matchday growth.
+            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-secondary sm:text-5xl lg:text-6xl">
+              Building champions from grassroots to glory in Liberia through football management.
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
