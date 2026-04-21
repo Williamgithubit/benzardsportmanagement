@@ -79,7 +79,7 @@ export default function DashboardNotificationsPanel({
   const dispatch = useAppDispatch();
   const router = useRouter();
   const style = variantStyles[variant];
-  const { items, unreadCount, user } = useDashboardNotifications(50);
+  const { items, unreadCount, user, teamId } = useDashboardNotifications(50);
   const [permission, setPermission] = useState<string>(
     typeof window !== "undefined" && "Notification" in window
       ? Notification.permission
@@ -158,7 +158,7 @@ export default function DashboardNotificationsPanel({
         markAllNotificationsRead({
           role: user.role || null,
           userId: user.uid,
-          teamId: user.teamId || null,
+          teamId,
         }),
       ).unwrap();
       updateLocalReadState();
@@ -194,7 +194,7 @@ export default function DashboardNotificationsPanel({
         clearAllNotifications({
           role: user.role || null,
           userId: user.uid,
-          teamId: user.teamId || null,
+          teamId,
         }),
       ).unwrap();
       dispatch(setNotifications([]));

@@ -7,11 +7,11 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
+import { deleteBlogPost, updateBlogPost } from "@/services/blogService";
 import { CoachService } from "@/services/coachService";
 import { NotificationService } from "@/services/notificationService";
 import {
@@ -27,6 +27,8 @@ import {
 } from "@/utils/firestore";
 
 const POSTS_COLLECTION = "posts";
+const BLOG_POSTS_COLLECTION = "blogPosts";
+const EVENTS_COLLECTION = "events";
 const MEDIA_COLLECTION = "media";
 const ANNOUNCEMENTS_COLLECTION = "announcements";
 
@@ -41,6 +43,8 @@ const normalizePost = (
 ): TeamPostRecord => ({
   id,
   teamId: typeof data.teamId === "string" ? data.teamId : "",
+  sourceCollection: POSTS_COLLECTION,
+  sourceId: id,
   type:
     data.type === "event" ||
     data.type === "match_report" ||
@@ -65,6 +69,82 @@ const normalizePost = (
   createdAt: toIsoString(data.createdAt as FirestoreDateValue),
   updatedAt: toIsoString(data.updatedAt as FirestoreDateValue),
   views: typeof data.views === "number" ? data.views : 0,
+});
+
+const legacyMatchesTeam = (
+  data: Record<string, unknown>,
+  teamId: string | null,
+) => {
+  if (!teamId) {
+    return true;
+  }
+
+  return (
+    typeof data.teamId !== "string" ||
+    !data.teamId.trim() ||
+    data.teamId === teamId
+  );
+};
+
+const normalizeBlogPost = (
+  id: string,
+  data: Record<string, unknown>,
+): TeamPostRecord => {
+  const author =
+    data.author && typeof data.author === "object"
+      ? (data.author as Record<string, unknown>)
+      : null;
+
+  return {
+    id,
+    teamId: typeof data.teamId === "string" ? data.teamId : "",
+    sourceCollection: BLOG_POSTS_COLLECTION,
+    sourceId: id,
+    type: "blog",
+    status: data.status === "published" ? "published" : "draft",
+    title:
+      (typeof data.title === "string" && data.title.trim()) || "Untitled post",
+    content:
+      typeof data.content === "string"
+        ? data.content
+        : typeof data.excerpt === "string"
+          ? data.excerpt
+          : "",
+    mediaIds: [],
+    publishedAt: toIsoString(data.publishedAt as FirestoreDateValue),
+    scheduledFor: null,
+    createdBy: author && typeof author.id === "string" ? author.id : null,
+    createdAt: toIsoString(data.createdAt as FirestoreDateValue),
+    updatedAt: toIsoString(data.updatedAt as FirestoreDateValue),
+    views: typeof data.views === "number" ? data.views : 0,
+  };
+};
+
+const normalizeEventPost = (
+  id: string,
+  data: Record<string, unknown>,
+): TeamPostRecord => ({
+  id,
+  teamId: typeof data.teamId === "string" ? data.teamId : "",
+  sourceCollection: EVENTS_COLLECTION,
+  sourceId: id,
+  type: "event",
+  status:
+    data.status === "upcoming"
+      ? "scheduled"
+      : data.status === "cancelled"
+        ? "draft"
+        : "published",
+  title:
+    (typeof data.title === "string" && data.title.trim()) || "Untitled event",
+  content: typeof data.description === "string" ? data.description : "",
+  mediaIds: [],
+  publishedAt: null,
+  scheduledFor: toIsoString(data.startDate as FirestoreDateValue),
+  createdBy: typeof data.createdBy === "string" ? data.createdBy : null,
+  createdAt: toIsoString(data.createdAt as FirestoreDateValue),
+  updatedAt: toIsoString(data.updatedAt as FirestoreDateValue),
+  views: typeof data.registrations === "number" ? data.registrations : 0,
 });
 
 const normalizeMedia = (
@@ -132,19 +212,64 @@ export const MediaDashboardService = {
     callback: (posts: TeamPostRecord[]) => void,
     onError?: (error: unknown) => void,
   ) {
-    return onSnapshot(
-      teamCollection(POSTS_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizePost(entry.id, entry.data() as Record<string, unknown>),
-            )
-            .sort(sortByNewest),
-        );
-      },
-      onError,
-    );
+    const postBuckets: Record<"native" | "blog" | "event", TeamPostRecord[]> = {
+      native: [],
+      blog: [],
+      event: [],
+    };
+
+    const publishPosts = () => {
+      callback(
+        [...postBuckets.native, ...postBuckets.blog, ...postBuckets.event].sort(
+          sortByNewest,
+        ),
+      );
+    };
+
+    const unsubscribers = [
+      onSnapshot(
+        teamCollection(POSTS_COLLECTION, teamId),
+        (snapshot) => {
+          postBuckets.native = snapshot.docs.map((entry) =>
+            normalizePost(entry.id, entry.data() as Record<string, unknown>),
+          );
+          publishPosts();
+        },
+        onError,
+      ),
+      onSnapshot(
+        collection(db, BLOG_POSTS_COLLECTION),
+        (snapshot) => {
+          postBuckets.blog = snapshot.docs
+            .map((entry) => ({
+              id: entry.id,
+              data: entry.data() as Record<string, unknown>,
+            }))
+            .filter((entry) => legacyMatchesTeam(entry.data, teamId))
+            .map((entry) => normalizeBlogPost(entry.id, entry.data));
+          publishPosts();
+        },
+        onError,
+      ),
+      onSnapshot(
+        collection(db, EVENTS_COLLECTION),
+        (snapshot) => {
+          postBuckets.event = snapshot.docs
+            .map((entry) => ({
+              id: entry.id,
+              data: entry.data() as Record<string, unknown>,
+            }))
+            .filter((entry) => legacyMatchesTeam(entry.data, teamId))
+            .map((entry) => normalizeEventPost(entry.id, entry.data));
+          publishPosts();
+        },
+        onError,
+      ),
+    ];
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
   },
 
   subscribeToMedia(
@@ -208,7 +333,16 @@ export const MediaDashboardService = {
 
   async createPost(
     teamId: string,
-    payload: Omit<TeamPostRecord, "id" | "createdAt" | "updatedAt" | "teamId" | "publishedAt">,
+    payload: Omit<
+      TeamPostRecord,
+      | "id"
+      | "createdAt"
+      | "updatedAt"
+      | "teamId"
+      | "publishedAt"
+      | "sourceCollection"
+      | "sourceId"
+    >,
   ) {
     const docRef = await addDoc(collection(db, POSTS_COLLECTION), {
       ...payload,
@@ -224,18 +358,63 @@ export const MediaDashboardService = {
   },
 
   async updatePost(
-    postId: string,
-    updates: Partial<Omit<TeamPostRecord, "id" | "teamId" | "createdAt" | "updatedAt">>,
+    post: TeamPostRecord,
+    updates: Partial<
+      Omit<
+        TeamPostRecord,
+        | "id"
+        | "teamId"
+        | "createdAt"
+        | "updatedAt"
+        | "sourceCollection"
+        | "sourceId"
+      >
+    >,
   ) {
-    await updateDoc(doc(db, POSTS_COLLECTION, postId), {
+    const sourceId = post.sourceId || post.id;
+
+    if (post.sourceCollection === BLOG_POSTS_COLLECTION) {
+      await updateBlogPost({
+        id: sourceId,
+        ...(typeof updates.title === "string" ? { title: updates.title } : {}),
+        ...(typeof updates.content === "string"
+          ? { content: updates.content }
+          : {}),
+        ...(updates.status
+          ? {
+              status:
+                updates.status === "published" ? "published" : "draft",
+            }
+          : {}),
+        ...(post.teamId ? { teamId: post.teamId } : {}),
+      });
+      return;
+    }
+
+    if (post.sourceCollection === EVENTS_COLLECTION) {
+      throw new Error("Event entries are managed from the events dashboard.");
+    }
+
+    await updateDoc(doc(db, POSTS_COLLECTION, sourceId), {
       ...updates,
       ...(updates.status === "published" ? { publishedAt: serverTimestamp() } : {}),
       updatedAt: serverTimestamp(),
     });
   },
 
-  async deletePost(postId: string) {
-    await deleteDoc(doc(db, POSTS_COLLECTION, postId));
+  async deletePost(post: TeamPostRecord) {
+    const sourceId = post.sourceId || post.id;
+
+    if (post.sourceCollection === BLOG_POSTS_COLLECTION) {
+      await deleteBlogPost(sourceId);
+      return;
+    }
+
+    if (post.sourceCollection === EVENTS_COLLECTION) {
+      throw new Error("Event entries are managed from the events dashboard.");
+    }
+
+    await deleteDoc(doc(db, POSTS_COLLECTION, sourceId));
   },
 
   async publishDuePosts(teamId: string) {

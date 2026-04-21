@@ -5,6 +5,7 @@ export type TeamPostType =
   | "announcement";
 
 export type TeamPostStatus = "draft" | "scheduled" | "published";
+export type TeamPostSource = "posts" | "blogPosts" | "events";
 
 export interface TeamMediaRecord {
   id: string;
@@ -25,6 +26,8 @@ export interface TeamMediaRecord {
 export interface TeamPostRecord {
   id: string;
   teamId: string;
+  sourceCollection?: TeamPostSource;
+  sourceId?: string;
   type: TeamPostType;
   status: TeamPostStatus;
   title: string;

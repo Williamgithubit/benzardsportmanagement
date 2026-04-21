@@ -84,6 +84,35 @@ const resolveUserTeamId = (user: User | null | undefined) => {
   return null;
 };
 
+const extractTeamIds = (
+  source:
+    | { teamId?: string | null; teamIds?: unknown }
+    | Record<string, unknown>
+    | null
+    | undefined,
+) => {
+  const ids: string[] = [];
+
+  if (
+    source &&
+    "teamId" in source &&
+    typeof source.teamId === "string" &&
+    source.teamId.trim()
+  ) {
+    ids.push(source.teamId.trim());
+  }
+
+  if (source && "teamIds" in source && Array.isArray(source.teamIds)) {
+    source.teamIds.forEach((teamId) => {
+      if (typeof teamId === "string" && teamId.trim()) {
+        ids.push(teamId.trim());
+      }
+    });
+  }
+
+  return [...new Set(ids)];
+};
+
 const getUserDisplayTeamName = (user: User) => {
   const baseName =
     user.displayName || user.name || user.email?.split("@")[0] || "Team";
@@ -93,6 +122,96 @@ const getUserDisplayTeamName = (user: User) => {
 const canBootstrapTeam = (user: User) =>
   ["admin", "manager", "coach", "statistician", "media"].includes(user.role);
 
+const normalizeTeamIds = (teamId: string, teamIds?: string[]) =>
+  [...new Set([...(teamIds || []), teamId])].filter(
+    (entry): entry is string => typeof entry === "string" && Boolean(entry.trim()),
+  );
+
+const buildUserTeamProfilePatch = (user: User, teamId: string) => {
+  const fallbackName =
+    user.displayName || user.name || user.email?.split("@")[0] || "User";
+  const now = new Date().toISOString();
+
+  return {
+    uid: user.uid,
+    email: user.email || null,
+    name: user.name || fallbackName,
+    displayName: user.displayName || user.name || fallbackName,
+    role: user.role,
+    status: user.status || "active",
+    teamId,
+    teamIds: normalizeTeamIds(teamId, user.teamIds),
+    photoURL: user.photoURL || null,
+    photoPublicId: user.photoPublicId || null,
+    phoneNumber: user.phoneNumber || null,
+    address: user.address || null,
+    bio: user.bio || null,
+    emailVerified: Boolean(user.emailVerified),
+    metadata: user.metadata || {},
+    providerData: user.providerData || [],
+    createdAt: user.createdAt || now,
+    updatedAt: now,
+    lastLoginAt: user.lastLoginAt || user.metadata?.lastSignInTime || now,
+  };
+};
+
+const persistResolvedTeamContext = async (user: User, teamId: string) => {
+  try {
+    await setDoc(
+      doc(db, USERS_COLLECTION, user.uid),
+      buildUserTeamProfilePatch(user, teamId),
+      { merge: true },
+    );
+  } catch (error) {
+    console.warn("Unable to persist the resolved team context to users/{uid}.", error);
+  }
+};
+
+const isUserAssignedToTeam = (team: TeamRecord, userId: string) =>
+  team.createdBy === userId ||
+  Boolean(team.memberIds?.includes(userId)) ||
+  Boolean(team.staffIds?.includes(userId)) ||
+  Boolean(team.coachIds?.includes(userId));
+
+const isLegacyTeamRecord = (team: TeamRecord) =>
+  !team.createdBy &&
+  (team.memberIds?.length || 0) === 0 &&
+  (team.staffIds?.length || 0) === 0 &&
+  (team.coachIds?.length || 0) === 0;
+
+const getValidatedTeamContext = async (
+  user: User,
+  candidateTeamIds: string[],
+): Promise<TeamContext | null> => {
+  for (const candidateTeamId of candidateTeamIds) {
+    const teamDoc = await getDoc(doc(db, TEAMS_COLLECTION, candidateTeamId)).catch(
+      () => null,
+    );
+
+    if (!teamDoc?.exists()) {
+      continue;
+    }
+
+    const team = normalizeTeam(
+      teamDoc.id,
+      teamDoc.data() as Record<string, unknown>,
+    );
+
+    if (!isUserAssignedToTeam(team, user.uid) && !isLegacyTeamRecord(team)) {
+      continue;
+    }
+
+    await persistResolvedTeamContext(user, team.id);
+
+    return {
+      teamId: team.id,
+      team,
+    };
+  }
+
+  return null;
+};
+
 export const TeamService = {
   getResolvedTeamId: resolveUserTeamId,
 
@@ -101,39 +220,28 @@ export const TeamService = {
       return null;
     }
 
-    let resolvedTeamId = resolveUserTeamId(user);
+    const candidateTeamIds = extractTeamIds(user);
 
-    if (!resolvedTeamId) {
+    if (candidateTeamIds.length === 0) {
       const userDoc = await getDoc(doc(db, USERS_COLLECTION, user.uid));
       if (userDoc.exists()) {
-        const userData = userDoc.data() as Record<string, unknown>;
-        if (typeof userData.teamId === "string" && userData.teamId.trim()) {
-          resolvedTeamId = userData.teamId.trim();
-        } else if (Array.isArray(userData.teamIds)) {
-          const firstTeamId = userData.teamIds.find(
-            (teamId) => typeof teamId === "string" && Boolean(teamId.trim()),
-          );
-          if (firstTeamId) {
-            resolvedTeamId = firstTeamId;
-          }
-        }
+        extractTeamIds(userDoc.data() as Record<string, unknown>).forEach((teamId) => {
+          candidateTeamIds.push(teamId);
+        });
       }
     }
 
-    if (resolvedTeamId) {
-      const teamDoc = await getDoc(doc(db, TEAMS_COLLECTION, resolvedTeamId));
-      return {
-        teamId: resolvedTeamId,
-        team: teamDoc.exists()
-          ? normalizeTeam(
-              teamDoc.id,
-              teamDoc.data() as Record<string, unknown>,
-            )
-          : null,
-      };
+    const validatedTeamContext = await getValidatedTeamContext(
+      user,
+      candidateTeamIds,
+    );
+
+    if (validatedTeamContext) {
+      return validatedTeamContext;
     }
 
     const membershipQueries = [
+      query(collection(db, TEAMS_COLLECTION), where("createdBy", "==", user.uid), limit(1)),
       query(collection(db, TEAMS_COLLECTION), where("memberIds", "array-contains", user.uid), limit(1)),
       query(collection(db, TEAMS_COLLECTION), where("staffIds", "array-contains", user.uid), limit(1)),
       query(collection(db, TEAMS_COLLECTION), where("coachIds", "array-contains", user.uid), limit(1)),
@@ -143,15 +251,7 @@ export const TeamService = {
       const snapshot = await getDocs(membershipQuery);
       if (!snapshot.empty) {
         const teamDoc = snapshot.docs[0];
-        await setDoc(
-          doc(db, USERS_COLLECTION, user.uid),
-          {
-            teamId: teamDoc.id,
-            teamIds: arrayUnion(teamDoc.id),
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true },
-        );
+        await persistResolvedTeamContext(user, teamDoc.id);
 
         return {
           teamId: teamDoc.id,
@@ -170,15 +270,7 @@ export const TeamService = {
     if (!existingTeamSnapshot.empty) {
       const teamDoc = existingTeamSnapshot.docs[0];
       await Promise.all([
-        setDoc(
-          doc(db, USERS_COLLECTION, user.uid),
-          {
-            teamId: teamDoc.id,
-            teamIds: arrayUnion(teamDoc.id),
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true },
-        ),
+        persistResolvedTeamContext(user, teamDoc.id),
         updateDoc(doc(db, TEAMS_COLLECTION, teamDoc.id), {
           memberIds: arrayUnion(user.uid),
           staffIds: arrayUnion(user.uid),
@@ -212,15 +304,7 @@ export const TeamService = {
       updatedAt: serverTimestamp(),
     });
 
-    await setDoc(
-      doc(db, USERS_COLLECTION, user.uid),
-      {
-        teamId: createdTeamRef.id,
-        teamIds: [createdTeamRef.id],
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true },
-    );
+    await persistResolvedTeamContext(user, createdTeamRef.id);
 
     const createdTeam = await getDoc(doc(db, TEAMS_COLLECTION, createdTeamRef.id));
 

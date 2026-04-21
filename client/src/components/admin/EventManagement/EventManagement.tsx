@@ -18,8 +18,10 @@ import {
   deleteEvent,
 } from "@/services/eventService";
 import { fetchAdminEvents } from "@/services/adminDataService";
+import TeamService from "@/services/teamService";
 import toast, { Toaster } from "react-hot-toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
+import { useAppSelector } from "@/store/store";
 
 interface EventManagementProps {
   openDialog?: boolean;
@@ -30,6 +32,7 @@ const EventManagement: React.FC<EventManagementProps> = ({
   openDialog = false,
   onCloseDialog,
 }) => {
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,11 +209,19 @@ const EventManagement: React.FC<EventManagementProps> = ({
     }
 
     try {
+      const teamContext = currentUser
+        ? await TeamService.ensureTeamContext(currentUser).catch(() => null)
+        : null;
+      const eventPayload = {
+        ...formData,
+        teamId: teamContext?.teamId || currentUser?.teamId || null,
+      };
+
       if (editingEvent) {
-        await updateEvent(editingEvent.id, formData);
+        await updateEvent(editingEvent.id, eventPayload);
         toast.success("Event updated successfully");
       } else {
-        await createEvent(formData);
+        await createEvent(eventPayload);
         toast.success("Event created successfully");
       }
 

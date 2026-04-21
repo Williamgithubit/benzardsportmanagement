@@ -36,6 +36,7 @@ export interface CreateBlogPostData {
   featured?: boolean;
   seoTitle?: string;
   seoDescription?: string;
+  teamId?: string | null;
 }
 
 export interface UpdateBlogPostData extends Partial<CreateBlogPostData> {
@@ -85,6 +86,10 @@ export const createBlogPost = async (
       views: 0,
       featured: postData.featured || false,
     };
+
+    if (typeof postData.teamId === "string" && postData.teamId.trim()) {
+      blogPost.teamId = postData.teamId.trim();
+    }
 
     // Only add optional fields if they have values
     if (postData.featuredImage) {

@@ -177,13 +177,20 @@ export function useCoachRealtimeData(
         teamContext.teamId,
         coachSnapshot.performance.underperformers,
         coachSnapshot.attendanceAnalytics,
+      ).catch((incomingError) =>
+        console.error("Unable to sync coach insights.", incomingError),
       );
     }, 1200);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [coachSnapshot.attendanceAnalytics, coachSnapshot.performance.underperformers, teamContext?.teamId]);
+  }, [
+    coachSnapshot.attendanceAnalytics,
+    coachSnapshot.performance.summaries.length,
+    coachSnapshot.performance.underperformers,
+    teamContext?.teamId,
+  ]);
 
   return {
     teamContext,

@@ -40,6 +40,79 @@ service cloud.firestore {
       );
     }
 
+    function authRole() {
+      return isAuthenticated() && request.auth.token.admin == true
+        ? 'admin'
+        : (
+          isAuthenticated() && request.auth.token.role is string
+            ? request.auth.token.role
+            : null
+        );
+    }
+
+    function authEmail() {
+      return isAuthenticated() && request.auth.token.email is string
+        ? request.auth.token.email
+        : null;
+    }
+
+    function authEmailVerified() {
+      return isAuthenticated() && request.auth.token.email_verified == true;
+    }
+
+    function validUserStatus(status) {
+      return status in ['active', 'inactive', 'suspended'];
+    }
+
+    function canCreateOwnUserProfile(userId) {
+      return isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.uid == request.auth.uid &&
+        authRole() != null &&
+        request.resource.data.role == authRole() &&
+        (
+          authEmail() == null ||
+          request.resource.data.email == authEmail()
+        ) &&
+        request.resource.data.keys().hasAll(['status']) &&
+        validUserStatus(request.resource.data.status) &&
+        (
+          !request.resource.data.keys().hasAny(['emailVerified']) ||
+          request.resource.data.emailVerified == authEmailVerified()
+        );
+    }
+
+    function canUpdateOwnUserProfile(userId) {
+      return isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.uid == request.auth.uid &&
+        (
+          authRole() != null
+            ? request.resource.data.role == authRole()
+            : (
+              resource.data.keys().hasAny(['role']) &&
+              request.resource.data.role == resource.data.role
+            )
+        ) &&
+        (
+          authEmail() == null
+            ? (
+              !resource.data.keys().hasAny(['email']) ||
+              request.resource.data.email == resource.data.email
+            )
+            : request.resource.data.email == authEmail()
+        ) &&
+        (
+          !resource.data.keys().hasAny(['status']) ||
+          request.resource.data.status == resource.data.status
+        ) &&
+        (
+          !request.resource.data.keys().hasAny(['emailVerified']) ||
+          request.resource.data.emailVerified == authEmailVerified()
+        );
+    }
+
     function currentUserTeamId() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -94,16 +167,9 @@ service cloud.firestore {
         ) ||
         request.auth.uid == userId
       );
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin() || (
-        isAuthenticated() &&
-        request.auth.uid == userId &&
-        request.resource.data.uid == resource.data.uid &&
-        request.resource.data.role == resource.data.role &&
-        request.resource.data.status == resource.data.status &&
-        request.resource.data.email == resource.data.email &&
-        request.resource.data.emailVerified == resource.data.emailVerified
-      );
+      allow create: if isAdmin() || canCreateOwnUserProfile(userId);
+      allow delete: if isAdmin();
+      allow update: if isAdmin() || canUpdateOwnUserProfile(userId);
     }
 
     match /teams/{teamId} {
@@ -284,59 +350,59 @@ service cloud.firestore {
     }
 
     match /matchSquads/{squadId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && resourceMatchesTeam();
     }
 
     match /formations/{formationId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && resourceMatchesTeam();
     }
 
     match /trainingPlans/{planId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && resourceMatchesTeam();
     }
 
     match /playerStatuses/{statusId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && resourceMatchesTeam();
     }
 
     match /matchPreparations/{prepId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'coach']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']) && resourceMatchesTeam();
     }
 
     match /posts/{postId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && resourceMatchesTeam();
     }
 
     match /media/{mediaId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media', 'coach']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media', 'coach']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && resourceMatchesTeam();
     }
 
     match /announcements/{announcementId} {
-      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
-      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!request.resource.data.keys().hasAny(['teamId']) || request.resource.data.teamId == currentUserTeamId());
+      allow read: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && resourceMatchesTeam();
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && legacyOrScopedCreate();
       allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && requestMatchesExistingOrLegacy();
-      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && (!dataHasTeamId(resource.data) || resource.data.teamId == currentUserTeamId());
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && resourceMatchesTeam();
     }
   }
 }

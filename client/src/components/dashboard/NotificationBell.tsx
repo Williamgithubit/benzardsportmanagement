@@ -106,7 +106,7 @@ export default function NotificationBell({
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const { items, unreadCount, user } = useDashboardNotifications(30);
+  const { items, unreadCount, user, teamId } = useDashboardNotifications(30);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -181,7 +181,7 @@ export default function NotificationBell({
         markAllNotificationsRead({
           role: user.role || null,
           userId: user.uid,
-          teamId: user.teamId || null,
+          teamId,
         }),
       ).unwrap();
       updateLocalReadState();
@@ -225,7 +225,7 @@ export default function NotificationBell({
         clearAllNotifications({
           role: user.role || null,
           userId: user.uid,
-          teamId: user.teamId || null,
+          teamId,
         }),
       ).unwrap();
       dispatch(setNotifications([]));

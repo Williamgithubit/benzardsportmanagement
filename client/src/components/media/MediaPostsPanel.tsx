@@ -42,6 +42,9 @@ export default function MediaPostsPanel({
   const dispatch = useAppDispatch();
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const editingPost = editingPostId
+    ? posts.find((post) => post.id === editingPostId) || null
+    : null;
 
   const sortedPosts = useMemo(
     () =>
@@ -66,9 +69,20 @@ export default function MediaPostsPanel({
 
     try {
       if (editingPostId) {
+        if (!editingPost) {
+          toast.error("The selected post could not be found.");
+          resetForm();
+          return;
+        }
+
+        if (editingPost.sourceCollection === "events") {
+          toast.error("Event entries are managed from the events dashboard.");
+          return;
+        }
+
         await dispatch(
           updateTeamPost({
-            postId: editingPostId,
+            post: editingPost,
             updates: {
               title: form.title,
               type: form.type,
@@ -104,11 +118,16 @@ export default function MediaPostsPanel({
     }
   };
 
-  const handleDelete = async (postId: string) => {
+  const handleDelete = async (post: TeamPostRecord) => {
     try {
-      await dispatch(deleteTeamPost(postId)).unwrap();
+      if (post.sourceCollection === "events") {
+        toast.error("Event entries are managed from the events dashboard.");
+        return;
+      }
+
+      await dispatch(deleteTeamPost(post)).unwrap();
       toast.success("Post deleted.");
-      if (editingPostId === postId) {
+      if (editingPostId === post.id) {
         resetForm();
       }
     } catch (error) {
@@ -119,6 +138,11 @@ export default function MediaPostsPanel({
   };
 
   const handleEdit = (post: TeamPostRecord) => {
+    if (post.sourceCollection === "events") {
+      toast.error("Event entries are managed from the events dashboard.");
+      return;
+    }
+
     setEditingPostId(post.id);
     setForm({
       title: post.title,
@@ -132,9 +156,21 @@ export default function MediaPostsPanel({
 
   const handlePublishNow = async (postId: string) => {
     try {
+      const targetPost = posts.find((post) => post.id === postId);
+
+      if (!targetPost) {
+        toast.error("The selected post could not be found.");
+        return;
+      }
+
+      if (targetPost.sourceCollection === "events") {
+        toast.error("Event entries are managed from the events dashboard.");
+        return;
+      }
+
       await dispatch(
         updateTeamPost({
-          postId,
+          post: targetPost,
           updates: {
             status: "published",
           },
@@ -324,11 +360,19 @@ export default function MediaPostsPanel({
             <tbody className="divide-y divide-slate-200 bg-white/60">
               {sortedPosts.length > 0 ? (
                 sortedPosts.map((post) => (
-                  <tr key={post.id} className="hover:bg-slate-50/80">
+                  <tr key={`${post.sourceCollection || "posts"}:${post.id}`} className="hover:bg-slate-50/80">
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-slate-900">
                         {post.title}
                       </p>
+                      {post.sourceCollection && post.sourceCollection !== "posts" ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Imported from{" "}
+                          {post.sourceCollection === "blogPosts"
+                            ? "blog posts"
+                            : "events"}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-700">
                       {post.type.replace("_", " ")}
@@ -343,6 +387,11 @@ export default function MediaPostsPanel({
                       {post.views || 0}
                     </td>
                     <td className="px-5 py-4">
+                      {post.sourceCollection === "events" ? (
+                        <p className="text-xs text-slate-500">
+                          Manage in Events dashboard
+                        </p>
+                      ) : (
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -361,13 +410,14 @@ export default function MediaPostsPanel({
                         </button>
                         <button
                           type="button"
-                          onClick={() => void handleDelete(post.id)}
+                          onClick={() => void handleDelete(post)}
                           className="inline-flex items-center gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300"
                         >
                           <MdDelete size={14} />
                           Delete
                         </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 ))

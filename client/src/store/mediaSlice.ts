@@ -51,13 +51,18 @@ export const createTeamPost = createAsyncThunk<
 export const updateTeamPost = createAsyncThunk<
   void,
   {
-    postId: string;
-    updates: Partial<Omit<TeamPostRecord, "id" | "teamId" | "createdAt" | "updatedAt">>;
+    post: TeamPostRecord;
+    updates: Partial<
+      Omit<
+        TeamPostRecord,
+        "id" | "teamId" | "createdAt" | "updatedAt" | "sourceCollection" | "sourceId"
+      >
+    >;
   },
   { rejectValue: string }
->("media/updatePost", async ({ postId, updates }, { rejectWithValue }) => {
+>("media/updatePost", async ({ post, updates }, { rejectWithValue }) => {
   try {
-    await MediaDashboardService.updatePost(postId, updates);
+    await MediaDashboardService.updatePost(post, updates);
   } catch (error) {
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to update post",
@@ -67,11 +72,11 @@ export const updateTeamPost = createAsyncThunk<
 
 export const deleteTeamPost = createAsyncThunk<
   void,
-  string,
+  TeamPostRecord,
   { rejectValue: string }
->("media/deletePost", async (postId, { rejectWithValue }) => {
+>("media/deletePost", async (post, { rejectWithValue }) => {
   try {
-    await MediaDashboardService.deletePost(postId);
+    await MediaDashboardService.deletePost(post);
   } catch (error) {
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to delete post",

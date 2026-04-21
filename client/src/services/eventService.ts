@@ -56,6 +56,7 @@ export interface EventDoc {
     | "other";
   price: number;
   isPublic: boolean;
+  teamId?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -78,6 +79,7 @@ export interface CreateEventData {
     | "other";
   price: number;
   isPublic: boolean;
+  teamId?: string | null;
 }
 
 export type UpdateEventData = Partial<CreateEventData>;
@@ -141,14 +143,19 @@ export const createEvent = async (
 ): Promise<string> => {
   try {
     const now = Timestamp.now();
+    const { teamId, ...restData } = eventData;
     const docData: EventDoc = {
-      ...eventData,
+      ...restData,
       startDate: Timestamp.fromDate(eventData.startDate),
       endDate: Timestamp.fromDate(eventData.endDate),
       registrations: 0,
       createdAt: now,
       updatedAt: now,
     };
+
+    if (typeof teamId === "string" && teamId.trim()) {
+      docData.teamId = teamId.trim();
+    }
 
     const docRef = await addDoc(collection(db, "events"), docData);
     return docRef.id;
@@ -167,7 +174,7 @@ export const updateEvent = async (
     const eventRef = doc(db, "events", id);
 
     // Destructure to separate date fields from other fields
-    const { startDate, endDate, ...otherData } = eventData;
+    const { startDate, endDate, teamId, ...otherData } = eventData;
 
     const updateData: Partial<EventDoc> = {
       ...otherData,
@@ -180,6 +187,9 @@ export const updateEvent = async (
     }
     if (endDate) {
       updateData.endDate = Timestamp.fromDate(endDate);
+    }
+    if (typeof teamId === "string" && teamId.trim()) {
+      updateData.teamId = teamId.trim();
     }
 
     await updateDoc(eventRef, updateData);

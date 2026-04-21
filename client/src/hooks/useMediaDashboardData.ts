@@ -72,10 +72,18 @@ export function useMediaDashboardData(enabled = true) {
       dispatch(setMediaLoading(false));
     };
 
-    void MediaDashboardService.publishDuePosts(teamContext.teamId).catch(handleError);
+    const handleBackgroundError = (task: string, incomingError: unknown) => {
+      console.error(`Unable to ${task}.`, incomingError);
+    };
+
+    void MediaDashboardService.publishDuePosts(teamContext.teamId).catch((incomingError) =>
+      handleBackgroundError("publish due media posts", incomingError),
+    );
 
     const publishInterval = window.setInterval(() => {
-      void MediaDashboardService.publishDuePosts(teamContext.teamId).catch(handleError);
+      void MediaDashboardService.publishDuePosts(teamContext.teamId).catch((incomingError) =>
+        handleBackgroundError("publish due media posts", incomingError),
+      );
     }, 60_000);
 
     const unsubscribers = [
@@ -139,6 +147,8 @@ export function useMediaDashboardData(enabled = true) {
         players,
         matches,
         mediaState.posts,
+      ).catch((incomingError) =>
+        console.error("Unable to sync media notifications.", incomingError),
       );
     }, 1400);
 

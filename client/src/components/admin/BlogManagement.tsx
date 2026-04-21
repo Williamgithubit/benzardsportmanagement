@@ -26,10 +26,12 @@ import {
   updateBlogPost,
   deleteBlogPost,
 } from "@/services/blogService";
+import TeamService from "@/services/teamService";
 import RichTextEditor from "./RichTextEditor";
 import { uploadBlogImage } from "@/services/cloudinaryService";
 import { fetchAdminBlogData } from "@/services/adminDataService";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
+import { useAppSelector } from "@/store/store";
 
 export interface BlogFormData {
   title: string;
@@ -45,7 +47,9 @@ export interface BlogFormData {
   _featuredImageFile?: File;
 }
 
-type CreateBlogPostData = Omit<BlogFormData, "_featuredImageFile">;
+type CreateBlogPostData = Omit<BlogFormData, "_featuredImageFile"> & {
+  teamId?: string | null;
+};
 type UpdateBlogPostData = Partial<CreateBlogPostData> & { id: string };
 
 interface BlogManagementProps {
@@ -58,6 +62,7 @@ const BlogManagement: React.FC<BlogManagementProps> = ({
   onCloseDialog,
 }) => {
   const [user] = useAuthState(auth);
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -161,8 +166,15 @@ const BlogManagement: React.FC<BlogManagementProps> = ({
       const postData = { ...updatedFormData };
       delete postData._featuredImageFile;
 
+      const teamContext = currentUser
+        ? await TeamService.ensureTeamContext(currentUser).catch(() => null)
+        : null;
+
       await createBlogPost(
-        postData,
+        {
+          ...postData,
+          teamId: teamContext?.teamId || currentUser?.teamId || null,
+        },
         user.uid,
         user.displayName || "Anonymous",
         user.email || "unknown@email.com",
@@ -208,9 +220,14 @@ const BlogManagement: React.FC<BlogManagementProps> = ({
       const postData = { ...updatedFormData };
       delete postData._featuredImageFile;
 
+      const teamContext = currentUser
+        ? await TeamService.ensureTeamContext(currentUser).catch(() => null)
+        : null;
+
       const updateData: UpdateBlogPostData = {
         id: editingPost.id,
         ...postData,
+        teamId: teamContext?.teamId || currentUser?.teamId || null,
       };
 
       await updateBlogPost(updateData);

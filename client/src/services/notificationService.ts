@@ -21,6 +21,7 @@ import {
 } from "@/utils/firestore";
 
 const COLLECTION = "notifications";
+const USERS_COLLECTION = "users";
 
 type SubscriptionArgs =
   | string
@@ -105,32 +106,89 @@ const buildTargetQueries = ({
     typeof userId === "string" && userId.trim() ? userId.trim() : null;
   const normalizedTeamId =
     typeof teamId === "string" && teamId.trim() ? teamId.trim() : null;
+  const notificationsRef = collection(db, COLLECTION);
 
   if (normalizedUserId) {
-    targets.push(
-      query(collection(db, COLLECTION), where("userId", "==", normalizedUserId)),
-    );
+    if (normalizedTeamId) {
+      targets.push(
+        query(
+          notificationsRef,
+          where("userId", "==", normalizedUserId),
+          where("teamId", "==", normalizedTeamId),
+        ),
+        query(
+          notificationsRef,
+          where("userId", "==", normalizedUserId),
+          where("teamId", "==", null),
+        ),
+      );
+    } else {
+      targets.push(query(notificationsRef, where("userId", "==", normalizedUserId)));
+    }
   }
 
   if (includeRoleFallback && normalizedRole) {
-    targets.push(
-      query(collection(db, COLLECTION), where("role", "==", normalizedRole)),
-      query(
-        collection(db, COLLECTION),
-        where("recipientRole", "==", normalizedRole),
-      ),
-    );
+    if (normalizedTeamId) {
+      targets.push(
+        query(
+          notificationsRef,
+          where("role", "==", normalizedRole),
+          where("teamId", "==", normalizedTeamId),
+        ),
+        query(
+          notificationsRef,
+          where("role", "==", normalizedRole),
+          where("teamId", "==", null),
+        ),
+        query(
+          notificationsRef,
+          where("recipientRole", "==", normalizedRole),
+          where("teamId", "==", normalizedTeamId),
+        ),
+        query(
+          notificationsRef,
+          where("recipientRole", "==", normalizedRole),
+          where("teamId", "==", null),
+        ),
+      );
+    } else {
+      targets.push(
+        query(notificationsRef, where("role", "==", normalizedRole)),
+        query(notificationsRef, where("recipientRole", "==", normalizedRole)),
+      );
+    }
   }
 
   if (includeRoleFallback) {
-    targets.push(
-      query(collection(db, COLLECTION), where("role", "==", "all")),
-      query(collection(db, COLLECTION), where("recipientRole", "==", "all")),
-    );
-  }
-
-  if (!normalizedTeamId) {
-    return targets;
+    if (normalizedTeamId) {
+      targets.push(
+        query(
+          notificationsRef,
+          where("role", "==", "all"),
+          where("teamId", "==", normalizedTeamId),
+        ),
+        query(
+          notificationsRef,
+          where("role", "==", "all"),
+          where("teamId", "==", null),
+        ),
+        query(
+          notificationsRef,
+          where("recipientRole", "==", "all"),
+          where("teamId", "==", normalizedTeamId),
+        ),
+        query(
+          notificationsRef,
+          where("recipientRole", "==", "all"),
+          where("teamId", "==", null),
+        ),
+      );
+    } else {
+      targets.push(
+        query(notificationsRef, where("role", "==", "all")),
+        query(notificationsRef, where("recipientRole", "==", "all")),
+      );
+    }
   }
 
   return targets;
@@ -147,59 +205,55 @@ const resolveAudienceUsers = async (
         .filter((role): role is NotificationAudienceRole => Boolean(role)),
     ),
   ];
-  const usersSnapshot = await getDocs(collection(db, "users"));
   const normalizedTeamId =
     typeof teamId === "string" && teamId.trim() ? teamId.trim() : null;
+  const usersRef = collection(db, USERS_COLLECTION);
+  const audienceSnapshots = normalizedTeamId
+    ? await Promise.all([
+        getDocs(query(usersRef, where("teamId", "==", normalizedTeamId))),
+      ])
+    : await Promise.all([
+        normalizedRoles.length === 0 || normalizedRoles.includes("all")
+          ? getDocs(usersRef)
+          : getDocs(query(usersRef, where("role", "in", normalizedRoles))),
+      ]);
 
   const scopedAudience = new Map<
     string,
     { uid: string; role: NotificationAudienceRole }
   >();
-  const legacyAudience = new Map<
-    string,
-    { uid: string; role: NotificationAudienceRole }
-  >();
+  audienceSnapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((entry) => {
+      const data = entry.data() as Record<string, unknown>;
+      const uid = resolveUserUid(entry.id, data);
+      const role = normalizeAudienceRole(data.role) || "all";
 
-  usersSnapshot.docs.forEach((entry) => {
-    const data = entry.data() as Record<string, unknown>;
-    const uid = resolveUserUid(entry.id, data);
-    const role = normalizeAudienceRole(data.role) || "all";
+      if (!uid) {
+        return;
+      }
 
-    if (!uid) {
-      return;
-    }
+      if (
+        normalizedTeamId &&
+        typeof data.teamId === "string" &&
+        data.teamId.trim() &&
+        data.teamId.trim() !== normalizedTeamId
+      ) {
+        return;
+      }
 
-    if (
-      normalizedTeamId &&
-      typeof data.teamId === "string" &&
-      data.teamId.trim() &&
-      data.teamId.trim() !== normalizedTeamId
-    ) {
-      return;
-    }
+      if (
+        !normalizedRoles.includes("all") &&
+        !normalizedRoles.includes(role)
+      ) {
+        return;
+      }
 
-    if (
-      !normalizedRoles.includes("all") &&
-      !normalizedRoles.includes(role)
-    ) {
-      return;
-    }
-
-    const targetMap =
-      normalizedTeamId &&
-      !(typeof data.teamId === "string" && data.teamId.trim())
-        ? legacyAudience
-        : scopedAudience;
-
-    targetMap.set(uid, {
-      uid,
-      role,
+      scopedAudience.set(uid, {
+        uid,
+        role,
+      });
     });
   });
-
-  if (normalizedTeamId && scopedAudience.size === 0) {
-    return [...legacyAudience.values()];
-  }
 
   return [...scopedAudience.values()];
 };
@@ -264,6 +318,12 @@ export const NotificationService = {
     const dedupeQuery = query(
       collection(db, COLLECTION),
       where("dedupeKey", "==", payload.dedupeKey),
+      ...(typeof payload.userId === "string" && payload.userId.trim()
+        ? [where("userId", "==", payload.userId.trim())]
+        : []),
+      typeof payload.teamId === "string" && payload.teamId.trim()
+        ? where("teamId", "==", payload.teamId.trim())
+        : where("teamId", "==", null),
       limit(1),
     );
     const existing = await getDocs(dedupeQuery);
