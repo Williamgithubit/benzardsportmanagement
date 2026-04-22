@@ -33,6 +33,12 @@ export const createTeamPost = createAsyncThunk<
     title: string;
     content: string;
     mediaIds: string[];
+    excerpt?: string;
+    category?: string;
+    tags?: string[];
+    featuredImage?: string | null;
+    authorName?: string | null;
+    authorEmail?: string | null;
     scheduledFor?: string | null;
     createdBy?: string | null;
   },
@@ -57,7 +63,12 @@ export const updateTeamPost = createAsyncThunk<
         TeamPostRecord,
         "id" | "teamId" | "createdAt" | "updatedAt" | "sourceCollection" | "sourceId"
       >
-    >;
+    > & {
+      excerpt?: string;
+      category?: string;
+      tags?: string[];
+      featuredImage?: string | null;
+    };
   },
   { rejectValue: string }
 >("media/updatePost", async ({ post, updates }, { rejectWithValue }) => {

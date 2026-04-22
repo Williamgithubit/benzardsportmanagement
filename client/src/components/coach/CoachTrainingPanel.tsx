@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { MdChecklist, MdFitnessCenter, MdSave } from "react-icons/md";
 import {
+  dashboardNeutralButtonClass,
+  dashboardPrimaryButtonClass,
+} from "@/components/dashboard/dashboardButtonStyles";
+import {
   createCoachTrainingSession,
   saveCoachTrainingPlan,
 } from "@/store/coachSlice";
@@ -219,7 +223,7 @@ export default function CoachTrainingPanel({
           <button
             type="button"
             onClick={() => void handleCreateSession()}
-            className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            className={`mt-5 ${dashboardPrimaryButtonClass}`}
           >
             <MdSave size={18} />
             Add Training Session
@@ -382,7 +386,7 @@ export default function CoachTrainingPanel({
           <button
             type="button"
             onClick={() => void handleSavePlan()}
-            className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className={`mt-5 ${dashboardNeutralButtonClass}`}
           >
             <MdSave size={18} />
             Save Training Plan

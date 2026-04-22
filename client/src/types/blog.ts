@@ -1,25 +1,34 @@
 import { Timestamp } from "firebase/firestore";
 
+export type BlogPostStatus =
+  | "draft"
+  | "review"
+  | "published"
+  | "archived";
+
 export interface FirestoreBlogPost {
   id: string;
   title: string;
   slug: string;
   excerpt: string;
   content: string;
+  teamId?: string;
+  mediaIds?: string[];
   featuredImage?: string;
   category: string;
   tags?: string[];
   author: {
+    id?: string;
     name: string;
     email: string;
   };
   views: number;
-  status: "draft" | "published";
+  status: BlogPostStatus;
   publishedAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   comments?: BlogComment[];
-  reactionCount: number;
+  reactionCount?: number;
 }
 
 export interface BlogPost {
@@ -28,20 +37,23 @@ export interface BlogPost {
   slug: string;
   excerpt: string;
   content: string;
+  teamId?: string;
+  mediaIds?: string[];
   featuredImage?: string;
   category: string;
   tags?: string[];
   author: {
+    id?: string;
     name: string;
     email: string;
   };
   views: number;
-  status: "draft" | "published";
+  status: BlogPostStatus;
   publishedAt?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   comments?: BlogComment[];
-  reactionCount: number;
+  reactionCount?: number;
 }
 
 export interface BlogComment {

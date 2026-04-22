@@ -11,8 +11,17 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
-import { deleteBlogPost, updateBlogPost } from "@/services/blogService";
+import {
+  createBlogPost,
+  deleteBlogPost,
+  updateBlogPost,
+} from "@/services/blogService";
 import { CoachService } from "@/services/coachService";
+import {
+  createEvent,
+  deleteEvent,
+  updateEvent,
+} from "@/services/eventService";
 import { NotificationService } from "@/services/notificationService";
 import {
   deleteMediaAsset,
@@ -36,6 +45,75 @@ const teamCollection = (collectionName: string, teamId: string | null) =>
   teamId
     ? query(collection(db, collectionName), where("teamId", "==", teamId))
     : collection(db, collectionName);
+
+const stripHtml = (value: string) => value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+const buildExcerpt = (content: string, maxLength = 180) => {
+  const plainText = stripHtml(content);
+  if (plainText.length <= maxLength) {
+    return plainText;
+  }
+
+  return `${plainText.slice(0, maxLength).trim()}...`;
+};
+
+const normalizeBlogCategory = (type: TeamPostRecord["type"]) => {
+  switch (type) {
+    case "announcement":
+      return "announcements";
+    case "match_report":
+      return "match_report";
+    case "event":
+      return "events";
+    default:
+      return "general";
+  }
+};
+
+const inferBlogPostType = (data: Record<string, unknown>): TeamPostRecord["type"] => {
+  const category =
+    typeof data.category === "string" ? data.category.toLowerCase() : "";
+
+  if (category.includes("match")) {
+    return "match_report";
+  }
+
+  if (category.includes("announcement")) {
+    return "announcement";
+  }
+
+  return "blog";
+};
+
+const mapMediaStatusToBlogStatus = (status: TeamPostRecord["status"]) =>
+  status === "published" ? "published" : "draft";
+
+const mapMediaStatusToEventStatus = (
+  status: TeamPostRecord["status"],
+  scheduledFor?: string | null,
+) => {
+  if (status === "draft") {
+    return "cancelled" as const;
+  }
+
+  const scheduledTime = scheduledFor ? new Date(scheduledFor).getTime() : Number.NaN;
+  if (status === "published" && Number.isFinite(scheduledTime) && scheduledTime <= Date.now()) {
+    return "ongoing" as const;
+  }
+
+  return "upcoming" as const;
+};
+
+const resolveEventWindow = (scheduledFor?: string | null) => {
+  const startDate = scheduledFor ? new Date(scheduledFor) : new Date();
+  const safeStartDate = Number.isNaN(startDate.getTime()) ? new Date() : startDate;
+  const endDate = new Date(safeStartDate.getTime() + 2 * 60 * 60 * 1000);
+
+  return {
+    startDate: safeStartDate,
+    endDate,
+  };
+};
 
 const normalizePost = (
   id: string,
@@ -100,7 +178,7 @@ const normalizeBlogPost = (
     teamId: typeof data.teamId === "string" ? data.teamId : "",
     sourceCollection: BLOG_POSTS_COLLECTION,
     sourceId: id,
-    type: "blog",
+    type: inferBlogPostType(data),
     status: data.status === "published" ? "published" : "draft",
     title:
       (typeof data.title === "string" && data.title.trim()) || "Untitled post",
@@ -110,7 +188,12 @@ const normalizeBlogPost = (
         : typeof data.excerpt === "string"
           ? data.excerpt
           : "",
-    mediaIds: [],
+    mediaIds: Array.isArray(data.mediaIds)
+      ? data.mediaIds.filter(
+          (mediaId): mediaId is string =>
+            typeof mediaId === "string" && Boolean(mediaId.trim()),
+        )
+      : [],
     publishedAt: toIsoString(data.publishedAt as FirestoreDateValue),
     scheduledFor: null,
     createdBy: author && typeof author.id === "string" ? author.id : null,
@@ -342,8 +425,58 @@ export const MediaDashboardService = {
       | "publishedAt"
       | "sourceCollection"
       | "sourceId"
-    >,
+    > & {
+      excerpt?: string;
+      category?: string;
+      tags?: string[];
+      featuredImage?: string | null;
+      authorName?: string | null;
+      authorEmail?: string | null;
+    },
   ) {
+    if (payload.type === "event") {
+      const { startDate, endDate } = resolveEventWindow(payload.scheduledFor);
+
+      return createEvent({
+        title: payload.title,
+        description: payload.content,
+        startDate,
+        endDate,
+        location: "To be announced",
+        capacity: 0,
+        status: mapMediaStatusToEventStatus(payload.status, payload.scheduledFor),
+        category: "other",
+        price: 0,
+        isPublic: payload.status !== "draft",
+        teamId,
+        createdBy: payload.createdBy || null,
+      });
+    }
+
+    if (
+      payload.type === "blog" ||
+      payload.type === "match_report" ||
+      payload.type === "announcement"
+    ) {
+      return createBlogPost(
+        {
+          title: payload.title,
+          content: payload.content,
+          excerpt: payload.excerpt || buildExcerpt(payload.content),
+          mediaIds: payload.mediaIds,
+          featuredImage: payload.featuredImage || undefined,
+          category: payload.category || normalizeBlogCategory(payload.type),
+          tags: payload.tags || [],
+          status: mapMediaStatusToBlogStatus(payload.status),
+          featured: false,
+          teamId,
+        },
+        payload.createdBy || "media-dashboard",
+        payload.authorName || "Media Team",
+        payload.authorEmail || "media@benzard.local",
+      );
+    }
+
     const docRef = await addDoc(collection(db, POSTS_COLLECTION), {
       ...payload,
       teamId,
@@ -369,7 +502,12 @@ export const MediaDashboardService = {
         | "sourceCollection"
         | "sourceId"
       >
-    >,
+    > & {
+      excerpt?: string;
+      category?: string;
+      tags?: string[];
+      featuredImage?: string | null;
+    },
   ) {
     const sourceId = post.sourceId || post.id;
 
@@ -380,19 +518,53 @@ export const MediaDashboardService = {
         ...(typeof updates.content === "string"
           ? { content: updates.content }
           : {}),
-        ...(updates.status
+        ...(typeof updates.content === "string" || typeof updates.excerpt === "string"
           ? {
-              status:
-                updates.status === "published" ? "published" : "draft",
+              excerpt:
+                updates.excerpt ||
+                (typeof updates.content === "string"
+                  ? buildExcerpt(updates.content)
+                  : buildExcerpt(post.content)),
             }
           : {}),
+        ...(updates.status
+          ? {
+              status: mapMediaStatusToBlogStatus(updates.status),
+            }
+          : {}),
+        ...(Array.isArray(updates.mediaIds) ? { mediaIds: updates.mediaIds } : {}),
+        ...(typeof updates.featuredImage === "string"
+          ? { featuredImage: updates.featuredImage }
+          : {}),
+        ...(typeof updates.category === "string"
+          ? { category: updates.category }
+          : typeof updates.type === "string"
+            ? { category: normalizeBlogCategory(updates.type) }
+            : {}),
+        ...(Array.isArray(updates.tags) ? { tags: updates.tags } : {}),
         ...(post.teamId ? { teamId: post.teamId } : {}),
       });
       return;
     }
 
     if (post.sourceCollection === EVENTS_COLLECTION) {
-      throw new Error("Event entries are managed from the events dashboard.");
+      const nextScheduledFor = updates.scheduledFor || post.scheduledFor || null;
+      const { startDate, endDate } = resolveEventWindow(nextScheduledFor);
+
+      await updateEvent(sourceId, {
+        ...(typeof updates.title === "string" ? { title: updates.title } : {}),
+        ...(typeof updates.content === "string"
+          ? { description: updates.content }
+          : {}),
+        ...(updates.status
+          ? {
+              status: mapMediaStatusToEventStatus(updates.status, nextScheduledFor),
+            }
+          : {}),
+        ...(nextScheduledFor ? { startDate, endDate } : {}),
+        ...(post.teamId ? { teamId: post.teamId } : {}),
+      });
+      return;
     }
 
     await updateDoc(doc(db, POSTS_COLLECTION, sourceId), {
@@ -411,7 +583,8 @@ export const MediaDashboardService = {
     }
 
     if (post.sourceCollection === EVENTS_COLLECTION) {
-      throw new Error("Event entries are managed from the events dashboard.");
+      await deleteEvent(sourceId);
+      return;
     }
 
     await deleteDoc(doc(db, POSTS_COLLECTION, sourceId));

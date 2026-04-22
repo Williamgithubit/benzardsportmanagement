@@ -5,30 +5,175 @@ import {
   getDoc,
   deleteDoc,
   query,
-  orderBy,
   where,
   serverTimestamp,
   Timestamp,
   updateDoc,
   addDoc,
-  limit,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { BlogPost, FirestoreBlogPost } from "@/types/blog";
+import type { BlogPost, BlogPostStatus, FirestoreBlogPost } from "@/types/blog";
 
-const serializePost = (post: FirestoreBlogPost): BlogPost => {
-  return {
-    ...post,
-    createdAt: post.createdAt?.toDate?.()?.toISOString() || null,
-    updatedAt: post.updatedAt?.toDate?.()?.toISOString() || null,
-    publishedAt: post.publishedAt?.toDate?.()?.toISOString() || null,
-  };
+const blogStatuses: BlogPostStatus[] = [
+  "draft",
+  "review",
+  "published",
+  "archived",
+];
+
+const isBlogStatus = (value: unknown): value is BlogPostStatus =>
+  typeof value === "string" && blogStatuses.includes(value as BlogPostStatus);
+
+const toIsoString = (
+  value:
+    | Timestamp
+    | { toDate?: () => Date }
+    | string
+    | number
+    | null
+    | undefined,
+) => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const parsedDate = new Date(value);
+    return Number.isNaN(parsedDate.getTime()) ? value : parsedDate.toISOString();
+  }
+
+  if (typeof value === "number") {
+    const parsedDate = new Date(value);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString();
+  }
+
+  if (typeof value === "object" && typeof value.toDate === "function") {
+    return value.toDate().toISOString();
+  }
+
+  return null;
+};
+
+const normalizeBlogStatus = (
+  post: Partial<FirestoreBlogPost> & Record<string, unknown>,
+): BlogPostStatus => {
+  if (isBlogStatus(post.status)) {
+    return post.status;
+  }
+
+  if (post.publishedAt) {
+    return "published";
+  }
+
+  return "draft";
+};
+
+const serializePost = (post: FirestoreBlogPost): BlogPost => ({
+  id: post.id,
+  title: typeof post.title === "string" ? post.title : "Untitled post",
+  slug: typeof post.slug === "string" ? post.slug : "",
+  excerpt: typeof post.excerpt === "string" ? post.excerpt : "",
+  content: typeof post.content === "string" ? post.content : "",
+  teamId: typeof post.teamId === "string" ? post.teamId : undefined,
+  mediaIds: Array.isArray(post.mediaIds)
+    ? post.mediaIds.filter(
+        (mediaId): mediaId is string =>
+          typeof mediaId === "string" && Boolean(mediaId.trim()),
+      )
+    : undefined,
+  featuredImage:
+    typeof post.featuredImage === "string" ? post.featuredImage : undefined,
+  category: typeof post.category === "string" ? post.category : "general",
+  tags: Array.isArray(post.tags)
+    ? post.tags.filter(
+        (tag): tag is string => typeof tag === "string" && Boolean(tag.trim()),
+      )
+    : [],
+  author: {
+    id: typeof post.author?.id === "string" ? post.author.id : undefined,
+    name:
+      typeof post.author?.name === "string" && post.author.name.trim()
+        ? post.author.name
+        : "Benzard Sports Management",
+    email:
+      typeof post.author?.email === "string" && post.author.email.trim()
+        ? post.author.email
+        : "support@benzardsportsmanagement.com",
+  },
+  views: typeof post.views === "number" ? post.views : 0,
+  status: normalizeBlogStatus(post),
+  publishedAt: toIsoString(post.publishedAt),
+  createdAt: toIsoString(post.createdAt),
+  updatedAt: toIsoString(post.updatedAt),
+  comments: Array.isArray(post.comments) ? post.comments : [],
+  reactionCount: typeof post.reactionCount === "number" ? post.reactionCount : 0,
+});
+
+const getDateSortValue = (
+  post: BlogPost,
+  field: "createdAt" | "publishedAt" | "updatedAt",
+) => {
+  const candidates = [
+    post[field],
+    post.publishedAt,
+    post.updatedAt,
+    post.createdAt,
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const timestamp = new Date(candidate as string).getTime();
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+
+  return 0;
+};
+
+const sortPosts = (
+  posts: BlogPost[],
+  orderByField: "createdAt" | "publishedAt" | "updatedAt" | "views",
+  orderDirection: "asc" | "desc",
+) => {
+  const direction = orderDirection === "asc" ? 1 : -1;
+
+  return [...posts].sort((left, right) => {
+    const leftValue =
+      orderByField === "views"
+        ? left.views || 0
+        : getDateSortValue(left, orderByField);
+    const rightValue =
+      orderByField === "views"
+        ? right.views || 0
+        : getDateSortValue(right, orderByField);
+
+    if (leftValue === rightValue) {
+      return (
+        getDateSortValue(left, "updatedAt") -
+        getDateSortValue(right, "updatedAt")
+      ) * direction;
+    }
+
+    return (leftValue - rightValue) * direction;
+  });
+};
+
+const fetchAllSerializedPosts = async (): Promise<BlogPost[]> => {
+  const querySnapshot = await getDocs(collection(db, "blogPosts"));
+
+  return querySnapshot.docs.map((entry) =>
+    serializePost({
+      id: entry.id,
+      ...(entry.data() as Omit<FirestoreBlogPost, "id">),
+    } as FirestoreBlogPost),
+  );
 };
 
 export interface CreateBlogPostData {
   title: string;
   content: string;
   excerpt: string;
+  mediaIds?: string[];
   featuredImage?: string;
   category: string;
   tags: string[];
@@ -84,11 +229,18 @@ export const createBlogPost = async (
       createdAt: now as Timestamp,
       updatedAt: now as Timestamp,
       views: 0,
+      reactionCount: 0,
       featured: postData.featured || false,
     };
 
     if (typeof postData.teamId === "string" && postData.teamId.trim()) {
       blogPost.teamId = postData.teamId.trim();
+    }
+    if (Array.isArray(postData.mediaIds) && postData.mediaIds.length > 0) {
+      blogPost.mediaIds = postData.mediaIds.filter(
+        (mediaId): mediaId is string =>
+          typeof mediaId === "string" && Boolean(mediaId.trim()),
+      );
     }
 
     // Only add optional fields if they have values
@@ -168,7 +320,7 @@ export const deleteBlogPost = async (postId: string): Promise<void> => {
  * Get all blog posts with optional filtering
  */
 export const getBlogPosts = async (options?: {
-  status?: BlogPost["status"];
+  status?: BlogPostStatus;
   category?: string;
   limit?: number;
   orderByField?: "createdAt" | "publishedAt" | "updatedAt" | "views";
@@ -183,35 +335,20 @@ export const getBlogPosts = async (options?: {
       orderDirection = "desc",
     } = options || {};
 
-    let q = query(collection(db, "blogPosts"));
-
-    // Add filters
-    if (status) {
-      q = query(q, where("status", "==", status));
-    }
-    if (category) {
-      q = query(q, where("category", "==", category));
-    }
-
-    // Add ordering
-    q = query(q, orderBy(orderByField, orderDirection));
-
-    // Add limit
-    if (limitCount) {
-      q = query(q, limit(limitCount));
-    }
-
-    const querySnapshot = await getDocs(q);
-    const posts: BlogPost[] = [];
-
-    querySnapshot.forEach((doc) => {
-      posts.push({
-        id: doc.id,
-        ...doc.data(),
-      } as BlogPost);
+    const filteredPosts = (await fetchAllSerializedPosts()).filter((post) => {
+      const matchesStatus = !status || post.status === status;
+      const matchesCategory = !category || post.category === category;
+      return matchesStatus && matchesCategory;
     });
+    const sortedPosts = sortPosts(
+      filteredPosts,
+      orderByField,
+      orderDirection,
+    );
 
-    return posts;
+    return typeof limitCount === "number"
+      ? sortedPosts.slice(0, limitCount)
+      : sortedPosts;
   } catch (error) {
     console.error("Error getting blog posts:", error);
     throw error;
@@ -226,10 +363,10 @@ export const getBlogPost = async (postId: string): Promise<BlogPost | null> => {
     const docSnap = await getDoc(doc(db, "blogPosts", postId));
 
     if (docSnap.exists()) {
-      return {
+      return serializePost({
         id: docSnap.id,
-        ...docSnap.data(),
-      } as BlogPost;
+        ...(docSnap.data() as Omit<FirestoreBlogPost, "id">),
+      } as FirestoreBlogPost);
     }
 
     return null;
@@ -250,12 +387,14 @@ export const getBlogPostBySlug = async (
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
-      const doc = querySnapshot.docs[0];
-      const firestorePost = {
-        id: doc.id,
-        ...doc.data(),
-      } as FirestoreBlogPost;
-      return serializePost(firestorePost);
+      const matchingPosts = querySnapshot.docs.map((entry) =>
+        serializePost({
+          id: entry.id,
+          ...(entry.data() as Omit<FirestoreBlogPost, "id">),
+        } as FirestoreBlogPost),
+      );
+
+      return sortPosts(matchingPosts, "updatedAt", "desc")[0] || null;
     }
 
     return null;

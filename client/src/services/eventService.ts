@@ -33,6 +33,8 @@ export interface Event {
     | "other";
   price: number;
   isPublic: boolean;
+  teamId?: string | null;
+  createdBy?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +59,7 @@ export interface EventDoc {
   price: number;
   isPublic: boolean;
   teamId?: string;
+  createdBy?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -80,6 +83,7 @@ export interface CreateEventData {
   price: number;
   isPublic: boolean;
   teamId?: string | null;
+  createdBy?: string | null;
 }
 
 export type UpdateEventData = Partial<CreateEventData>;
@@ -117,6 +121,8 @@ const convertDocToEvent = (id: string, doc: EventDoc): Event => ({
   category: doc.category,
   price: doc.price || 0,
   isPublic: doc.isPublic,
+  teamId: typeof doc.teamId === "string" ? doc.teamId : null,
+  createdBy: typeof doc.createdBy === "string" ? doc.createdBy : null,
   createdAt: toDate(doc.createdAt),
   updatedAt: toDate(doc.updatedAt),
 });
@@ -143,7 +149,7 @@ export const createEvent = async (
 ): Promise<string> => {
   try {
     const now = Timestamp.now();
-    const { teamId, ...restData } = eventData;
+    const { teamId, createdBy, ...restData } = eventData;
     const docData: EventDoc = {
       ...restData,
       startDate: Timestamp.fromDate(eventData.startDate),
@@ -155,6 +161,9 @@ export const createEvent = async (
 
     if (typeof teamId === "string" && teamId.trim()) {
       docData.teamId = teamId.trim();
+    }
+    if (typeof createdBy === "string" && createdBy.trim()) {
+      docData.createdBy = createdBy.trim();
     }
 
     const docRef = await addDoc(collection(db, "events"), docData);
@@ -174,7 +183,7 @@ export const updateEvent = async (
     const eventRef = doc(db, "events", id);
 
     // Destructure to separate date fields from other fields
-    const { startDate, endDate, teamId, ...otherData } = eventData;
+    const { startDate, endDate, teamId, createdBy, ...otherData } = eventData;
 
     const updateData: Partial<EventDoc> = {
       ...otherData,
@@ -190,6 +199,9 @@ export const updateEvent = async (
     }
     if (typeof teamId === "string" && teamId.trim()) {
       updateData.teamId = teamId.trim();
+    }
+    if (typeof createdBy === "string" && createdBy.trim()) {
+      updateData.createdBy = createdBy.trim();
     }
 
     await updateDoc(eventRef, updateData);

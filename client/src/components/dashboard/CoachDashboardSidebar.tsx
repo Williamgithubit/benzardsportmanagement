@@ -8,6 +8,7 @@ import { MdClose, MdLogout } from "react-icons/md";
 import { useAppDispatch, useAppSelector } from "@/store/store";
 import { performLogout } from "@/store/Auth/logoutAction";
 import { selectAuthState } from "@/store/Auth/authSlice";
+import { dashboardSidebarLogoutButtonClass } from "@/components/dashboard/dashboardButtonStyles";
 import {
   coachNavigation,
   type CoachTabId,
@@ -182,7 +183,7 @@ export default function CoachDashboardSidebar({
               type="button"
               onClick={handleLogout}
               disabled={logoutPending}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+              className={dashboardSidebarLogoutButtonClass}
             >
               <MdLogout size={16} />
               {logoutPending ? "Signing out..." : "Logout"}

@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { MdGroups, MdMedicalInformation, MdSave } from "react-icons/md";
+import {
+  dashboardOutlineActionButtonClass,
+  dashboardPrimaryCompactButtonClass,
+  dashboardToggleActiveClass,
+  dashboardToggleButtonClass,
+  dashboardToggleInactiveClass,
+} from "@/components/dashboard/dashboardButtonStyles";
 import { saveCoachMatchSquad, saveCoachPlayerStatus } from "@/store/coachSlice";
 import { useAppDispatch } from "@/store/store";
 import type { MatchSquadRecord, PlayerStatusRecord } from "@/types/coach";
@@ -266,7 +273,7 @@ export default function CoachSquadManagementPanel({
             <button
               type="button"
               onClick={() => void handleSaveSquad()}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              className={dashboardPrimaryCompactButtonClass}
             >
               <MdSave size={18} />
               Save Squad
@@ -303,10 +310,10 @@ export default function CoachSquadManagementPanel({
                       <button
                         type="button"
                         onClick={() => toggleStarter(player.id)}
-                        className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${
+                        className={`${dashboardToggleButtonClass} text-xs ${
                           isStarter
-                            ? "bg-emerald-600 text-white"
-                            : "border border-slate-200 bg-white text-slate-700"
+                            ? dashboardToggleActiveClass
+                            : dashboardToggleInactiveClass
                         }`}
                       >
                         Starting XI
@@ -314,10 +321,10 @@ export default function CoachSquadManagementPanel({
                       <button
                         type="button"
                         onClick={() => toggleSubstitute(player.id)}
-                        className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${
+                        className={`${dashboardToggleButtonClass} text-xs ${
                           isSubstitute
-                            ? "bg-slate-800 text-white"
-                            : "border border-slate-200 bg-white text-slate-700"
+                            ? dashboardToggleActiveClass
+                            : dashboardToggleInactiveClass
                         }`}
                       >
                         Substitute
@@ -405,7 +412,7 @@ export default function CoachSquadManagementPanel({
                     <button
                       type="button"
                       onClick={() => void handleSaveStatus(player.id)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                      className={dashboardOutlineActionButtonClass}
                     >
                       <MdMedicalInformation size={18} />
                       Save Status

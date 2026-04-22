@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { MdCloudUpload, MdDelete, MdImage, MdMovie } from "react-icons/md";
+import {
+  dashboardDangerActionButtonClass,
+  dashboardPrimaryButtonClass,
+} from "@/components/dashboard/dashboardButtonStyles";
 import { deleteTeamMediaAsset, uploadTeamMediaAsset } from "@/store/mediaSlice";
 import { useAppDispatch } from "@/store/store";
 import type { TeamMediaRecord } from "@/types/media-dashboard";
@@ -207,7 +211,7 @@ export default function MediaLibraryPanel({
           <button
             type="button"
             onClick={() => void handleUpload()}
-            className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
+            className={dashboardPrimaryButtonClass}
           >
             <MdCloudUpload size={18} />
             Upload
@@ -228,7 +232,7 @@ export default function MediaLibraryPanel({
             type="search"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-sky-300 focus:outline-none"
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-secondary/30 focus:outline-none"
             placeholder="Search media"
           />
         </div>
@@ -242,7 +246,6 @@ export default function MediaLibraryPanel({
               >
                 <div className="flex h-56 items-center justify-center bg-slate-100">
                   {item.type === "video" ? (
-                    // eslint-disable-next-line jsx-a11y/media-has-caption
                     <video src={item.url} controls className="h-full w-full object-cover" />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -263,7 +266,7 @@ export default function MediaLibraryPanel({
                     <button
                       type="button"
                       onClick={() => void handleDelete(item)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300"
+                      className={dashboardDangerActionButtonClass}
                     >
                       <MdDelete size={18} />
                     </button>

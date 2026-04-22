@@ -30,14 +30,14 @@ const variantStyles = {
     ring: "ring-primary/20",
   },
   coach: {
-    badge: "bg-emerald-100 text-emerald-700",
-    button: "bg-emerald-600 hover:bg-emerald-700",
-    ring: "ring-emerald-500/20",
+    badge: "bg-secondary/10 text-secondary",
+    button: "bg-secondary hover:bg-secondary-hover",
+    ring: "ring-secondary/20",
   },
   media: {
-    badge: "bg-sky-100 text-sky-700",
-    button: "bg-sky-600 hover:bg-sky-700",
-    ring: "ring-sky-500/20",
+    badge: "bg-secondary/10 text-secondary",
+    button: "bg-secondary hover:bg-secondary-hover",
+    ring: "ring-secondary/20",
   },
 } as const;
 

@@ -44,12 +44,19 @@ const formatRoleLabel = (role?: string | null) => {
     .join(" ");
 };
 
+const normalizeRoleKey = (role?: string | null) =>
+  typeof role === "string" ? role.trim().toLowerCase() : "";
+
 const getDashboardPath = (role?: string | null) => {
-  switch (role) {
+  switch (normalizeRoleKey(role)) {
     case "admin":
       return "/dashboard/admin";
     case "statistician":
       return "/dashboard/statistician";
+    case "coach":
+      return "/dashboard/coach";
+    case "media":
+      return "/dashboard/media";
     default:
       return "/";
   }

@@ -3,6 +3,12 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { MdCampaign, MdSend } from "react-icons/md";
+import {
+  dashboardPrimaryButtonClass,
+  dashboardToggleActiveClass,
+  dashboardToggleButtonClass,
+  dashboardToggleInactiveClass,
+} from "@/components/dashboard/dashboardButtonStyles";
 import { createTeamAnnouncement } from "@/store/mediaSlice";
 import { useAppDispatch } from "@/store/store";
 import type { TeamAnnouncementRecord } from "@/types/media-dashboard";
@@ -122,10 +128,10 @@ export default function MediaAnnouncementsPanel({
                     key={audience}
                     type="button"
                     onClick={() => handleToggleAudience(audience)}
-                    className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                    className={`${dashboardToggleButtonClass} ${
                       active
-                        ? "bg-sky-600 text-white"
-                        : "border border-slate-200 bg-white text-slate-700"
+                        ? dashboardToggleActiveClass
+                        : dashboardToggleInactiveClass
                     }`}
                   >
                     {audience}
@@ -139,7 +145,7 @@ export default function MediaAnnouncementsPanel({
         <button
           type="button"
           onClick={() => void handleSubmit()}
-          className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
+          className={`mt-5 ${dashboardPrimaryButtonClass}`}
         >
           <MdSend size={18} />
           Send Announcement

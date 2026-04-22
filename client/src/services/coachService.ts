@@ -49,10 +49,112 @@ const TRAINING_PLANS_COLLECTION = "trainingPlans";
 const PLAYER_STATUSES_COLLECTION = "playerStatuses";
 const MATCH_PREPARATIONS_COLLECTION = "matchPreparations";
 
-const teamCollection = (collectionName: string, teamId: string | null) =>
-  teamId
-    ? query(collection(db, collectionName), where("teamId", "==", teamId))
-    : collection(db, collectionName);
+const normalizeTeamId = (data: Record<string, unknown>) =>
+  typeof data.teamId === "string" && data.teamId.trim()
+    ? data.teamId.trim()
+    : null;
+
+const legacyMatchesTeam = (
+  data: Record<string, unknown>,
+  teamId: string | null,
+) => {
+  if (!teamId) {
+    return true;
+  }
+
+  const resolvedTeamId = normalizeTeamId(data);
+  return !resolvedTeamId || resolvedTeamId === teamId;
+};
+
+const subscribeToLegacyAwareCollection = <T extends { id: string }>(
+  collectionName: string,
+  teamId: string | null,
+  normalize: (id: string, data: Record<string, unknown>) => T,
+  callback: (items: T[]) => void,
+  onError?: (error: unknown) => void,
+  options: {
+    sort?: (left: T, right: T) => number;
+    limit?: number;
+  } = {},
+) => {
+  if (!teamId) {
+    return onSnapshot(
+      collection(db, collectionName),
+      (snapshot) => {
+        const items = snapshot.docs
+          .map((entry) => ({
+            id: entry.id,
+            data: entry.data() as Record<string, unknown>,
+          }))
+          .filter((entry) => legacyMatchesTeam(entry.data, teamId))
+          .map((entry) => normalize(entry.id, entry.data));
+
+        const sortedItems = options.sort ? [...items].sort(options.sort) : items;
+        callback(
+          typeof options.limit === "number"
+            ? sortedItems.slice(0, options.limit)
+            : sortedItems,
+        );
+      },
+      onError,
+    );
+  }
+
+  let scopedItems: T[] = [];
+  let legacyItems: T[] = [];
+
+  const publish = () => {
+    const scopedIds = new Set(scopedItems.map((item) => item.id));
+    const mergedItems = [
+      ...scopedItems,
+      ...legacyItems.filter((item) => !scopedIds.has(item.id)),
+    ];
+    const sortedItems = options.sort
+      ? [...mergedItems].sort(options.sort)
+      : mergedItems;
+
+    callback(
+      typeof options.limit === "number"
+        ? sortedItems.slice(0, options.limit)
+        : sortedItems,
+    );
+  };
+
+  const unsubscribeScoped = onSnapshot(
+    query(collection(db, collectionName), where("teamId", "==", teamId)),
+    (snapshot) => {
+      scopedItems = snapshot.docs
+        .map((entry) => ({
+          id: entry.id,
+          data: entry.data() as Record<string, unknown>,
+        }))
+        .filter((entry) => legacyMatchesTeam(entry.data, teamId))
+        .map((entry) => normalize(entry.id, entry.data));
+      publish();
+    },
+    onError,
+  );
+
+  const unsubscribeLegacy = onSnapshot(
+    query(collection(db, collectionName), where("teamId", "==", null)),
+    (snapshot) => {
+      legacyItems = snapshot.docs
+        .map((entry) => ({
+          id: entry.id,
+          data: entry.data() as Record<string, unknown>,
+        }))
+        .filter((entry) => legacyMatchesTeam(entry.data, teamId))
+        .map((entry) => normalize(entry.id, entry.data));
+      publish();
+    },
+    onError,
+  );
+
+  return () => {
+    unsubscribeScoped();
+    unsubscribeLegacy();
+  };
+};
 
 const teamCollectionWithFilter = (
   collectionName: string,
@@ -441,16 +543,17 @@ export const CoachService = {
       );
     };
 
-    const unsubscribePlayers = onSnapshot(
-      teamCollection(PLAYERS_COLLECTION, teamId),
-      (snapshot) => {
-        playerDocs = snapshot.docs.map((entry) =>
-          normalizePlayer(
-            entry.id,
-            entry.data() as Record<string, unknown>,
-            "players",
-          ),
-        );
+    const unsubscribePlayers = subscribeToLegacyAwareCollection(
+      PLAYERS_COLLECTION,
+      teamId,
+      (id, data) =>
+        normalizePlayer(
+          id,
+          data,
+          "players",
+        ),
+      (items) => {
+        playerDocs = items;
         publish();
       },
       (error) => {
@@ -460,16 +563,17 @@ export const CoachService = {
       },
     );
 
-    const unsubscribeAthletes = onSnapshot(
-      teamCollection(ATHLETES_COLLECTION, teamId),
-      (snapshot) => {
-        athleteDocs = snapshot.docs.map((entry) =>
-          normalizePlayer(
-            entry.id,
-            entry.data() as Record<string, unknown>,
-            "athletes",
-          ),
-        );
+    const unsubscribeAthletes = subscribeToLegacyAwareCollection(
+      ATHLETES_COLLECTION,
+      teamId,
+      (id, data) =>
+        normalizePlayer(
+          id,
+          data,
+          "athletes",
+        ),
+      (items) => {
+        athleteDocs = items;
         publish();
       },
       (error) => {
@@ -486,168 +590,115 @@ export const CoachService = {
   },
 
   subscribeToMatches(teamId: string | null, callback: (matches: MatchRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(MATCHES_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizeMatch(entry.id, entry.data() as Record<string, unknown>),
-            )
-            .sort((left, right) => sortByNewest(left, right)),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      MATCHES_COLLECTION,
+      teamId,
+      normalizeMatch,
+      callback,
       onError,
+      {
+        sort: (left, right) => sortByNewest(left, right),
+      },
     );
   },
 
   subscribeToMatchEvents(teamId: string | null, callback: (events: MatchEventRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(MATCH_EVENTS_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizeMatchEvent(
-                entry.id,
-                entry.data() as Record<string, unknown>,
-              ),
-            )
-            .sort(sortByNewest)
-            .slice(0, 1000),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      MATCH_EVENTS_COLLECTION,
+      teamId,
+      normalizeMatchEvent,
+      callback,
       onError,
+      {
+        sort: sortByNewest,
+        limit: 1000,
+      },
     );
   },
 
   subscribeToTrainingSessions(teamId: string | null, callback: (sessions: TrainingSessionRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(TRAINING_SESSIONS_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizeTrainingSession(
-                entry.id,
-                entry.data() as Record<string, unknown>,
-              ),
-            )
-            .sort((left, right) => sortByNewest(left, right)),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      TRAINING_SESSIONS_COLLECTION,
+      teamId,
+      normalizeTrainingSession,
+      callback,
       onError,
+      {
+        sort: (left, right) => sortByNewest(left, right),
+      },
     );
   },
 
   subscribeToAttendance(teamId: string | null, callback: (records: AttendanceRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(ATTENDANCE_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizeAttendanceRecord(
-                entry.id,
-                entry.data() as Record<string, unknown>,
-              ),
-            )
-            .sort(sortByNewest)
-            .slice(0, 1500),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      ATTENDANCE_COLLECTION,
+      teamId,
+      normalizeAttendanceRecord,
+      callback,
       onError,
+      {
+        sort: sortByNewest,
+        limit: 1500,
+      },
     );
   },
 
   subscribeToPlayerStatuses(teamId: string | null, callback: (items: PlayerStatusRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(PLAYER_STATUSES_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs.map((entry) =>
-            normalizePlayerStatus(
-              entry.id,
-              entry.data() as Record<string, unknown>,
-            ),
-          ),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      PLAYER_STATUSES_COLLECTION,
+      teamId,
+      normalizePlayerStatus,
+      callback,
       onError,
     );
   },
 
   subscribeToMatchSquads(teamId: string | null, callback: (items: MatchSquadRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(MATCH_SQUADS_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs.map((entry) =>
-            normalizeMatchSquad(
-              entry.id,
-              entry.data() as Record<string, unknown>,
-            ),
-          ),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      MATCH_SQUADS_COLLECTION,
+      teamId,
+      normalizeMatchSquad,
+      callback,
       onError,
     );
   },
 
   subscribeToFormations(teamId: string | null, callback: (items: FormationRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(FORMATIONS_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizeFormation(
-                entry.id,
-                entry.data() as Record<string, unknown>,
-              ),
-            )
-            .sort(sortByNewest),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      FORMATIONS_COLLECTION,
+      teamId,
+      normalizeFormation,
+      callback,
       onError,
+      {
+        sort: sortByNewest,
+      },
     );
   },
 
   subscribeToTrainingPlans(teamId: string | null, callback: (items: TrainingPlanRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(TRAINING_PLANS_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizeTrainingPlan(
-                entry.id,
-                entry.data() as Record<string, unknown>,
-              ),
-            )
-            .sort(sortByNewest),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      TRAINING_PLANS_COLLECTION,
+      teamId,
+      normalizeTrainingPlan,
+      callback,
       onError,
+      {
+        sort: sortByNewest,
+      },
     );
   },
 
   subscribeToMatchPreparations(teamId: string | null, callback: (items: MatchPreparationRecord[]) => void, onError?: (error: unknown) => void) {
-    return onSnapshot(
-      teamCollection(MATCH_PREPARATIONS_COLLECTION, teamId),
-      (snapshot) => {
-        callback(
-          snapshot.docs
-            .map((entry) =>
-              normalizePreparation(
-                entry.id,
-                entry.data() as Record<string, unknown>,
-              ),
-            )
-            .sort(sortByNewest),
-        );
-      },
+    return subscribeToLegacyAwareCollection(
+      MATCH_PREPARATIONS_COLLECTION,
+      teamId,
+      normalizePreparation,
+      callback,
       onError,
+      {
+        sort: sortByNewest,
+      },
     );
   },
 

@@ -10,11 +10,18 @@ import {
 } from "react-icons/md";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import {
+  dashboardDangerActionButtonClass,
+  dashboardNeutralButtonClass,
+  dashboardOutlineActionButtonClass,
+  dashboardPrimaryButtonClass,
+  dashboardSoftActionButtonClass,
+} from "@/components/dashboard/dashboardButtonStyles";
+import {
   createTeamPost,
   deleteTeamPost,
   updateTeamPost,
 } from "@/store/mediaSlice";
-import { useAppDispatch } from "@/store/store";
+import { useAppDispatch, useAppSelector } from "@/store/store";
 import type { TeamMediaRecord, TeamPostRecord } from "@/types/media-dashboard";
 
 interface MediaPostsPanelProps {
@@ -33,6 +40,31 @@ const emptyForm = {
   mediaIds: [] as string[],
 };
 
+const stripHtml = (value: string) =>
+  value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+const buildExcerpt = (content: string, maxLength = 180) => {
+  const plainText = stripHtml(content);
+  if (plainText.length <= maxLength) {
+    return plainText;
+  }
+
+  return `${plainText.slice(0, maxLength).trim()}...`;
+};
+
+const getCategoryForPostType = (type: TeamPostRecord["type"]) => {
+  switch (type) {
+    case "announcement":
+      return "announcements";
+    case "match_report":
+      return "match_report";
+    case "event":
+      return "events";
+    default:
+      return "general";
+  }
+};
+
 export default function MediaPostsPanel({
   teamId,
   currentUserId,
@@ -40,11 +72,16 @@ export default function MediaPostsPanel({
   mediaItems,
 }: MediaPostsPanelProps) {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const editingPost = editingPostId
     ? posts.find((post) => post.id === editingPostId) || null
     : null;
+  const selectedMedia = useMemo(
+    () => mediaItems.filter((item) => form.mediaIds.includes(item.id)),
+    [form.mediaIds, mediaItems],
+  );
 
   const sortedPosts = useMemo(
     () =>
@@ -68,15 +105,24 @@ export default function MediaPostsPanel({
     }
 
     try {
+      const featuredImage =
+        selectedMedia.find((item) => item.type === "image")?.url || null;
+      const tags = Array.from(
+        new Set(
+          selectedMedia.flatMap((item) => item.tags).filter(Boolean),
+        ),
+      );
+      const derivedPayload = {
+        excerpt: buildExcerpt(form.content),
+        category: getCategoryForPostType(form.type),
+        tags,
+        featuredImage,
+      };
+
       if (editingPostId) {
         if (!editingPost) {
           toast.error("The selected post could not be found.");
           resetForm();
-          return;
-        }
-
-        if (editingPost.sourceCollection === "events") {
-          toast.error("Event entries are managed from the events dashboard.");
           return;
         }
 
@@ -90,6 +136,7 @@ export default function MediaPostsPanel({
               scheduledFor: form.scheduledFor || null,
               content: form.content,
               mediaIds: form.mediaIds,
+              ...derivedPayload,
             },
           }),
         ).unwrap();
@@ -105,6 +152,10 @@ export default function MediaPostsPanel({
             content: form.content,
             mediaIds: form.mediaIds,
             createdBy: currentUserId || null,
+            authorName:
+              currentUser?.displayName || currentUser?.name || "Media Team",
+            authorEmail: currentUser?.email || "media@benzard.local",
+            ...derivedPayload,
           }),
         ).unwrap();
         toast.success("Post created.");
@@ -120,11 +171,6 @@ export default function MediaPostsPanel({
 
   const handleDelete = async (post: TeamPostRecord) => {
     try {
-      if (post.sourceCollection === "events") {
-        toast.error("Event entries are managed from the events dashboard.");
-        return;
-      }
-
       await dispatch(deleteTeamPost(post)).unwrap();
       toast.success("Post deleted.");
       if (editingPostId === post.id) {
@@ -138,11 +184,6 @@ export default function MediaPostsPanel({
   };
 
   const handleEdit = (post: TeamPostRecord) => {
-    if (post.sourceCollection === "events") {
-      toast.error("Event entries are managed from the events dashboard.");
-      return;
-    }
-
     setEditingPostId(post.id);
     setForm({
       title: post.title,
@@ -160,11 +201,6 @@ export default function MediaPostsPanel({
 
       if (!targetPost) {
         toast.error("The selected post could not be found.");
-        return;
-      }
-
-      if (targetPost.sourceCollection === "events") {
-        toast.error("Event entries are managed from the events dashboard.");
         return;
       }
 
@@ -305,7 +341,7 @@ export default function MediaPostsPanel({
                           : current.mediaIds.filter((mediaId) => mediaId !== item.id),
                       }))
                     }
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-secondary focus:ring-secondary"
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">
@@ -329,7 +365,7 @@ export default function MediaPostsPanel({
           <button
             type="button"
             onClick={() => void handleSubmit()}
-            className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
+            className={dashboardPrimaryButtonClass}
           >
             <MdSave size={18} />
             {editingPostId ? "Update Post" : "Create Post"}
@@ -337,7 +373,7 @@ export default function MediaPostsPanel({
           <button
             type="button"
             onClick={resetForm}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
+            className={dashboardNeutralButtonClass}
           >
             Reset
           </button>
@@ -387,23 +423,18 @@ export default function MediaPostsPanel({
                       {post.views || 0}
                     </td>
                     <td className="px-5 py-4">
-                      {post.sourceCollection === "events" ? (
-                        <p className="text-xs text-slate-500">
-                          Manage in Events dashboard
-                        </p>
-                      ) : (
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => handleEdit(post)}
-                          className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300"
+                          className={dashboardOutlineActionButtonClass}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => void handlePublishNow(post.id)}
-                          className="inline-flex items-center gap-1 rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:border-sky-300"
+                          className={dashboardSoftActionButtonClass}
                         >
                           <MdOutlinePublish size={14} />
                           Publish
@@ -411,13 +442,12 @@ export default function MediaPostsPanel({
                         <button
                           type="button"
                           onClick={() => void handleDelete(post)}
-                          className="inline-flex items-center gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300"
+                          className={dashboardDangerActionButtonClass}
                         >
                           <MdDelete size={14} />
                           Delete
                         </button>
                       </div>
-                      )}
                     </td>
                   </tr>
                 ))

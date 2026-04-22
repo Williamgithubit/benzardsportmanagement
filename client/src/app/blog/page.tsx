@@ -85,11 +85,11 @@ export default function BlogPage() {
     const fetchBlogPosts = async () => {
       try {
         setLoading(true);
-        const allPosts = await getBlogPosts({
-          orderByField: "createdAt",
+        const publishedPosts = await getBlogPosts({
+          status: "published",
+          orderByField: "publishedAt",
           orderDirection: "desc",
         });
-        const publishedPosts = allPosts.filter((post) => post.status === "published");
         setBlogPosts(publishedPosts);
       } catch (error) {
         console.error("Error fetching blog posts:", error);

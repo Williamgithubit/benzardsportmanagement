@@ -223,7 +223,9 @@ service cloud.firestore {
 
     match /events/{eventId} {
       allow read: if true;
-      allow create, update, delete: if isAuthenticated() && hasAnyRole(['admin', 'manager']);
+      allow create: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && legacyOrScopedCreate();
+      allow update: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && requestMatchesExistingOrLegacy();
+      allow delete: if isAuthenticated() && hasAnyRole(['admin', 'manager', 'media']) && resourceMatchesTeam();
     }
 
     match /tasks/{taskId} {

@@ -47,12 +47,12 @@ const variantStyles = {
     button: "bg-primary hover:bg-primary-hover",
   },
   coach: {
-    badge: "bg-emerald-100 text-emerald-700",
-    button: "bg-emerald-600 hover:bg-emerald-700",
+    badge: "bg-secondary/10 text-secondary",
+    button: "bg-secondary hover:bg-secondary-hover",
   },
   media: {
-    badge: "bg-sky-100 text-sky-700",
-    button: "bg-sky-600 hover:bg-sky-700",
+    badge: "bg-secondary/10 text-secondary",
+    button: "bg-secondary hover:bg-secondary-hover",
   },
 } as const;
 
