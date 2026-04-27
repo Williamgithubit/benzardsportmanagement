@@ -56,6 +56,7 @@ export interface AthleteContact {
 export interface Athlete {
   id: string;
   name: string;
+  teamId?: string | null;
   firstName?: string;
   lastName?: string;
   age?: number;

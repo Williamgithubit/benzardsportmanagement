@@ -75,6 +75,7 @@ export default function MediaPostsPanel({
   const currentUser = useAppSelector((state) => state.auth.user);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const supportsScheduling = form.type === "event";
   const editingPost = editingPostId
     ? posts.find((post) => post.id === editingPostId) || null
     : null;
@@ -101,6 +102,11 @@ export default function MediaPostsPanel({
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.content.trim()) {
       toast.error("Title and content are required.");
+      return;
+    }
+
+    if (!supportsScheduling && form.status === "scheduled") {
+      toast.error("Scheduling is only available for event posts.");
       return;
     }
 
@@ -257,6 +263,12 @@ export default function MediaPostsPanel({
                 setForm((current) => ({
                   ...current,
                   type: event.target.value as TeamPostRecord["type"],
+                  status:
+                    event.target.value === "event" || current.status !== "scheduled"
+                      ? current.status
+                      : "draft",
+                  scheduledFor:
+                    event.target.value === "event" ? current.scheduledFor : "",
                 }))
               }
               className="mt-3 w-full bg-transparent text-sm text-slate-800 outline-none"
@@ -283,7 +295,7 @@ export default function MediaPostsPanel({
               className="mt-3 w-full bg-transparent text-sm text-slate-800 outline-none"
             >
               <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
+              {supportsScheduling ? <option value="scheduled">Scheduled</option> : null}
               <option value="published">Published</option>
             </select>
           </label>

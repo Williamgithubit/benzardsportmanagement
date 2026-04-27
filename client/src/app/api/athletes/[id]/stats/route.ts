@@ -36,6 +36,16 @@ const toIsoString = (value: unknown) => {
   return null;
 };
 
+const resolveAthleteName = (athlete: Record<string, unknown>) =>
+  (typeof athlete.name === "string" && athlete.name.trim()) ||
+  [
+    typeof athlete.firstName === "string" ? athlete.firstName : "",
+    typeof athlete.lastName === "string" ? athlete.lastName : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
 const normalizeBaseStats = (value: unknown): AthleteComputedStats => {
   const stats =
     value && typeof value === "object"
@@ -91,19 +101,39 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const athleteData = athleteDoc.data() as Record<string, unknown>;
     const baseStats = normalizeBaseStats(athleteData.stats);
+    const athleteName = resolveAthleteName(athleteData);
+    let resolvedPerformanceDoc = performanceDoc;
 
-    if (performanceDoc.exists) {
-      const performanceData = performanceDoc.data() as Record<string, unknown>;
+    if (!resolvedPerformanceDoc.exists && athleteName) {
+      const performanceByNameSnapshot = await adminDb
+        .collection("performance")
+        .where("playerName", "==", athleteName)
+        .limit(1)
+        .get();
+
+      if (!performanceByNameSnapshot.empty) {
+        resolvedPerformanceDoc = performanceByNameSnapshot.docs[0];
+      }
+    }
+
+    if (resolvedPerformanceDoc.exists) {
+      const performanceData = resolvedPerformanceDoc.data() as Record<string, unknown>;
       return NextResponse.json({
         success: true,
         stats: {
           ...baseStats,
-          matches: toNumber(performanceData.matchesPlayed),
-          goals: toNumber(performanceData.goals),
-          assists: toNumber(performanceData.assists),
-          yellowCards: toNumber(performanceData.yellowCards),
-          redCards: toNumber(performanceData.redCards),
-          minutesPlayed: toNumber(performanceData.minutesPlayed),
+          matches: toNumber(
+            performanceData.matchesPlayed ?? performanceData.matches ?? baseStats.matches,
+          ),
+          goals: toNumber(performanceData.goals ?? baseStats.goals),
+          assists: toNumber(performanceData.assists ?? baseStats.assists),
+          yellowCards: toNumber(
+            performanceData.yellowCards ?? baseStats.yellowCards,
+          ),
+          redCards: toNumber(performanceData.redCards ?? baseStats.redCards),
+          minutesPlayed: toNumber(
+            performanceData.minutesPlayed ?? baseStats.minutesPlayed,
+          ),
           fouls: toNumber(performanceData.fouls),
           averageRating: toNumber(performanceData.averageRating),
           attendanceRate: toNumber(performanceData.attendanceRate),

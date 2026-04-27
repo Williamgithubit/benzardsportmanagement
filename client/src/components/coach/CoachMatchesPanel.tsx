@@ -414,12 +414,14 @@ export default function CoachMatchesPanel({
 
     return [...selectedSquad.startingXI, ...selectedSquad.substitutes]
       .map((playerId) => playerMap.get(playerId))
-      .filter(
-        (player): player is PlayerRecord =>
-          Boolean(player) &&
-          !seenPlayerIds.has(player.id) &&
-          Boolean(seenPlayerIds.add(player.id)),
-      );
+      .filter((player): player is PlayerRecord => {
+        if (!player || seenPlayerIds.has(player.id)) {
+          return false;
+        }
+
+        seenPlayerIds.add(player.id);
+        return true;
+      });
   }, [playerMap, players, selectedSquad]);
 
   const assignedPlayerIds = useMemo(

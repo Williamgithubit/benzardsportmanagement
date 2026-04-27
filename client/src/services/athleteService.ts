@@ -542,6 +542,7 @@ export class AthleteService {
   static async importAthletesFromCSV(
     csvContent: string,
     userId: string,
+    teamId?: string | null,
   ): Promise<{ success: number; errors: string[] }> {
     try {
       const lines = csvContent.split("\n");
@@ -564,6 +565,10 @@ export class AthleteService {
             createdBy: userId,
             status: "active",
           };
+
+          if (typeof teamId === "string" && teamId.trim()) {
+            athleteData.teamId = teamId.trim();
+          }
 
           // Only add fields that have values
           if (values[1] && !isNaN(parseInt(values[1]))) {

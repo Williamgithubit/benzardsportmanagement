@@ -14,6 +14,9 @@ import {
 import { db } from "./firebase";
 import type { BlogPost, BlogPostStatus, FirestoreBlogPost } from "@/types/blog";
 
+const BLOG_POSTS_COLLECTION = "blogPosts";
+const LEGACY_POSTS_COLLECTION = "posts";
+
 const blogStatuses: BlogPostStatus[] = [
   "draft",
   "review",
@@ -54,9 +57,7 @@ const toIsoString = (
   return null;
 };
 
-const normalizeBlogStatus = (
-  post: Partial<FirestoreBlogPost> & Record<string, unknown>,
-): BlogPostStatus => {
+const normalizeBlogStatus = (post: Partial<FirestoreBlogPost>): BlogPostStatus => {
   if (isBlogStatus(post.status)) {
     return post.status;
   }
@@ -109,6 +110,100 @@ const serializePost = (post: FirestoreBlogPost): BlogPost => ({
   reactionCount: typeof post.reactionCount === "number" ? post.reactionCount : 0,
 });
 
+const stripHtml = (value: string) =>
+  value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+const getLegacyPostStatus = (post: Record<string, unknown>): BlogPostStatus => {
+  if (post.status === "published") {
+    return "published";
+  }
+
+  if (post.publishedAt) {
+    return "published";
+  }
+
+  return "draft";
+};
+
+const normalizeLegacyCategory = (post: Record<string, unknown>) => {
+  if (typeof post.category === "string" && post.category.trim()) {
+    return post.category;
+  }
+
+  if (post.type === "announcement") {
+    return "announcements";
+  }
+
+  if (post.type === "match_report") {
+    return "match_report";
+  }
+
+  return "general";
+};
+
+const isLegacyBlogLikePost = (post: Record<string, unknown>) =>
+  post.type === "blog" ||
+  post.type === "announcement" ||
+  post.type === "match_report";
+
+const serializeLegacyPost = (
+  id: string,
+  post: Record<string, unknown>,
+): BlogPost => {
+  const title =
+    (typeof post.title === "string" && post.title.trim()) || "Untitled post";
+  const content = typeof post.content === "string" ? post.content : "";
+  const excerptSource =
+    typeof post.excerpt === "string" && post.excerpt.trim()
+      ? post.excerpt
+      : stripHtml(content);
+  const createdBy =
+    typeof post.createdBy === "string" && post.createdBy.trim()
+      ? post.createdBy
+      : undefined;
+
+  return {
+    id,
+    title,
+    slug: generateSlug(title),
+    excerpt: excerptSource,
+    content,
+    teamId: typeof post.teamId === "string" ? post.teamId : undefined,
+    mediaIds: Array.isArray(post.mediaIds)
+      ? post.mediaIds.filter(
+          (mediaId): mediaId is string =>
+            typeof mediaId === "string" && Boolean(mediaId.trim()),
+        )
+      : [],
+    featuredImage:
+      typeof post.featuredImage === "string" ? post.featuredImage : undefined,
+    category: normalizeLegacyCategory(post),
+    tags: Array.isArray(post.tags)
+      ? post.tags.filter(
+          (tag): tag is string => typeof tag === "string" && Boolean(tag.trim()),
+        )
+      : [],
+    author: {
+      id: createdBy,
+      name: "Benzard Sports Management",
+      email: "support@benzardsportsmanagement.com",
+    },
+    views: typeof post.views === "number" ? post.views : 0,
+    status: getLegacyPostStatus(post),
+    publishedAt: toIsoString(
+      post.publishedAt as Timestamp | { toDate?: () => Date } | string | number | null,
+    ),
+    createdAt: toIsoString(
+      post.createdAt as Timestamp | { toDate?: () => Date } | string | number | null,
+    ),
+    updatedAt: toIsoString(
+      post.updatedAt as Timestamp | { toDate?: () => Date } | string | number | null,
+    ),
+    comments: [],
+    reactionCount: typeof post.reactionCount === "number" ? post.reactionCount : 0,
+  };
+};
+
 const getDateSortValue = (
   post: BlogPost,
   field: "createdAt" | "publishedAt" | "updatedAt",
@@ -158,15 +253,45 @@ const sortPosts = (
   });
 };
 
-const fetchAllSerializedPosts = async (): Promise<BlogPost[]> => {
-  const querySnapshot = await getDocs(collection(db, "blogPosts"));
+const getLegacyPostsSnapshot = async () => {
+  try {
+    return await getDocs(collection(db, LEGACY_POSTS_COLLECTION));
+  } catch (error) {
+    console.warn("Legacy posts collection is not publicly readable; skipping fallback.", error);
+    return null;
+  }
+};
 
-  return querySnapshot.docs.map((entry) =>
+const fetchAllSerializedPosts = async (): Promise<BlogPost[]> => {
+  const [blogPostsSnapshot, legacyPostsSnapshot] = await Promise.all([
+    getDocs(collection(db, BLOG_POSTS_COLLECTION)),
+    getLegacyPostsSnapshot(),
+  ]);
+
+  const canonicalPosts = blogPostsSnapshot.docs.map((entry) =>
     serializePost({
       id: entry.id,
       ...(entry.data() as Omit<FirestoreBlogPost, "id">),
     } as FirestoreBlogPost),
   );
+
+  const seenSlugs = new Set(
+    canonicalPosts
+      .map((post) => post.slug)
+      .filter((slug): slug is string => typeof slug === "string" && Boolean(slug)),
+  );
+
+  const legacyPosts =
+    legacyPostsSnapshot?.docs
+      .map((entry) => ({
+        id: entry.id,
+        data: entry.data() as Record<string, unknown>,
+      }))
+      .filter((entry) => isLegacyBlogLikePost(entry.data))
+      .map((entry) => serializeLegacyPost(entry.id, entry.data))
+      .filter((post) => !seenSlugs.has(post.slug)) || [];
+
+  return [...canonicalPosts, ...legacyPosts];
 };
 
 export interface CreateBlogPostData {
@@ -259,7 +384,7 @@ export const createBlogPost = async (
       blogPost.publishedAt = now as Timestamp;
     }
 
-    const docRef = await addDoc(collection(db, "blogPosts"), blogPost);
+    const docRef = await addDoc(collection(db, BLOG_POSTS_COLLECTION), blogPost);
     return docRef.id;
   } catch (error) {
     console.error("Error creating blog post:", error);
@@ -297,7 +422,7 @@ export const updateBlogPost = async (
       updatePayload.publishedAt = serverTimestamp() as Timestamp;
     }
 
-    await updateDoc(doc(db, "blogPosts", id), updatePayload);
+    await updateDoc(doc(db, BLOG_POSTS_COLLECTION, id), updatePayload);
   } catch (error) {
     console.error("Error updating blog post:", error);
     throw error;
@@ -309,7 +434,7 @@ export const updateBlogPost = async (
  */
 export const deleteBlogPost = async (postId: string): Promise<void> => {
   try {
-    await deleteDoc(doc(db, "blogPosts", postId));
+    await deleteDoc(doc(db, BLOG_POSTS_COLLECTION, postId));
   } catch (error) {
     console.error("Error deleting blog post:", error);
     throw error;
@@ -360,13 +485,25 @@ export const getBlogPosts = async (options?: {
  */
 export const getBlogPost = async (postId: string): Promise<BlogPost | null> => {
   try {
-    const docSnap = await getDoc(doc(db, "blogPosts", postId));
+    const docSnap = await getDoc(doc(db, BLOG_POSTS_COLLECTION, postId));
 
     if (docSnap.exists()) {
       return serializePost({
         id: docSnap.id,
         ...(docSnap.data() as Omit<FirestoreBlogPost, "id">),
       } as FirestoreBlogPost);
+    }
+
+    try {
+      const legacyDocSnap = await getDoc(doc(db, LEGACY_POSTS_COLLECTION, postId));
+      if (legacyDocSnap.exists()) {
+        const data = legacyDocSnap.data() as Record<string, unknown>;
+        return isLegacyBlogLikePost(data)
+          ? serializeLegacyPost(legacyDocSnap.id, data)
+          : null;
+      }
+    } catch (legacyError) {
+      console.warn("Unable to read legacy post by ID; falling back to canonical blog posts only.", legacyError);
     }
 
     return null;
@@ -383,7 +520,7 @@ export const getBlogPostBySlug = async (
   slug: string,
 ): Promise<BlogPost | null> => {
   try {
-    const q = query(collection(db, "blogPosts"), where("slug", "==", slug));
+    const q = query(collection(db, BLOG_POSTS_COLLECTION), where("slug", "==", slug));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
@@ -397,7 +534,14 @@ export const getBlogPostBySlug = async (
       return sortPosts(matchingPosts, "updatedAt", "desc")[0] || null;
     }
 
-    return null;
+    const legacyMatch = sortPosts(
+      (await fetchAllSerializedPosts()).filter((post) => post.slug === slug),
+      "updatedAt",
+      "desc",
+    )[0];
+
+    return legacyMatch || null;
+
   } catch (error) {
     console.error("Error getting blog post by slug:", error);
     throw error;
@@ -409,12 +553,22 @@ export const getBlogPostBySlug = async (
  */
 export const incrementBlogPostViews = async (postId: string): Promise<void> => {
   try {
-    const postRef = doc(db, "blogPosts", postId);
+    const postRef = doc(db, BLOG_POSTS_COLLECTION, postId);
     const postSnap = await getDoc(postRef);
 
     if (postSnap.exists()) {
       const currentViews = postSnap.data().views || 0;
       await updateDoc(postRef, {
+        views: currentViews + 1,
+      });
+      return;
+    }
+
+    const legacyPostRef = doc(db, LEGACY_POSTS_COLLECTION, postId);
+    const legacyPostSnap = await getDoc(legacyPostRef);
+    if (legacyPostSnap.exists()) {
+      const currentViews = legacyPostSnap.data().views || 0;
+      await updateDoc(legacyPostRef, {
         views: currentViews + 1,
       });
     }
@@ -429,13 +583,11 @@ export const incrementBlogPostViews = async (postId: string): Promise<void> => {
  */
 export const getBlogCategories = async (): Promise<string[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, "blogPosts"));
     const categories = new Set<string>();
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.category) {
-        categories.add(data.category);
+    (await fetchAllSerializedPosts()).forEach((post) => {
+      if (post.category) {
+        categories.add(post.category);
       }
     });
 
@@ -451,13 +603,11 @@ export const getBlogCategories = async (): Promise<string[]> => {
  */
 export const getBlogTags = async (): Promise<string[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, "blogPosts"));
     const tagCounts = new Map<string, number>();
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.tags && Array.isArray(data.tags)) {
-        data.tags.forEach((tag: string) => {
+    (await fetchAllSerializedPosts()).forEach((post) => {
+      if (post.tags && Array.isArray(post.tags)) {
+        post.tags.forEach((tag: string) => {
           tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
         });
       }

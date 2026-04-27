@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   MdSearch,
   MdFilterList,
@@ -22,24 +23,21 @@ import {
 } from "@/types/athlete";
 import AthleteCard from "./AthleteCard";
 import AthleteProfile from "./AthleteProfile";
-import AthleteForm from "./AthleteForm";
 import BulkActionsDialog from "./BulkActionsDialog";
 import AthleteService from "@/services/athleteService";
+import TeamService from "@/services/teamService";
 import toast, { Toaster } from "react-hot-toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { fetchAdminAthletes } from "@/services/adminDataService";
+import { useAppSelector } from "@/store/store";
 
 interface AthleteDirectoryProps {
   userRole: UserRole;
-  openDialog?: boolean;
-  onCloseDialog?: () => void;
 }
 
-export default function AthleteDirectory({
-  userRole,
-  openDialog = false,
-  onCloseDialog,
-}: AthleteDirectoryProps) {
+export default function AthleteDirectory({ userRole }: AthleteDirectoryProps) {
+  const router = useRouter();
+  const currentUser = useAppSelector((state) => state.auth.user);
   // State management
   const [allAthletes, setAllAthletes] = useState<Athlete[]>([]);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
@@ -52,12 +50,10 @@ export default function AthleteDirectory({
 
   // Dialog states
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [formDialogOpen, setFormDialogOpen] = useState(openDialog);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [athleteToDelete, setAthleteToDelete] = useState<string | null>(null);
-  const [formMode, setFormMode] = useState<"add" | "edit">("add");
 
   // Filters and pagination
   const [filters, setFilters] = useState<AthleteFilters>({
@@ -80,6 +76,9 @@ export default function AthleteDirectory({
   // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [resolvedTeamId, setResolvedTeamId] = useState<string | null>(
+    currentUser?.teamId || null,
+  );
 
   // Load athletes
   const loadAthletes = useCallback(
@@ -195,8 +194,42 @@ export default function AthleteDirectory({
   }, [allAthletes, filters, pagination.page, pagination.pageSize]);
 
   useEffect(() => {
-    setFormDialogOpen(openDialog);
-  }, [openDialog]);
+    let mounted = true;
+
+    const fallbackTeamId =
+      currentUser?.teamId ||
+      currentUser?.teamIds?.find(
+        (teamId): teamId is string =>
+          typeof teamId === "string" && Boolean(teamId.trim()),
+      ) ||
+      null;
+
+    setResolvedTeamId(fallbackTeamId);
+
+    if (!currentUser) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    void TeamService.ensureTeamContext(currentUser)
+      .then((context) => {
+        if (!mounted) {
+          return;
+        }
+
+        setResolvedTeamId(context?.teamId || fallbackTeamId);
+      })
+      .catch(() => {
+        if (mounted) {
+          setResolvedTeamId(fallbackTeamId);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser]);
 
   // Event handlers
   const handleFilterChange = (
@@ -250,8 +283,8 @@ export default function AthleteDirectory({
 
   const handleEditAthlete = (athlete: Athlete) => {
     setSelectedAthlete(athlete);
-    setFormMode("edit");
-    setFormDialogOpen(true);
+    setProfileDialogOpen(false);
+    router.push(`/dashboard/admin/athletes/${athlete.id}/edit`);
   };
 
   const handleDeleteAthlete = (athleteId: string) => {
@@ -275,74 +308,7 @@ export default function AthleteDirectory({
   };
 
   const handleAddAthlete = () => {
-    setSelectedAthlete(null);
-    setFormMode("add");
-    setFormDialogOpen(true);
-  };
-
-  const handleFormSubmit = async (payload: {
-    data: Partial<Athlete>;
-    photos?: File[];
-    videos?: File[];
-  }) => {
-    try {
-      if (formMode === "add") {
-        const id = await AthleteService.createAthlete(
-          payload.data as Omit<Athlete, "id" | "createdAt" | "updatedAt">,
-        );
-
-        if (payload.photos && payload.photos.length > 0) {
-          await Promise.all(
-            payload.photos.map((file) =>
-              AthleteService.uploadAthleteMedia(id, file, "photo"),
-            ),
-          );
-        }
-        if (payload.videos && payload.videos.length > 0) {
-          await Promise.all(
-            payload.videos.map((file) =>
-              AthleteService.uploadAthleteMedia(id, file, "video"),
-            ),
-          );
-        }
-
-        toast.success("Athlete added successfully");
-      } else if (selectedAthlete) {
-        await AthleteService.updateAthlete(selectedAthlete.id, payload.data);
-
-        if (payload.photos && payload.photos.length > 0) {
-          await Promise.all(
-            payload.photos.map((file) =>
-              AthleteService.uploadAthleteMedia(
-                selectedAthlete.id,
-                file,
-                "photo",
-              ),
-            ),
-          );
-        }
-        if (payload.videos && payload.videos.length > 0) {
-          await Promise.all(
-            payload.videos.map((file) =>
-              AthleteService.uploadAthleteMedia(
-                selectedAthlete.id,
-                file,
-                "video",
-              ),
-            ),
-          );
-        }
-
-        toast.success("Athlete updated successfully");
-      }
-
-      setFormDialogOpen(false);
-      if (onCloseDialog) onCloseDialog();
-      void loadAthletes(false);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      toast.error(`Failed to ${formMode} athlete`);
-    }
+    router.push("/dashboard/admin/athletes/new");
   };
 
   const handleExport = async () => {
@@ -372,7 +338,8 @@ export default function AthleteDirectory({
       const csvContent = await importFile.text();
       const result = await AthleteService.importAthletesFromCSV(
         csvContent,
-        "current-user-id",
+        currentUser?.uid || "current-user-id",
+        resolvedTeamId,
       );
 
       toast.success(
@@ -826,18 +793,6 @@ export default function AthleteDirectory({
         open={profileDialogOpen}
         onClose={() => setProfileDialogOpen(false)}
         onEdit={handleEditAthlete}
-        userRole={userRole}
-      />
-
-      <AthleteForm
-        athlete={formMode === "edit" ? selectedAthlete : null}
-        open={formDialogOpen}
-        onClose={() => {
-          setFormDialogOpen(false);
-          if (onCloseDialog) onCloseDialog();
-        }}
-        onSubmit={handleFormSubmit}
-        mode={formMode}
         userRole={userRole}
       />
 

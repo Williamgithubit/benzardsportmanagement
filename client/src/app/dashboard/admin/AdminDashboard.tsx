@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 // Import Admin Components
 import UserManagement from "@/components/admin/UserManagement";
@@ -19,6 +20,7 @@ import AdminDashboardShell from "@/components/dashboard/AdminDashboardShell";
 import { AdminTabId, isAdminTab } from "@/components/dashboard/admin-navigation";
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [tab, setTab] = useState<AdminTabId>(() => {
     if (typeof window === "undefined") {
       return "dashboard";
@@ -28,7 +30,6 @@ export default function AdminDashboard() {
     return isAdminTab(initialHash) ? initialHash : "dashboard";
   });
   const [userDialogOpen, setUserDialogOpen] = useState(false);
-  const [athleteDialogOpen, setAthleteDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [blogDialogOpen, setBlogDialogOpen] = useState(false);
@@ -78,7 +79,7 @@ export default function AdminDashboard() {
         setUserDialogOpen(true);
         break;
       case "athletes":
-        setAthleteDialogOpen(true);
+        router.push("/dashboard/admin/athletes/new");
         break;
       case "events":
         setEventDialogOpen(true);
@@ -104,12 +105,7 @@ export default function AdminDashboard() {
       onAddNew={canCreateFromHeader ? () => handleAddNew(tab) : undefined}
     >
       {tab === "dashboard" && <Dashboard />}
-      {tab === "athletes" && (
-        <AthleteManagement
-          openDialog={athleteDialogOpen}
-          onCloseDialog={() => setAthleteDialogOpen(false)}
-        />
-      )}
+      {tab === "athletes" && <AthleteManagement />}
       {tab === "events" && (
         <EventManagement
           openDialog={eventDialogOpen}

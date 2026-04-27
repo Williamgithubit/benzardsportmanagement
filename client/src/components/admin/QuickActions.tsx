@@ -184,7 +184,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
       label: "Add Athlete",
       icon: <MdOutlineFitnessCenter size={18} />,
       colors: "text-navy border-navy hover:bg-navy/10",
-      onClick: onAddAthlete || (() => navigateToAdminTab("athletes")),
+      onClick: onAddAthlete || (() => router.push("/dashboard/admin/athletes/new")),
     },
     {
       label: "Add Event",

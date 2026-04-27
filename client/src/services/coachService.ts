@@ -196,7 +196,7 @@ const normalizePlayer = (
 
   return {
     id,
-    teamId: typeof data.teamId === "string" ? data.teamId : null,
+    teamId: normalizeTeamId(data),
     sourceCollection,
     fullName,
     firstName: typeof data.firstName === "string" ? data.firstName : undefined,
@@ -533,13 +533,24 @@ export const buildCoachAlerts = (
 export const CoachService = {
   subscribeToPlayers(teamId: string | null, callback: (players: PlayerRecord[]) => void, onError?: (error: unknown) => void) {
     let playerDocs: PlayerRecord[] = [];
+    let legacyPlayerDocs: PlayerRecord[] = [];
     let athleteDocs: PlayerRecord[] = [];
+    let legacyAthleteDocs: PlayerRecord[] = [];
 
     const publish = () => {
+      const seenIds = new Set<string>();
       callback(
-        [...playerDocs, ...athleteDocs].sort((left, right) =>
-          left.fullName.localeCompare(right.fullName),
-        ),
+        [...playerDocs, ...legacyPlayerDocs, ...athleteDocs, ...legacyAthleteDocs]
+          .filter((player) => {
+            const key = `${player.sourceCollection}:${player.id}`;
+            if (seenIds.has(key)) {
+              return false;
+            }
+
+            seenIds.add(key);
+            return true;
+          })
+          .sort((left, right) => left.fullName.localeCompare(right.fullName)),
       );
     };
 
@@ -583,9 +594,53 @@ export const CoachService = {
       },
     );
 
+    const unsubscribeLegacyPlayers = teamId
+      ? onSnapshot(
+          collection(db, PLAYERS_COLLECTION),
+          (snapshot) => {
+            legacyPlayerDocs = snapshot.docs
+              .map((entry) => ({
+                id: entry.id,
+                data: entry.data() as Record<string, unknown>,
+              }))
+              .filter((entry) => !normalizeTeamId(entry.data))
+              .map((entry) => normalizePlayer(entry.id, entry.data, "players"));
+            publish();
+          },
+          (error) => {
+            legacyPlayerDocs = [];
+            publish();
+            onError?.(error);
+          },
+        )
+      : () => undefined;
+
+    const unsubscribeLegacyAthletes = teamId
+      ? onSnapshot(
+          collection(db, ATHLETES_COLLECTION),
+          (snapshot) => {
+            legacyAthleteDocs = snapshot.docs
+              .map((entry) => ({
+                id: entry.id,
+                data: entry.data() as Record<string, unknown>,
+              }))
+              .filter((entry) => !normalizeTeamId(entry.data))
+              .map((entry) => normalizePlayer(entry.id, entry.data, "athletes"));
+            publish();
+          },
+          (error) => {
+            legacyAthleteDocs = [];
+            publish();
+            onError?.(error);
+          },
+        )
+      : () => undefined;
+
     return () => {
       unsubscribePlayers();
       unsubscribeAthletes();
+      unsubscribeLegacyPlayers();
+      unsubscribeLegacyAthletes();
     };
   },
 
